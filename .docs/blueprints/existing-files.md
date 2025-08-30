@@ -22,16 +22,21 @@
 - `globals.css`: Global styles and Tailwind layers.
 - `layout.tsx`: Root HTML layout; initializes theme and wraps `ThemeProvider` + `Header`.
 - `page.tsx`: Home page route rendering a simple placeholder.
+- `not-found.tsx`: 404 error page with return home link.
 
 ### components/common
 
-- `header.component.tsx`: Application header with brand link and layout styles.
+- `header.component.tsx`: Application header with brand link and theme toggle.
 - `logo.component.tsx`: Logo component using `next/image` for `/logo.svg`.
-- `themeToggle.component.tsx`: Theme toggle bound to app theme context.
+- `themeToggle.component.tsx`: Theme toggle with sun/moon icons using Switch component.
 
 ### components/ui
 
 - `switch.tsx`: Radix-based `Switch` component styled to shadcn/ui conventions.
+
+### hooks
+
+- `useTheme.hook.ts`: Custom hook for accessing theme context and state management.
 
 ### public
 
@@ -40,7 +45,11 @@
 
 ### store/providers
 
-- `theme.provider.tsx`: Theme context/provider; persists to localStorage and tracks system preference.
+- `theme.provider.tsx`: Theme context/provider; persists to localStorage with dark mode as default.
+
+### types
+
+- `app.types.ts`: Application-wide TypeScript types including Theme enum.
 
 ### utils
 

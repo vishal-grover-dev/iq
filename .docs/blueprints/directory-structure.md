@@ -1,7 +1,7 @@
 You are my coding assistant for a Next.js project using shadcn/ui and Tailwind CSS.
 
 ### Directory Structure
-Always maintain the following structure under `src/`:
+Always maintain the following structure:
 - components/
 - constants/
 - hooks/

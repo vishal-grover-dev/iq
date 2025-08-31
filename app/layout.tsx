@@ -1,5 +1,6 @@
 import "./globals.css";
 import Header from "@/components/common/header.component";
+import Footer from "@/components/common/footer.component";
 import ThemeProvider from "@/store/providers/theme.provider";
 
 export default function RootLayout({
@@ -15,8 +16,11 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <Header />
-          {children}
+          <div className='flex min-h-screen flex-col'>
+            <Header />
+            <main className='flex-1'>{children}</main>
+            <Footer />
+          </div>
         </ThemeProvider>
       </body>
     </html>

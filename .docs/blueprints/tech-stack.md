@@ -13,7 +13,9 @@
 - **Tailwind CSS v4** - Utility-first CSS framework for rapid UI development
 - **shadcn/ui** - High-quality, accessible component library built on Radix UI
 - **Radix UI** - Unstyled, accessible UI primitives
-- **Lucide React** - Beautiful, customizable icons
+- **Phosphor Icons** - Consistent icon set for React.
+  - Note: Import components with the `Icon` suffix (e.g., `SunDimIcon`, `MoonIcon`, `LinkedinLogoIcon`).
+  - Guideline: Do not use `duotone` icons; prefer `regular`, `bold`, or `fill` weights.
 
 ### State Management
 

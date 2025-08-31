@@ -10,7 +10,7 @@
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
 
-### .docs/blueprints
+### docs/blueprints
 
 - `directory-structure.md`: Enforced directory and naming conventions.
 - `tech-stack.md`: Tech stack and architecture overview.
@@ -47,6 +47,7 @@
  - `popover.tsx`: shadcn/ui `Popover` primitives and styling.
  - `combobox.tsx`: Reusable combobox built with `Popover` + `Command` and Phosphor icons.
  - `sonner.tsx`: shadcn/ui `Toaster` wrapper integrating theme-aware Sonner notifications.
+ - `error-message.tsx`: Reusable error message component for forms and UI states.
 
 ### components/upload
 
@@ -70,10 +71,14 @@
 - `app.types.ts`: Application-wide TypeScript types including Theme enum.
  - `upload.types.ts`: Types for the upload flow.
 
+### schema
+
+- `upload.schema.ts`: Zod schema and validation for the upload flow.
+
 ### utils
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
 
-### .docs/work-items
+### docs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.

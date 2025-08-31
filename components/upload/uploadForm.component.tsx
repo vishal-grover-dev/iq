@@ -1,0 +1,250 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDropzone } from "react-dropzone";
+import { cn } from "@/utils/tailwind.utils";
+import { Combobox } from "@/components/ui/combobox";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  AcademicResourceType,
+  ContentCategory,
+  AcademicClass,
+  AcademicSubject,
+  EducationBoard,
+  type AcademicUploadFormValues,
+  type UploadState,
+} from "@/types/upload.types";
+import { FormSchema, formSchema } from "@/schema/upload.schema";
+
+const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
+
+export default function UploadForm() {
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
+
+  const defaultValues: AcademicUploadFormValues = {
+    contentCategory: ContentCategory.ACADEMIC,
+    board: undefined,
+    grade: undefined,
+    subject: undefined,
+    resourceType: undefined,
+    files: [],
+  };
+
+  const {
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<FormSchema>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaultValues as unknown as FormSchema,
+    mode: "onBlur",
+  });
+
+  const contentCategory = watch("contentCategory");
+  const files = watch("files");
+  const resourceType = (watch as any)("resourceType") as AcademicResourceType | undefined;
+  const grade = (watch as any)("grade") as AcademicClass | undefined;
+  const subject = (watch as any)("subject") as AcademicSubject | undefined;
+
+  const contentCategoryOptions = [
+    { label: ContentCategory.ACADEMIC, value: ContentCategory.ACADEMIC },
+    { label: ContentCategory.COMPETITIVE_EXAM, value: ContentCategory.COMPETITIVE_EXAM },
+    { label: ContentCategory.VIDEO_SUBTITLES, value: ContentCategory.VIDEO_SUBTITLES },
+  ];
+  const resourceTypeOptions = [
+    { label: AcademicResourceType.TEXTBOOK, value: AcademicResourceType.TEXTBOOK },
+    { label: AcademicResourceType.PREVIOUS_YEAR_PAPER, value: AcademicResourceType.PREVIOUS_YEAR_PAPER },
+  ];
+  const classOptions = (Object.values(AcademicClass) as string[]).map((v) => ({ label: v, value: v }));
+  const subjectOptions = (Object.values(AcademicSubject) as string[]).map((v) => ({ label: v, value: v }));
+  const boardOptions = (Object.values(EducationBoard) as string[])
+    .map((v) => ({ label: v, value: v }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const existing = watch("files") ?? [];
+      const next = [...existing, ...acceptedFiles];
+      setValue("files", next as any, { shouldValidate: true });
+    },
+    [setValue, watch]
+  );
+
+  const handleCategoryChange = useCallback(
+    (val: ContentCategory) => {
+      setValue("contentCategory", val as any, { shouldValidate: true, shouldTouch: true });
+      if (val !== ContentCategory.ACADEMIC) {
+        // lazy import to avoid SSR mismatch
+        import("sonner").then(({ toast }) =>
+          toast.error("Coming soon", {
+            description:
+              val === ContentCategory.COMPETITIVE_EXAM
+                ? "Heads up: Competitive Exam is still an Aspirant, not yet ready!"
+                : "Lights, camera… almost: Subtitles support arriving shortly.",
+          })
+        );
+      }
+    },
+    [setValue]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: ACCEPTED_MIME_TYPES as any,
+    multiple: true,
+    disabled:
+      (watch("contentCategory") as any) !== ContentCategory.ACADEMIC ||
+      uploadState === "submitting" ||
+      uploadState === "processing",
+  });
+
+  const isAcademic = contentCategory === ContentCategory.ACADEMIC;
+
+  const onSubmit = async (data: FormSchema) => {
+    try {
+      setUploadState("submitting");
+      // Simulate async handoff to backend
+      await new Promise((r) => setTimeout(r, 600));
+      setUploadState("processing");
+      // Simulate processing stage
+      await new Promise((r) => setTimeout(r, 1000));
+      setUploadState("completed");
+      reset(defaultValues as any);
+    } catch (e) {
+      setUploadState("failed");
+    }
+  };
+
+  const disabled = uploadState === "submitting" || uploadState === "processing";
+  const actionsDisabled = disabled || (contentCategory as any) !== ContentCategory.ACADEMIC;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+      <div className='grid gap-4'>
+        <div className='grid gap-2'>
+          <Label>Content category</Label>
+          <Combobox
+            value={contentCategory as any}
+            onChange={(val) => handleCategoryChange(val as ContentCategory)}
+            options={contentCategoryOptions}
+            placeholder='Select category'
+            searchPlaceholder='Search category...'
+            emptyMessage='No category found.'
+            disabled={disabled}
+          />
+          {(errors as any).contentCategory && (
+            <ErrorMessage message={(errors as any).contentCategory.message as string} />
+          )}
+        </div>
+
+        {isAcademic && (
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            <div className='grid gap-2'>
+              <Label>Board (India)</Label>
+              <Combobox
+                value={(watch as any)("board") as any}
+                onChange={(val) => setValue("board", val as any, { shouldValidate: true, shouldTouch: true })}
+                options={boardOptions}
+                placeholder='Select board'
+                searchPlaceholder='Search board...'
+                emptyMessage='No board found.'
+                listMaxHeightClassName='max-h-96'
+                disabled={disabled}
+              />
+              {(errors as any).board && <ErrorMessage message={(errors as any).board.message as string} />}
+            </div>
+
+            <div className='grid gap-2'>
+              <Label>Class (Grade)</Label>
+              <Combobox
+                value={grade as any}
+                onChange={(val) => setValue("grade", val as any, { shouldValidate: true, shouldTouch: true })}
+                options={classOptions}
+                placeholder='Select class'
+                searchPlaceholder='Search class...'
+                emptyMessage='No class found.'
+                disabled={disabled}
+              />
+              {(errors as any).grade && <ErrorMessage message={(errors as any).grade.message as string} />}
+            </div>
+
+            <div className='grid gap-2'>
+              <Label>Subject</Label>
+              <Combobox
+                value={subject as any}
+                onChange={(val) => setValue("subject", val as any, { shouldValidate: true, shouldTouch: true })}
+                options={subjectOptions}
+                placeholder='Select subject'
+                searchPlaceholder='Search subject...'
+                emptyMessage='No subject found.'
+                disabled={disabled}
+              />
+              {(errors as any).subject && <ErrorMessage message={(errors as any).subject.message as string} />}
+            </div>
+
+            <div className='grid gap-2'>
+              <Label>Resource type</Label>
+              <Combobox
+                value={resourceType as any}
+                onChange={(val) => setValue("resourceType", val as any, { shouldValidate: true, shouldTouch: true })}
+                options={resourceTypeOptions}
+                placeholder='Select resource type'
+                searchPlaceholder='Search resource type...'
+                emptyMessage='No type found.'
+                disabled={disabled}
+              />
+              {(errors as any).resourceType && (
+                <ErrorMessage message={(errors as any).resourceType.message as string} />
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className='grid gap-2'>
+          <Label>Files</Label>
+          <div
+            {...getRootProps()}
+            className={cn(
+              "rounded-md border border-dashed p-6 text-center",
+              "border-gray-300 dark:border-gray-800",
+              isDragActive ? "bg-gray-50 dark:bg-gray-900" : "bg-white dark:bg-gray-950"
+            )}
+          >
+            <input {...getInputProps()} disabled={actionsDisabled} />
+            <p className='text-sm'>Drag and drop PDF files here, or click to browse</p>
+            <p className='mt-1 text-xs text-gray-500'>Only PDF files are accepted</p>
+          </div>
+          {errors.files && <ErrorMessage message={errors.files.message as string} />}
+
+          {files && files.length > 0 && (
+            <ul className='mt-2 space-y-1'>
+              {files.map((file, idx) => (
+                <li key={`${file.name}-${idx}`} className='text-xs'>
+                  {file.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className='flex items-center gap-3'>
+        <Button type='submit' size='lg' disabled={actionsDisabled} className='w-full'>
+          Submit
+        </Button>
+
+        {uploadState === "processing" && (
+          <span className='text-sm'>We are on our way to enlighten. You will be notified via email.</span>
+        )}
+        {uploadState === "completed" && <span className='text-sm text-green-700'>Upload completed.</span>}
+        {uploadState === "failed" && <span className='text-sm text-red-600'>Something went wrong. Please retry.</span>}
+      </div>
+    </form>
+  );
+}

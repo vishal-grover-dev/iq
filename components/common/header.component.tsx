@@ -4,6 +4,12 @@ import Link from "next/link";
 import { cn } from "@/utils/tailwind.utils";
 import Logo from "@/components/common/logo.component";
 import ThemeToggle from "@/components/common/themeToggle.component";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
 
 type HeaderProps = {
   className?: string;
@@ -22,7 +28,20 @@ export function Header({ className }: HeaderProps) {
         <Link href='/' className='inline-flex items-center gap-2'>
           <Logo width={45} height={45} />
         </Link>
-        <ThemeToggle />
+        <div className='inline-flex items-center gap-4'>
+          <NavigationMenu viewport={false}>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <Link href='/upload' legacyBehavior passHref>
+                  <NavigationMenuLink className='text-sm font-medium text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300'>
+                    Upload
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

@@ -2,6 +2,7 @@ import "./globals.css";
 import Header from "@/components/common/header.component";
 import Footer from "@/components/common/footer.component";
 import ThemeProvider from "@/store/providers/theme.provider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -21,6 +22,7 @@ export default function RootLayout({
             <main className='flex-1'>{children}</main>
             <Footer />
           </div>
+          <Toaster richColors position='top-center' closeButton />
         </ThemeProvider>
       </body>
     </html>

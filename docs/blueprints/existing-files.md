@@ -1,3 +1,5 @@
+> Note: After creating any new file (or moving/deleting one), update this document to keep the index current.
+
 ### Root
 
 - `package.json`: Project metadata, scripts, and dependencies.
@@ -48,6 +50,7 @@
  - `combobox.tsx`: Reusable combobox built with `Popover` + `Command` and Phosphor icons.
  - `sonner.tsx`: shadcn/ui `Toaster` wrapper integrating theme-aware Sonner notifications.
  - `error-message.tsx`: Reusable error message component for forms and UI states.
+ - `file-dropzone.tsx`: Reusable dropzone wrapper for file uploads built on react-dropzone.
 
 ### components/upload
 

@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useDropzone } from "react-dropzone";
-import { cn } from "@/utils/tailwind.utils";
+import FileDropzone from "@/components/ui/file-dropzone";
 import { Combobox } from "@/components/ui/combobox";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Button } from "@/components/ui/button";
@@ -93,16 +92,6 @@ export default function UploadForm() {
     },
     [setValue]
   );
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: ACCEPTED_MIME_TYPES as any,
-    multiple: true,
-    disabled:
-      (watch("contentCategory") as any) !== ContentCategory.ACADEMIC ||
-      uploadState === "submitting" ||
-      uploadState === "processing",
-  });
 
   const isAcademic = contentCategory === ContentCategory.ACADEMIC;
 
@@ -208,18 +197,14 @@ export default function UploadForm() {
 
         <div className='grid gap-2'>
           <Label>Files</Label>
-          <div
-            {...getRootProps()}
-            className={cn(
-              "rounded-md border border-dashed p-6 text-center",
-              "border-gray-300 dark:border-gray-800",
-              isDragActive ? "bg-gray-50 dark:bg-gray-900" : "bg-white dark:bg-gray-950"
-            )}
-          >
-            <input {...getInputProps()} disabled={actionsDisabled} />
-            <p className='text-sm'>Drag and drop PDF files here, or click to browse</p>
-            <p className='mt-1 text-xs text-gray-500'>Only PDF files are accepted</p>
-          </div>
+          <FileDropzone
+            onDrop={onDrop}
+            accept={ACCEPTED_MIME_TYPES as any}
+            multiple={true}
+            disabled={actionsDisabled}
+            description='Drag and drop PDF files here, or click to browse'
+            hint='Only PDF files are accepted'
+          />
           {errors.files && <ErrorMessage message={errors.files.message as string} />}
 
           {files && files.length > 0 && (

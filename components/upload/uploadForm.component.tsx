@@ -8,6 +8,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import Loader from "@/components/common/loader.component";
 import {
   AcademicResourceType,
   ContentCategory,
@@ -97,14 +98,8 @@ export default function UploadForm() {
 
   const onSubmit = async (data: FormSchema) => {
     try {
-      setUploadState("submitting");
-      // Simulate async handoff to backend
-      await new Promise((r) => setTimeout(r, 600));
+      // Immediately enter processing state; mock progress UI will manage 5-minute interval
       setUploadState("processing");
-      // Simulate processing stage
-      await new Promise((r) => setTimeout(r, 1000));
-      setUploadState("completed");
-      reset(defaultValues as any);
     } catch (e) {
       setUploadState("failed");
     }
@@ -112,6 +107,19 @@ export default function UploadForm() {
 
   const disabled = uploadState === "submitting" || uploadState === "processing";
   const actionsDisabled = disabled || (contentCategory as any) !== ContentCategory.ACADEMIC;
+
+  if (uploadState === "processing") {
+    return (
+      <Loader
+        // 5 minutes mock progress
+        durationMs={300_000}
+        onComplete={() => {
+          setUploadState("completed");
+          reset(defaultValues as any);
+        }}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
@@ -224,9 +232,6 @@ export default function UploadForm() {
           Submit
         </Button>
 
-        {uploadState === "processing" && (
-          <span className='text-sm'>We are on our way to enlighten. You will be notified via email.</span>
-        )}
         {uploadState === "completed" && <span className='text-sm text-green-700'>Upload completed.</span>}
         {uploadState === "failed" && <span className='text-sm text-red-600'>Something went wrong. Please retry.</span>}
       </div>

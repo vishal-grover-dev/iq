@@ -32,6 +32,7 @@
 - `header.component.tsx`: Application header with brand link and theme toggle.
 - `logo.component.tsx`: Logo component using `next/image` for `/logo.svg`.
 - `themeToggle.component.tsx`: Theme toggle with sun/moon icons using Switch component.
+ - `loader.component.tsx`: Full-page Lottie loader used for async/processing states.
  - `footer.component.tsx`: Application footer with brand and navigation links.
 
 ### components/ui
@@ -64,6 +65,7 @@
 
 - `logo.svg`: Vector logo asset.
 - `logo.png`: Raster logo asset.
+ - `animations/girl-with-book.json`: Lottie animation used by the loader component.
 
 ### store/providers
 

@@ -36,9 +36,11 @@
 
 ### Database & Storage
 
-- **Qdrant** - Vector database for RAG content indexing and similarity search
 - **Supabase** - Primary database, authentication, and file storage platform
 - **PostgreSQL** - Relational database (via Supabase)
+- **pgvector** Extension – Vector embeddings storage for semantic search
+- **Postgres Full-Text Search (FTS)** – Keyword search
+- **Hybrid Search** – Combines vector and keyword search for improved accuracy
 
 ### AI/ML Services
 
@@ -46,6 +48,7 @@
 - **OpenAI SDK** - Official OpenAI API client for JavaScript
 - **OpenRouter** - Access to various open-source models via OpenAI-compatible API
 - **LangSmith** - Observability and monitoring platform for AI agents
+- **Reranker Model** – bge-reranker-base or Cohere Rerank for improved retrieval accuracy
 
 ### File Processing
 
@@ -89,6 +92,8 @@
 ### Security Measures
 
 - **Supabase Auth** - Authentication and authorization
+- **Row-Level Security (RLS)** – Fine-grained data protection in Postgres
+- **JWT Verification** – For securing API routes
 - **CORS** - Cross-origin resource sharing protection
 - **Rate Limiting** - API request throttling
 - **Input Validation** - Sanitization and validation

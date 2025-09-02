@@ -1,16 +1,15 @@
 "use client";
-
+import FileDropzone from "@/components/ui/file-dropzone";
+import Loader from "@/components/common/loader.component";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { FormLabel } from "@/components/ui/form-label";
+import { FormSchema, formSchema } from "@/schema/upload.schema";
+import { Input } from "@/components/ui/input";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import FileDropzone from "@/components/ui/file-dropzone";
-import { Combobox } from "@/components/ui/combobox";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Button } from "@/components/ui/button";
-import { FormLabel } from "@/components/ui/form-label";
-import { Input } from "@/components/ui/input";
-import Loader from "@/components/common/loader.component";
-
 import {
   AcademicResourceType,
   ContentCategory,
@@ -20,7 +19,6 @@ import {
   type AcademicUploadFormValues,
   type UploadState,
 } from "@/types/upload.types";
-import { FormSchema, formSchema } from "@/schema/upload.schema";
 
 const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
 
@@ -115,16 +113,7 @@ export default function UploadForm() {
   const actionsDisabled = disabled || (contentCategory as any) !== ContentCategory.ACADEMIC;
 
   if (uploadState === "processing") {
-    return (
-      <Loader
-        // 5 minutes mock progress
-        durationMs={300_000}
-        onComplete={() => {
-          setUploadState("completed");
-          reset(defaultValues as any);
-        }}
-      />
-    );
+    return <Loader />;
   }
 
   return (

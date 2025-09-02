@@ -3,7 +3,7 @@
 ## Project Overview
 
 **Project Title:** Intelliqent Questions (IQ)  
-**Product Type:** RAG-powered web application for educational content generation
+**Product Type:** RAG-powered web application for questions generation
 
 ## Product Summary
 

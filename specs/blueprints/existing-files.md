@@ -85,6 +85,10 @@
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
 
+### constants
+
+- `app.constants.ts`: Application constants from environment variables.
+
 ### docs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.

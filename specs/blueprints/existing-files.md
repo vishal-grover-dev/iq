@@ -99,3 +99,7 @@
 ### docs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.
+
+### migrations
+
+- `001-Storage-Academics-RLS-02-Sep-25.sql`: Creates `academics` bucket if missing; adds RLS policies (public read, authenticated insert/update/delete).

@@ -27,6 +27,7 @@ const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
 export default function UploadForm() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [isUploadingFiles, setIsUploadingFiles] = useState<boolean>(false);
+  const [hasUploadFailed, setHasUploadFailed] = useState<boolean>(false);
 
   const defaultValues: AcademicUploadFormValues = {
     contentCategory: ContentCategory.ACADEMIC,
@@ -97,6 +98,7 @@ export default function UploadForm() {
 
       try {
         setIsUploadingFiles(true);
+        setHasUploadFailed(false);
         await uploadAcademicFiles(
           {
             contentCategory: ContentCategory.ACADEMIC,
@@ -111,6 +113,9 @@ export default function UploadForm() {
         );
         toast.success("Files uploaded to storage");
       } catch (err: any) {
+        setHasUploadFailed(true);
+        // Revert optimistic file list addition for the failed batch
+        setValue("files", existing as any, { shouldValidate: true });
         toast.error("Upload failed", { description: err?.message ?? "Please retry" });
       } finally {
         setIsUploadingFiles(false);
@@ -147,7 +152,12 @@ export default function UploadForm() {
   const dropzoneDisabled =
     disabled || (contentCategory as any) !== ContentCategory.ACADEMIC || !isAcademicRequiredFieldsFilled;
   const submitDisabled =
-    disabled || !isAcademicRequiredFieldsFilled || !files || (files as any).length === 0 || !isAcademic;
+    disabled ||
+    hasUploadFailed ||
+    !isAcademicRequiredFieldsFilled ||
+    !files ||
+    (files as any).length === 0 ||
+    !isAcademic;
 
   if (uploadState === "processing") {
     return <Loader />;

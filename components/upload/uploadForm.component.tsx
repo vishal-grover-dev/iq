@@ -7,8 +7,10 @@ import FileDropzone from "@/components/ui/file-dropzone";
 import { Combobox } from "@/components/ui/combobox";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { FormLabel } from "@/components/ui/form-label";
+import { Input } from "@/components/ui/input";
 import Loader from "@/components/common/loader.component";
+
 import {
   AcademicResourceType,
   ContentCategory,
@@ -31,6 +33,8 @@ export default function UploadForm() {
     grade: undefined,
     subject: undefined,
     resourceType: undefined,
+    chapterNumber: undefined,
+    chapterName: undefined,
     files: [],
   };
 
@@ -51,6 +55,8 @@ export default function UploadForm() {
   const resourceType = (watch as any)("resourceType") as AcademicResourceType | undefined;
   const grade = (watch as any)("grade") as AcademicClass | undefined;
   const subject = (watch as any)("subject") as AcademicSubject | undefined;
+  const chapterNumber = (watch as any)("chapterNumber") as string | undefined;
+  const chapterName = (watch as any)("chapterName") as string | undefined;
 
   const contentCategoryOptions = [
     { label: ContentCategory.ACADEMIC, value: ContentCategory.ACADEMIC },
@@ -125,7 +131,7 @@ export default function UploadForm() {
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
       <div className='grid gap-4'>
         <div className='grid gap-2'>
-          <Label>Content category</Label>
+          <FormLabel required>Content category</FormLabel>
           <Combobox
             value={contentCategory as any}
             onChange={(val) => handleCategoryChange(val as ContentCategory)}
@@ -143,7 +149,7 @@ export default function UploadForm() {
         {isAcademic && (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
             <div className='grid gap-2'>
-              <Label>Board (India)</Label>
+              <FormLabel required>Board (India)</FormLabel>
               <Combobox
                 value={(watch as any)("board") as any}
                 onChange={(val) => setValue("board", val as any, { shouldValidate: true, shouldTouch: true })}
@@ -158,7 +164,7 @@ export default function UploadForm() {
             </div>
 
             <div className='grid gap-2'>
-              <Label>Class (Grade)</Label>
+              <FormLabel required>Class (Grade)</FormLabel>
               <Combobox
                 value={grade as any}
                 onChange={(val) => setValue("grade", val as any, { shouldValidate: true, shouldTouch: true })}
@@ -172,7 +178,7 @@ export default function UploadForm() {
             </div>
 
             <div className='grid gap-2'>
-              <Label>Subject</Label>
+              <FormLabel required>Subject</FormLabel>
               <Combobox
                 value={subject as any}
                 onChange={(val) => setValue("subject", val as any, { shouldValidate: true, shouldTouch: true })}
@@ -186,7 +192,7 @@ export default function UploadForm() {
             </div>
 
             <div className='grid gap-2'>
-              <Label>Resource type</Label>
+              <FormLabel required>Resource type</FormLabel>
               <Combobox
                 value={resourceType as any}
                 onChange={(val) => setValue("resourceType", val as any, { shouldValidate: true, shouldTouch: true })}
@@ -200,11 +206,35 @@ export default function UploadForm() {
                 <ErrorMessage message={(errors as any).resourceType.message as string} />
               )}
             </div>
+
+            <div className='grid gap-2'>
+              <FormLabel>Chapter Number</FormLabel>
+              <Input
+                value={chapterNumber ?? ""}
+                onChange={(e) => setValue("chapterNumber", e.target.value, { shouldValidate: true, shouldTouch: true })}
+                placeholder='e.g., 5'
+                disabled={disabled}
+              />
+              {(errors as any).chapterNumber && (
+                <ErrorMessage message={(errors as any).chapterNumber.message as string} />
+              )}
+            </div>
+
+            <div className='grid gap-2'>
+              <FormLabel>Chapter Name</FormLabel>
+              <Input
+                value={chapterName ?? ""}
+                onChange={(e) => setValue("chapterName", e.target.value, { shouldValidate: true, shouldTouch: true })}
+                placeholder='e.g., Trigonometric Functions'
+                disabled={disabled}
+              />
+              {(errors as any).chapterName && <ErrorMessage message={(errors as any).chapterName.message as string} />}
+            </div>
           </div>
         )}
 
         <div className='grid gap-2'>
-          <Label>Files</Label>
+          <FormLabel required>Files</FormLabel>
           <FileDropzone
             onDrop={onDrop}
             accept={ACCEPTED_MIME_TYPES as any}

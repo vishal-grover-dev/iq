@@ -52,6 +52,7 @@
  - `sonner.tsx`: shadcn/ui `Toaster` wrapper integrating theme-aware Sonner notifications.
  - `error-message.tsx`: Reusable error message component for forms and UI states.
  - `file-dropzone.tsx`: Reusable dropzone wrapper for file uploads built on react-dropzone.
+- `form-label.tsx`: Reusable label component that displays red asterisk for required form fields.
 
 ### components/upload
 

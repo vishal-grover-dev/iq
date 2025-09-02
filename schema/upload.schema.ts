@@ -22,6 +22,8 @@ export const academicSchema = baseSchema.extend({
   grade: z.enum(Object.values(AcademicClass) as [string, ...string[]]),
   subject: z.enum(Object.values(AcademicSubject) as [string, ...string[]]),
   resourceType: z.enum([AcademicResourceType.TEXTBOOK, AcademicResourceType.PREVIOUS_YEAR_PAPER]),
+  chapterNumber: z.string().optional(),
+  chapterName: z.string().optional(),
 });
 
 export const formSchema = z.discriminatedUnion("contentCategory", [

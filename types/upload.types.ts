@@ -79,6 +79,8 @@ export interface AcademicUploadFormValues {
   grade?: AcademicClass;
   subject?: AcademicSubject;
   resourceType?: AcademicResourceType;
+  chapterNumber?: string;
+  chapterName?: string;
   files: File[];
 }
 

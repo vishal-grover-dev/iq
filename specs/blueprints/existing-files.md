@@ -76,7 +76,7 @@
 ### types
 
 - `app.types.ts`: Application-wide TypeScript types including Theme enum.
- - `upload.types.ts`: Types for the upload flow.
+ - `upload.types.ts`: Types for the upload flow. Includes `IAcademicPathContext`.
 
 ### schema
 
@@ -86,6 +86,11 @@
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
 - `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
+ - `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
+
+### services
+
+- `upload.services.ts`: Supabase Storage uploads for academic content with directory helpers.
 
 ### constants
 

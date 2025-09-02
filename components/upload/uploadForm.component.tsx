@@ -7,9 +7,10 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { FormLabel } from "@/components/ui/form-label";
 import { FormSchema, formSchema } from "@/schema/upload.schema";
 import { Input } from "@/components/ui/input";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import {
   AcademicResourceType,
   ContentCategory,
@@ -19,11 +20,13 @@ import {
   type AcademicUploadFormValues,
   type UploadState,
 } from "@/types/upload.types";
+import { uploadAcademicFiles } from "@/services/upload.services";
 
 const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
 
 export default function UploadForm() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [isUploadingFiles, setIsUploadingFiles] = useState<boolean>(false);
 
   const defaultValues: AcademicUploadFormValues = {
     contentCategory: ContentCategory.ACADEMIC,
@@ -41,7 +44,6 @@ export default function UploadForm() {
     formState: { errors },
     setValue,
     watch,
-    reset,
   } = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues as unknown as FormSchema,
@@ -71,34 +73,66 @@ export default function UploadForm() {
     .map((v) => ({ label: v, value: v }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
+  const isAcademic = contentCategory === ContentCategory.ACADEMIC;
+
+  const isAcademicRequiredFieldsFilled = useMemo(() => {
+    return (
+      isAcademic && Boolean((watch as any)("board")) && Boolean(grade) && Boolean(subject) && Boolean(resourceType)
+    );
+  }, [isAcademic, watch, grade, subject, resourceType]);
+
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       const existing = watch("files") ?? [];
       const next = [...existing, ...acceptedFiles];
       setValue("files", next as any, { shouldValidate: true });
+
+      if (!isAcademicRequiredFieldsFilled) {
+        // should be disabled anyway, but guard
+        toast.error("Select required fields first", {
+          description: "Board, Class, Subject, and Resource type are required",
+        });
+        return;
+      }
+
+      try {
+        setIsUploadingFiles(true);
+        await uploadAcademicFiles(
+          {
+            contentCategory: ContentCategory.ACADEMIC,
+            board: (watch as any)("board"),
+            grade: grade!,
+            subject: subject!,
+            resourceType: resourceType!,
+            chapterNumber,
+            chapterName,
+          },
+          acceptedFiles
+        );
+        toast.success("Files uploaded to storage");
+      } catch (err: any) {
+        toast.error("Upload failed", { description: err?.message ?? "Please retry" });
+      } finally {
+        setIsUploadingFiles(false);
+      }
     },
-    [setValue, watch]
+    [setValue, watch, isAcademicRequiredFieldsFilled, grade, subject, resourceType, chapterNumber, chapterName]
   );
 
   const handleCategoryChange = useCallback(
     (val: ContentCategory) => {
       setValue("contentCategory", val as any, { shouldValidate: true, shouldTouch: true });
       if (val !== ContentCategory.ACADEMIC) {
-        // lazy import to avoid SSR mismatch
-        import("sonner").then(({ toast }) =>
-          toast.error("Coming soon", {
-            description:
-              val === ContentCategory.COMPETITIVE_EXAM
-                ? "Heads up: Competitive Exam is still an Aspirant, not yet ready!"
-                : "Lights, camera… almost: Subtitles support arriving shortly.",
-          })
-        );
+        toast.error("Coming soon", {
+          description:
+            val === ContentCategory.COMPETITIVE_EXAM
+              ? "Heads up: Competitive Exam is still an Aspirant, not yet ready!"
+              : "Lights, camera… almost: Subtitles support arriving shortly.",
+        });
       }
     },
     [setValue]
   );
-
-  const isAcademic = contentCategory === ContentCategory.ACADEMIC;
 
   const onSubmit = async (data: FormSchema) => {
     try {
@@ -109,8 +143,11 @@ export default function UploadForm() {
     }
   };
 
-  const disabled = uploadState === "submitting" || uploadState === "processing";
-  const actionsDisabled = disabled || (contentCategory as any) !== ContentCategory.ACADEMIC;
+  const disabled = uploadState === "submitting" || uploadState === "processing" || isUploadingFiles;
+  const dropzoneDisabled =
+    disabled || (contentCategory as any) !== ContentCategory.ACADEMIC || !isAcademicRequiredFieldsFilled;
+  const submitDisabled =
+    disabled || !isAcademicRequiredFieldsFilled || !files || (files as any).length === 0 || !isAcademic;
 
   if (uploadState === "processing") {
     return <Loader />;
@@ -228,7 +265,7 @@ export default function UploadForm() {
             onDrop={onDrop}
             accept={ACCEPTED_MIME_TYPES as any}
             multiple={true}
-            disabled={actionsDisabled}
+            disabled={dropzoneDisabled}
             description='Drag and drop PDF files here, or click to browse'
             hint='Only PDF files are accepted'
           />
@@ -247,7 +284,7 @@ export default function UploadForm() {
       </div>
 
       <div className='flex items-center gap-3'>
-        <Button type='submit' size='lg' disabled={actionsDisabled} className='w-full'>
+        <Button type='submit' size='lg' disabled={submitDisabled} className='w-full'>
           Submit
         </Button>
 

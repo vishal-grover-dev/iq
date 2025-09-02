@@ -85,3 +85,17 @@ export interface AcademicUploadFormValues {
 }
 
 export type UploadState = "idle" | "submitting" | "processing" | "completed" | "failed";
+
+/**
+ * Context required to construct storage paths for Academic uploads.
+ * Used by upload services and utilities when organizing files in buckets.
+ */
+export interface IAcademicPathContext {
+  contentCategory: ContentCategory.ACADEMIC;
+  board: EducationBoard;
+  grade: AcademicClass;
+  subject: AcademicSubject;
+  resourceType: AcademicResourceType;
+  chapterNumber?: string;
+  chapterName?: string;
+}

@@ -25,6 +25,14 @@ When creating files:
 - Hooks use their base name only (camelCase).
 - Domain subfolders must be consistent across `components/`.
 
+### Types & Interfaces Naming
+- Prefix interfaces with `I` (e.g., `IAcademicPathContext`).
+- Prefix types with `T` and enums with `E`.
+
+### Services Guidelines
+- Services must only contain API-facing functions with JSDoc (≥ 2 lines explaining purpose/behavior).
+- Move helpers to `utils/` and shared types/interfaces to `types/`.
+
 ### Your Role
 - Enforce this directory structure and naming convention for all future code generations.
 - Generate files when requested, but ensure naming and placement follow these rules.

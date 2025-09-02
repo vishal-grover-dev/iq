@@ -18,6 +18,7 @@
 - `tech-stack.md`: Tech stack and architecture overview.
 - `prd.md`: Product requirements document.
 - `existing-files.md`: This index of current files.
+- `env-examples.md`: Example environment variables and configuration.
 
 ### app
 
@@ -84,6 +85,7 @@
 ### utils
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
+- `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
 
 ### constants
 

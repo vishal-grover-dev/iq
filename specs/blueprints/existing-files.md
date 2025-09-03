@@ -75,8 +75,8 @@
 
 ### types
 
-- `app.types.ts`: Application-wide TypeScript types including Theme enum.
- - `upload.types.ts`: Types for the upload flow. Includes `IAcademicPathContext`.
+- `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
+ - `upload.types.ts`: Types for the upload flow. Includes `E*` enums, `IAcademicUploadFormValues`, `TUploadState`, and `IAcademicPathContext`.
 
 ### schema
 

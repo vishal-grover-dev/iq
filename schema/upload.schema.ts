@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  ContentCategory,
-  AcademicClass,
-  AcademicSubject,
-  EducationBoard,
-  AcademicResourceType,
+  EContentCategory,
+  EAcademicClass,
+  EAcademicSubject,
+  EEducationBoard,
+  EAcademicResourceType,
 } from "@/types/upload.types";
 export const baseSchema = z.object({
   files: z
@@ -17,19 +17,19 @@ export const baseSchema = z.object({
 });
 
 export const academicSchema = baseSchema.extend({
-  contentCategory: z.literal(ContentCategory.ACADEMIC),
-  board: z.enum(Object.values(EducationBoard) as [string, ...string[]]),
-  grade: z.enum(Object.values(AcademicClass) as [string, ...string[]]),
-  subject: z.enum(Object.values(AcademicSubject) as [string, ...string[]]),
-  resourceType: z.enum([AcademicResourceType.TEXTBOOK, AcademicResourceType.PREVIOUS_YEAR_PAPER]),
+  contentCategory: z.literal(EContentCategory.ACADEMIC),
+  board: z.enum(Object.values(EEducationBoard) as [string, ...string[]]),
+  grade: z.enum(Object.values(EAcademicClass) as [string, ...string[]]),
+  subject: z.enum(Object.values(EAcademicSubject) as [string, ...string[]]),
+  resourceType: z.enum([EAcademicResourceType.TEXTBOOK, EAcademicResourceType.PREVIOUS_YEAR_PAPER]),
   chapterNumber: z.string().optional(),
   chapterName: z.string().optional(),
 });
 
 export const formSchema = z.discriminatedUnion("contentCategory", [
   academicSchema,
-  baseSchema.extend({ contentCategory: z.literal(ContentCategory.COMPETITIVE_EXAM) }),
-  baseSchema.extend({ contentCategory: z.literal(ContentCategory.VIDEO_SUBTITLES) }),
+  baseSchema.extend({ contentCategory: z.literal(EContentCategory.COMPETITIVE_EXAM) }),
+  baseSchema.extend({ contentCategory: z.literal(EContentCategory.VIDEO_SUBTITLES) }),
 ]);
 
-export type FormSchema = z.infer<typeof formSchema>;
+export type TFormSchema = z.infer<typeof formSchema>;

@@ -2,7 +2,7 @@ import React from "react";
 import { useDropzone, type Accept } from "react-dropzone";
 import { cn } from "@/utils/tailwind.utils";
 
-type FileDropzoneProps = {
+type TFileDropzoneProps = {
   onDrop: (acceptedFiles: File[]) => void;
   accept?: Accept | Record<string, string[]>;
   multiple?: boolean;
@@ -20,7 +20,7 @@ export default function FileDropzone({
   className,
   description = "Drag and drop files here, or click to browse",
   hint,
-}: FileDropzoneProps) {
+}: TFileDropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: accept as any,

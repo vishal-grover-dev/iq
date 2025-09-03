@@ -1,15 +1,15 @@
-export enum ContentCategory {
+export enum EContentCategory {
   ACADEMIC = "Academic",
   COMPETITIVE_EXAM = "Competitive Exam",
   VIDEO_SUBTITLES = "Video (Subtitles)",
 }
 
-export enum AcademicResourceType {
+export enum EAcademicResourceType {
   TEXTBOOK = "Textbook (Learning Material)",
   PREVIOUS_YEAR_PAPER = "Previous Year Question Paper",
 }
 
-export enum AcademicClass {
+export enum EAcademicClass {
   CLASS_1 = "1",
   CLASS_2 = "2",
   CLASS_3 = "3",
@@ -24,7 +24,7 @@ export enum AcademicClass {
   CLASS_12 = "12",
 }
 
-export enum AcademicSubject {
+export enum EAcademicSubject {
   MATHEMATICS = "Mathematics",
   SCIENCE = "Science",
   ENGLISH = "English",
@@ -41,7 +41,7 @@ export enum AcademicSubject {
   ECONOMICS = "Economics",
 }
 
-export enum EducationBoard {
+export enum EEducationBoard {
   CBSE = "Central Board of Secondary Education",
   CISCE = "Council for the Indian School Certificate Examinations",
   NIOS = "National Institute of Open Schooling",
@@ -73,29 +73,29 @@ export enum EducationBoard {
   WEST_BENGAL_WBBSE = "West Bengal Board of Secondary Education",
 }
 
-export interface AcademicUploadFormValues {
-  contentCategory: ContentCategory;
-  board?: EducationBoard;
-  grade?: AcademicClass;
-  subject?: AcademicSubject;
-  resourceType?: AcademicResourceType;
+export interface IAcademicUploadFormValues {
+  contentCategory: EContentCategory;
+  board?: EEducationBoard;
+  grade?: EAcademicClass;
+  subject?: EAcademicSubject;
+  resourceType?: EAcademicResourceType;
   chapterNumber?: string;
   chapterName?: string;
   files: File[];
 }
 
-export type UploadState = "idle" | "submitting" | "processing" | "completed" | "failed";
+export type TUploadState = "idle" | "submitting" | "processing" | "completed" | "failed";
 
 /**
  * Context required to construct storage paths for Academic uploads.
  * Used by upload services and utilities when organizing files in buckets.
  */
 export interface IAcademicPathContext {
-  contentCategory: ContentCategory.ACADEMIC;
-  board: EducationBoard;
-  grade: AcademicClass;
-  subject: AcademicSubject;
-  resourceType: AcademicResourceType;
+  contentCategory: EContentCategory.ACADEMIC;
+  board: EEducationBoard;
+  grade: EAcademicClass;
+  subject: EAcademicSubject;
+  resourceType: EAcademicResourceType;
   chapterNumber?: string;
   chapterName?: string;
 }

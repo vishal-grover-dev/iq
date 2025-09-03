@@ -5,7 +5,7 @@ import { useTheme } from "@/hooks/useTheme.hook";
 import { MoonIcon, SunIcon } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/utils/tailwind.utils";
 import { useEffect, useState } from "react";
-import { Theme } from "@/types/app.types";
+import { ETheme as Theme } from "@/types/app.types";
 
 type ThemeToggleProps = {
   className?: string;

@@ -1,7 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { Theme, ResolvedTheme, ThemeContextValue } from "@/types/app.types";
+import {
+  ETheme as Theme,
+  TResolvedTheme as ResolvedTheme,
+  IThemeContextValue as ThemeContextValue,
+} from "@/types/app.types";
 
 export const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 

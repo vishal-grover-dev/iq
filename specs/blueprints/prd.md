@@ -21,7 +21,7 @@ IQ is an intelligent question generation platform that transforms educational co
 
 - **Document Upload:** Support for textbook and past paper uploads
 - **Automatic Indexing:** Auto-categorize content by board + grade + subject
-- **Vector Storage:** Store processed content in Qdrant collections for efficient retrieval
+- **Vector Storage:** Store processed content using pgvector in PostgreSQL for efficient retrieval
 
 ### 2. Intelligent Question Generation
 
@@ -43,7 +43,7 @@ IQ is an intelligent question generation platform that transforms educational co
 
 - **Frontend:** Modern web interface with intuitive UX
 - **Backend:** RAG-powered question generation engine
-- **Database:** Qdrant vector database for content indexing
+- **Database:** PostgreSQL with pgvector extension for vector embeddings, Full-Text Search (FTS) for keyword search, and Hybrid Search combining both approaches
 - **Output:** PDF generation with professional formatting
 
 ## Success Metrics

@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { FormLabel } from "@/components/ui/form-label";
-import { FormSchema, formSchema } from "@/schema/upload.schema";
+import { TFormSchema as FormSchema, formSchema } from "@/schema/upload.schema";
 import { Input } from "@/components/ui/input";
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
-  AcademicResourceType,
-  ContentCategory,
-  AcademicClass,
-  AcademicSubject,
-  EducationBoard,
-  type AcademicUploadFormValues,
-  type UploadState,
+  EAcademicResourceType as AcademicResourceType,
+  EContentCategory as ContentCategory,
+  EAcademicClass as AcademicClass,
+  EAcademicSubject as AcademicSubject,
+  EEducationBoard as EducationBoard,
+  type IAcademicUploadFormValues as AcademicUploadFormValues,
+  type TUploadState as UploadState,
 } from "@/types/upload.types";
 import { uploadAcademicFiles } from "@/services/upload.services";
 

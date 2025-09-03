@@ -11,11 +11,11 @@ import {
   NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
 
-type HeaderProps = {
+type THeaderProps = {
   className?: string;
 };
 
-export function Header({ className }: HeaderProps) {
+export function Header({ className }: THeaderProps) {
   return (
     <header
       className={cn(

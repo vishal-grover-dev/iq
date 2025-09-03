@@ -2,11 +2,11 @@ import Link from "next/link";
 import { cn } from "@/utils/tailwind.utils";
 import { LinkedinLogoIcon } from "@phosphor-icons/react/dist/ssr";
 
-type FooterProps = {
+type TFooterProps = {
   className?: string;
 };
 
-export default function Footer({ className }: FooterProps) {
+export default function Footer({ className }: TFooterProps) {
   return (
     <footer
       className={cn(

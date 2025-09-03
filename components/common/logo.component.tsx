@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/utils/tailwind.utils";
 
-export type LogoProps = {
+export type TLogoProps = {
   alt?: string;
   width?: number;
   height?: number;
@@ -9,7 +9,7 @@ export type LogoProps = {
   priority?: boolean;
 };
 
-export function Logo({ alt = "IQ logo", width = 32, height = 32, className, priority = false }: LogoProps) {
+export function Logo({ alt = "IQ logo", width = 32, height = 32, className, priority = false }: TLogoProps) {
   return (
     <Image
       src='/logo.svg'

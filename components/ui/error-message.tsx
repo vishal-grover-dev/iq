@@ -5,14 +5,14 @@ import * as React from "react";
 import { cn } from "@/utils/tailwind.utils";
 import { WarningCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
-export type ErrorMessageProps = {
+export type TErrorMessageProps = {
   message?: string;
   className?: string;
   children?: React.ReactNode;
   showIcon?: boolean;
 };
 
-export function ErrorMessage({ message, children, className, showIcon = true }: ErrorMessageProps) {
+export function ErrorMessage({ message, children, className, showIcon = true }: TErrorMessageProps) {
   const content = message ?? children;
   if (!content) return null;
 

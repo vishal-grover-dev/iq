@@ -1,13 +1,13 @@
-export enum Theme {
+export enum ETheme {
   LIGHT = "light",
   DARK = "dark",
 }
 
-export type ResolvedTheme = Theme.LIGHT | Theme.DARK;
+export type TResolvedTheme = ETheme.LIGHT | ETheme.DARK;
 
-export interface ThemeContextValue {
-  theme: Theme;
-  resolvedTheme: ResolvedTheme;
-  setTheme: (theme: Theme) => void;
+export interface IThemeContextValue {
+  theme: ETheme;
+  resolvedTheme: TResolvedTheme;
+  setTheme: (theme: ETheme) => void;
   toggleTheme: () => void;
 }

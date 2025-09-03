@@ -38,13 +38,6 @@
 - Action: Submit
   - Label: Submit
 
-## Processing (after Submit)
-- Loader: bulb slowly igniting animation.
-- Message: We are on our way to enlighten, this process takes time, once it’s done we would inform you on your email (This can be enhanced for better clarity)
-- Behavior:
-  - Email notification sent on completion.
-  - No technical details displayed.
-
 ## Non-goals
 - Do not show embeddings, vectorization, or any technical pipeline steps.
 - Do not add extra steps or wizards.

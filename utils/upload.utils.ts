@@ -15,32 +15,19 @@ export function slugify(input: string): string {
 
 /**
  * Produces a deterministic directory path for academic uploads based on contextual
- * metadata (board, class, subject, resource type, and optional chapter fields).
+ * metadata (board, class, and subject).
  */
 export function buildAcademicDirectoryPath(ctx: {
   board: string;
   grade: string;
   subject: string;
-  resourceType: string;
-  chapterNumber?: string;
-  chapterName?: string;
 }): string {
   const parts: string[] = [
     "academic",
     slugify(ctx.board),
     `class-${slugify(ctx.grade)}`,
     slugify(ctx.subject),
-    slugify(ctx.resourceType),
   ];
-
-  const chapterLabel = [ctx.chapterNumber, ctx.chapterName]
-    .filter(Boolean)
-    .map((x) => slugify(String(x)))
-    .join("-");
-
-  if (chapterLabel) {
-    parts.push(chapterLabel);
-  }
 
   return parts.join("/");
 }

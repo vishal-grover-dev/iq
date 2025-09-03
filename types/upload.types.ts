@@ -95,7 +95,4 @@ export interface IAcademicPathContext {
   board: EEducationBoard;
   grade: EAcademicClass;
   subject: EAcademicSubject;
-  resourceType: EAcademicResourceType;
-  chapterNumber?: string;
-  chapterName?: string;
 }

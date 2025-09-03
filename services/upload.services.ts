@@ -1,7 +1,7 @@
 import { getSupabaseBrowserClient } from "@/utils/supabase.utils";
 import { buildAcademicDirectoryPath, fileNameWithTimestamp } from "@/utils/upload.utils";
 import { IAcademicPathContext } from "@/types/upload.types";
-import { SUPABASE_ACADEMICS_BUCKET } from "@/constants/app.constants";
+import { SUPABASE_RAG_BUCKET } from "@/constants/app.constants";
 
 /**
  * Uploads a batch of Academic files into Supabase Storage using a deterministic
@@ -20,16 +20,13 @@ export async function uploadAcademicFiles(
     board: ctx.board,
     grade: ctx.grade,
     subject: ctx.subject,
-    resourceType: ctx.resourceType,
-    chapterNumber: ctx.chapterNumber,
-    chapterName: ctx.chapterName,
   });
 
   const results: { path: string; fullPath: string }[] = [];
 
   for (const file of files) {
     const objectName = `${baseDir}/${fileNameWithTimestamp(file.name)}`;
-    const { error } = await client.storage.from(SUPABASE_ACADEMICS_BUCKET).upload(objectName, file, {
+    const { error } = await client.storage.from(SUPABASE_RAG_BUCKET).upload(objectName, file, {
       cacheControl: "3600",
       upsert: false,
       contentType: file.type || "application/octet-stream",
@@ -37,7 +34,7 @@ export async function uploadAcademicFiles(
     if (error) {
       throw new Error(`Upload failed for ${file.name}: ${error.message}`);
     }
-    results.push({ path: objectName, fullPath: `${SUPABASE_ACADEMICS_BUCKET}/${objectName}` });
+    results.push({ path: objectName, fullPath: `${SUPABASE_RAG_BUCKET}/${objectName}` });
   }
 
   return results;

@@ -99,6 +99,7 @@
 ### docs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.
+ - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenRouter and pgvector.
 
 ### migrations
 

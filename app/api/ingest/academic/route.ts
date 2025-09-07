@@ -5,6 +5,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { SUPABASE_RAG_BUCKET, DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { extractTextFromPdfBufferLC, chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddingsBatch } from "@/services/embeddings.services";
+import { extractChapterFromFilename, extractChapterFromText, buildChapterTitle } from "@/utils/ingest.utils";
 
 export const runtime = "nodejs";
 
@@ -46,14 +47,23 @@ export async function POST(req: NextRequest) {
     }
     ingestionId = ingestionInsert.id as string;
 
-    // 2) Create document rows
-    const documentsToInsert = parsed.uploadedObjects.map((obj) => ({
-      ingestion_id: ingestionId,
-      bucket: obj.bucket ?? SUPABASE_RAG_BUCKET,
-      path: obj.storagePath,
-      mime_type: obj.mimeType ?? "application/pdf",
-      title: obj.originalFileName,
-    }));
+    // Prepare map for later lookups
+    const pathToOriginalName = new Map<string, string>(
+      parsed.uploadedObjects.map((o: any) => [o.storagePath, o.originalFileName])
+    );
+
+    // 2) Create document rows with initial title derived from filename heuristics
+    const documentsToInsert = parsed.uploadedObjects.map((obj) => {
+      const fromFilename = extractChapterFromFilename(obj.originalFileName ?? "");
+      const initialTitle = buildChapterTitle(fromFilename) ?? obj.originalFileName;
+      return {
+        ingestion_id: ingestionId,
+        bucket: obj.bucket ?? SUPABASE_RAG_BUCKET,
+        path: obj.storagePath,
+        mime_type: obj.mimeType ?? "application/pdf",
+        title: initialTitle,
+      };
+    });
     const { data: docsInserted, error: docsError } = await supabase
       .from("documents")
       .insert(documentsToInsert)
@@ -75,6 +85,26 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = await fileData.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const { text, numPages } = await extractTextFromPdfBufferLC(buffer);
+
+      // Attempt to extract chapter metadata from text and update document title if available
+      try {
+        const originalName = pathToOriginalName.get(doc.path) ?? "";
+        const fromFilename = extractChapterFromFilename(originalName);
+        const fromText = extractChapterFromText(text);
+        const merged = { ...fromFilename } as any;
+        if (fromText.chapterNumber) merged.chapterNumber = fromText.chapterNumber;
+        if (fromText.chapterName) merged.chapterName = fromText.chapterName;
+        if (fromText.label) merged.label = fromText.label;
+        const refinedTitle = buildChapterTitle(merged);
+        if (refinedTitle) {
+          await supabase.from("documents").update({ title: refinedTitle, num_pages: numPages }).eq("id", doc.id);
+        } else {
+          await supabase.from("documents").update({ num_pages: numPages }).eq("id", doc.id);
+        }
+      } catch {
+        // Best-effort: if extraction fails, still update pages
+        await supabase.from("documents").update({ num_pages: numPages }).eq("id", doc.id);
+      }
 
       const chunks = await chunkTextLC(text, { chunkSize: 1800, overlap: 200 });
       totalChunks += chunks.length;

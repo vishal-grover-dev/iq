@@ -92,6 +92,7 @@
 - `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
 - `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
 - `langchain.utils.ts`: Combined PDF extraction and text chunking (LangChain-based).
+ - `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
 
 ### services
 
@@ -108,6 +109,7 @@
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.
  - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenRouter and pgvector.
+ - `retrieval-phase.md`: Plan for retrieval UI and backend (hybrid search, contracts, endpoints).
 
 ### migrations
 

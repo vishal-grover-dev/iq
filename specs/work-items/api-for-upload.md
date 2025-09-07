@@ -2,9 +2,9 @@
 
 ## Summary
 
-- Purpose: Persist upload metadata, then generate text chunks and vector embeddings into pgvector (Supabase) using OpenRouter models via LangChain.
-- Trigger: User clicks Submit on Upload form.
-- Scope: Academic category only (for now). Uses `buildAcademicDirectoryPath` for deterministic paths.
+- Purpose: Persist upload metadata, then generate text chunks and vector embeddings into pgvector (Supabase).
+  - Embeddings provider: Hugging Face Inference API using Mixedbread "MxBai Embed Large V1" (1024-d) via a server-only HTTP client (axios interceptors).
+  - Keep the embedding dimension standardized at 1024 to match database schema and retrieval.
 
 ## API Endpoint
 
@@ -67,7 +67,7 @@ On error:
   - `chunk_index` int
   - `content` text
   - `tokens` int
-  - `embedding` vector(1536) -- match the embedding model dimension
+  - `embedding` vector(1024) — matches Mixedbread MxBai Embed Large V1 output dimension
 
 Suggested RLS:
 
@@ -81,7 +81,7 @@ Suggested RLS:
    - Fetch file from Supabase Storage (service role)
    - Parse to text (PDF.js for PDF; DOCX via Mammoth later)
    - Chunk text (LangChain `RecursiveCharacterTextSplitter` 1–2k chars, 10–15% overlap)
-   - Get embeddings with OpenRouter model via LangChain `Embeddings` wrapper
+   - Get embeddings with Hugging Face Inference (MxBai Embed Large V1, 1024-d) via server-only axios client
    - Upsert to `document_chunks` (content, tokens, embedding)
 4. Update `ingestions.status='completed'` and return summary.
 
@@ -92,9 +92,9 @@ Suggested RLS:
 - Client upload remains on the browser using anon key; the API only reads metadata and performs ingestion.
 - Use Supabase server client with Service Role for Storage reads and DB writes.
 
-## Embedding Models (OpenRouter)
+## Embedding Models (HF/OR)
 
-- mxbai-embed-large (Mixedbread, 1024-d): Strong overall retrieval quality; fast; widely used.
+- mxbai-embed-large (Mixedbread, 1024-d) — Standard for this project. Use Hugging Face Inference by default.
 - BAAI/bge-m3 (BAAI, 1024-d): All‑in‑one family; solid semantic embeddings.
 - nomic-ai/nomic-embed-text-v1.5 (Nomic, 768-d): Lightweight; good cost/quality tradeoff.
 - jinaai/jina-embeddings-v2-base-en (Jina, 768-d): Competitive on MTEB; English-focused.
@@ -102,9 +102,8 @@ Suggested RLS:
 
 Notes:
 
-- Standardize on one model to fix pgvector dimension. If using mxbai/bge‑m3/arctic‑embed‑l, use vector(1024). If using nomic/jina base, use vector(768).
-- "Free" status on OpenRouter can change; many above are free or low-cost. If one becomes paid or throttled, fall back to another from this list. You can probe model availability at runtime.
-- SDK: We will use the OpenAI SDK pointed at OpenRouter.
+- Standardize on a single embedding space across indexing and queries. Project default: 1024‑d (mxbai/bge‑m3/arctic‑embed‑l). If switching to 768‑d (nomic/jina), migrate the column to `vector(768)`.
+- "Free" status on OpenRouter can change; prefer Hugging Face for embeddings by default. Probe availability and fall back between HF and OR as needed.
 
 ## Pseudocode (Next.js Route Handler)
 

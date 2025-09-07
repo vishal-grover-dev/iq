@@ -52,3 +52,7 @@ IQ is an intelligent question generation platform that transforms educational co
 - User adoption across different educational boards
 - Export quality and formatting consistency
 - System performance and response times
+
+## Communication Guidance (for novice users)
+
+- When the user indicates they are new to GenAI or asks for more detailed explanations, respond with simple language and include short, concrete examples to illustrate concepts and choices (e.g., example queries, sample chunk/rerank flows, example chapter title extraction inputs/outputs). Keep examples minimal but clarifying.

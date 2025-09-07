@@ -1,0 +1,19 @@
+## Project-aware assistance
+
+- Always consult the documents under `specs/` (especially `specs/blueprints/*.md` and `specs/work-items/*.md`) before answering a user question or performing any task. Use these docs to understand requirements, architecture, conventions, and workflows.
+- Treat `specs/blueprints/prd.md`, `specs/blueprints/tech-stack.md`, and `specs/blueprints/directory-structure.md` as authoritative for product scope, stack, and structural conventions. Align code and explanations with these documents.
+- If information in code and `specs/` conflicts or is missing, call it out and request clarification, referencing the specific document and section when possible.
+
+## Communication and documentation norms
+
+- Do not include code or SQL in `.md` files (except `README.md`); markdown docs are for understanding and explanation.
+- If anything is unclear during a task or question, ask for clarification immediately; efficiency and correctness are priorities.
+- Be honest, transparent, and direct; candid questions and blunt feedback are welcome.
+
+## Context inclusion
+
+- Always include these `specs/blueprints` files in context (pin or @-include):
+  - `specs/blueprints/prd.md`
+  - `specs/blueprints/tech-stack.md`
+  - `specs/blueprints/directory-structure.md`
+  - `specs/blueprints/existing-files.md`

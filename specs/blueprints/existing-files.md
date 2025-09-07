@@ -11,6 +11,7 @@
 - `components.json`: shadcn/ui generator config and path aliases.
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
+- `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
 
 ### docs/blueprints
 

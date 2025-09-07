@@ -2,6 +2,7 @@ import "./globals.css";
 import Header from "@/components/common/header.component";
 import Footer from "@/components/common/footer.component";
 import ThemeProvider from "@/store/providers/theme.provider";
+import QueryProvider from "@/store/providers/query.provider";
 import { Toaster } from "sonner";
 
 export default function RootLayout({
@@ -17,12 +18,14 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <div className='flex min-h-screen flex-col'>
-            <Header />
-            <main className='flex-1'>{children}</main>
-            <Footer />
-          </div>
-          <Toaster richColors position='top-center' closeButton />
+          <QueryProvider>
+            <div className='flex min-h-screen flex-col'>
+              <Header />
+              <main className='flex-1'>{children}</main>
+              <Footer />
+            </div>
+            <Toaster richColors position='top-center' closeButton />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -13,7 +13,7 @@
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
 
-### docs/blueprints
+### specs/blueprints
 
 - `directory-structure.md`: Enforced directory and naming conventions.
 - `tech-stack.md`: Tech stack and architecture overview.
@@ -73,31 +73,38 @@
 ### store/providers
 
 - `theme.provider.tsx`: Theme context/provider; persists to localStorage with dark mode as default.
+- `query.provider.tsx`: React Query provider with sensible defaults.
 
 ### types
 
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
- - `upload.types.ts`: Types for the upload flow. Includes `E*` enums, `IAcademicUploadFormValues`, `TUploadState`, and `IAcademicPathContext`.
+- `upload.types.ts`: Types for the upload flow. Includes `E*` enums, `IAcademicUploadFormValues`, `TUploadState`, and `IAcademicPathContext`.
+- `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 
 ### schema
 
 - `upload.schema.ts`: Zod schema and validation for the upload flow.
+- `ingest.schema.ts`: Zod schema for ingestion API request/response.
 
 ### utils
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
 - `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
- - `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
+- `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
+- `langchain.utils.ts`: Combined PDF extraction and text chunking (LangChain-based).
 
 ### services
 
 - `upload.services.ts`: Supabase Storage uploads for academic content with directory helpers.
+- `embeddings.services.ts`: Hugging Face embeddings client.
+- `ingest.services.ts`: Client helper to call ingestion API.
+- `http.services.ts`: Axios clients with interceptors (API and Hugging Face).
 
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
 
-### docs/work-items
+### specs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.
  - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenRouter and pgvector.
@@ -105,3 +112,8 @@
 ### migrations
 
 - `001-Storage-Academics-RLS-02-Sep-25.sql`: Creates `academics` bucket if missing; adds RLS policies (public read, authenticated insert/update/delete).
+ - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
+
+### app/api
+
+- `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.

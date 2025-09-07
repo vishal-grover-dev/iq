@@ -21,6 +21,8 @@ import {
   type TUploadState as UploadState,
 } from "@/types/upload.types";
 import { uploadAcademicFiles } from "@/services/upload.services";
+import { useIngestAcademicMutations } from "@/services/ingest.services";
+import { SUPABASE_RAG_BUCKET } from "@/constants/app.constants";
 
 const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
 
@@ -28,6 +30,10 @@ export default function UploadForm() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [isUploadingFiles, setIsUploadingFiles] = useState<boolean>(false);
   const [hasUploadFailed, setHasUploadFailed] = useState<boolean>(false);
+  const [uploadedObjects, setUploadedObjects] = useState<
+    { originalFileName: string; storagePath: string; bucket: string; mimeType?: string }[]
+  >([]);
+  const { mutateAsync: ingestAcademic } = useIngestAcademicMutations();
 
   const defaultValues: AcademicUploadFormValues = {
     contentCategory: ContentCategory.ACADEMIC,
@@ -99,19 +105,27 @@ export default function UploadForm() {
       try {
         setIsUploadingFiles(true);
         setHasUploadFailed(false);
-        await uploadAcademicFiles(
+        const results = await uploadAcademicFiles(
           {
             contentCategory: ContentCategory.ACADEMIC,
             board: (watch as any)("board"),
             grade: grade!,
             subject: subject!,
-            resourceType: resourceType!,
-            chapterNumber,
-            chapterName,
           },
           acceptedFiles
         );
         toast.success("Files uploaded to storage");
+
+        // Persist uploaded object info for ingestion
+        setUploadedObjects((prev) => [
+          ...prev,
+          ...results.map((r, idx) => ({
+            originalFileName: acceptedFiles[idx].name,
+            storagePath: r.path,
+            bucket: SUPABASE_RAG_BUCKET,
+            mimeType: acceptedFiles[idx].type || "application/pdf",
+          })),
+        ]);
       } catch (err: any) {
         setHasUploadFailed(true);
         // Revert optimistic file list addition for the failed batch
@@ -143,6 +157,27 @@ export default function UploadForm() {
     try {
       // Immediately enter processing state; mock progress UI will manage 5-minute interval
       setUploadState("processing");
+      if (!uploadedObjects.length) {
+        toast.error("Please upload at least one file before submitting");
+        setUploadState("idle");
+        return;
+      }
+      const payload = {
+        contentCategory: ContentCategory.ACADEMIC,
+        metadata: {
+          board: (watch as any)("board"),
+          grade: grade!,
+          subject: subject!,
+          resourceType: resourceType!,
+          chapterNumber,
+          chapterName,
+        },
+        uploadedObjects,
+      } as any;
+
+      await ingestAcademic(payload);
+      setUploadState("completed");
+      toast.success("Ingestion started");
     } catch (e) {
       setUploadState("failed");
     }

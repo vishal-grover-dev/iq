@@ -87,3 +87,9 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 ## Task Response Style
 
 - After completing any task, respond in 2–5 bullets: either provide a concise explanation when asked/queried, or outline the next set of actions when operating in agent/task mode.
+
+## Dependency Management
+
+- The assistant has discretion to add runtime or dev dependencies when required to meet the scope efficiently.
+- Choices should align with the documented tech stack, be widely used, and minimize bloat.
+- At the end of each task, the assistant will list any newly added dependencies along with a brief note explaining their purpose and where they are used in the codebase.

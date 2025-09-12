@@ -19,10 +19,21 @@ import {
   EEducationBoard as EducationBoard,
   type IAcademicUploadFormValues as AcademicUploadFormValues,
   type TUploadState as UploadState,
+  EInterviewStream as InterviewStream,
+  EInterviewTopic as InterviewTopic,
+  EInterviewIngestType as InterviewIngestType,
 } from "@/types/upload.types";
 import { uploadAcademicFiles } from "@/services/upload.services";
-import { useIngestAcademicMutations } from "@/services/ingest.services";
+import { useIngestAcademicMutations, useIngestRepoWebMutations } from "@/services/ingest.services";
 import { SUPABASE_RAG_BUCKET } from "@/constants/app.constants";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  INTERVIEW_DEFAULT_STREAM,
+  INTERVIEW_INGEST_TYPE_OPTIONS,
+  INTERVIEW_SUBTOPICS,
+  INTERVIEW_TOPIC_OPTIONS,
+} from "@/utils/interview-streams-options.utils";
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 
 const ACCEPTED_MIME_TYPES = { "application/pdf": [".pdf"] } as const;
 
@@ -33,39 +44,47 @@ export default function UploadForm() {
   const [uploadedObjects, setUploadedObjects] = useState<
     { originalFileName: string; storagePath: string; bucket: string; mimeType?: string }[]
   >([]);
+  const [openModalIndex, setOpenModalIndex] = useState<number | null>(null);
+  const [customSubtopic, setCustomSubtopic] = useState<string>("");
   const { mutateAsync: ingestAcademic } = useIngestAcademicMutations();
+  const { mutateAsync: ingestRepoWeb } = useIngestRepoWebMutations();
 
-  const defaultValues: AcademicUploadFormValues = {
-    contentCategory: ContentCategory.ACADEMIC,
-    board: undefined,
-    grade: undefined,
-    subject: undefined,
-    resourceType: undefined,
-    chapterNumber: undefined,
-    chapterName: undefined,
-    files: [],
-  };
+  const defaultValues: any = {
+    contentCategory: ContentCategory.INTERVIEW_STREAMS,
+    stream: InterviewStream.FRONTEND_REACT,
+    items: [
+      {
+        topic: InterviewTopic.REACT,
+        subtopic: INTERVIEW_SUBTOPICS[InterviewTopic.REACT][0],
+        ingestType: InterviewIngestType.REPO,
+        url: "",
+      },
+    ],
+  } as const;
 
   const {
     handleSubmit,
     formState: { errors },
     setValue,
     watch,
-  } = useForm<FormSchema>({
+  } = useForm<any>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues as unknown as FormSchema,
+    defaultValues: defaultValues as any,
     mode: "onBlur",
   });
 
   const contentCategory = watch("contentCategory");
-  const files = watch("files");
+  const files = (watch as any)("files") as File[] | undefined;
   const resourceType = (watch as any)("resourceType") as AcademicResourceType | undefined;
   const grade = (watch as any)("grade") as AcademicClass | undefined;
   const subject = (watch as any)("subject") as AcademicSubject | undefined;
   const chapterNumber = (watch as any)("chapterNumber") as string | undefined;
   const chapterName = (watch as any)("chapterName") as string | undefined;
+  const stream = (watch as any)("stream") as InterviewStream | undefined;
+  const items = ((watch as any)("items") as any[]) || [];
 
   const contentCategoryOptions = [
+    { label: ContentCategory.INTERVIEW_STREAMS, value: ContentCategory.INTERVIEW_STREAMS },
     { label: ContentCategory.ACADEMIC, value: ContentCategory.ACADEMIC },
     { label: ContentCategory.COMPETITIVE_EXAM, value: ContentCategory.COMPETITIVE_EXAM },
     { label: ContentCategory.VIDEO_SUBTITLES, value: ContentCategory.VIDEO_SUBTITLES },
@@ -81,6 +100,7 @@ export default function UploadForm() {
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const isAcademic = contentCategory === ContentCategory.ACADEMIC;
+  const isInterview = contentCategory === ContentCategory.INTERVIEW_STREAMS;
 
   const isAcademicRequiredFieldsFilled = useMemo(() => {
     return (
@@ -141,43 +161,84 @@ export default function UploadForm() {
   const handleCategoryChange = useCallback(
     (val: ContentCategory) => {
       setValue("contentCategory", val as any, { shouldValidate: true, shouldTouch: true });
-      if (val !== ContentCategory.ACADEMIC) {
-        toast.error("Coming soon", {
-          description:
-            val === ContentCategory.COMPETITIVE_EXAM
-              ? "Heads up: Competitive Exam is still an Aspirant, not yet ready!"
-              : "Lights, camera… almost: Subtitles support arriving shortly.",
-        });
+      if (val === ContentCategory.INTERVIEW_STREAMS) {
+        // initialize stream/items if switching from Academic
+        setValue("stream", (stream ?? INTERVIEW_DEFAULT_STREAM) as any, { shouldValidate: true });
+        if (!items || items.length === 0) {
+          setValue(
+            "items",
+            [
+              {
+                topic: InterviewTopic.REACT,
+                subtopic: INTERVIEW_SUBTOPICS[InterviewTopic.REACT][0],
+                ingestType: InterviewIngestType.REPO,
+                url: "",
+              },
+            ] as any,
+            { shouldValidate: true }
+          );
+        }
       }
     },
-    [setValue]
+    [setValue, stream, items]
   );
 
-  const onSubmit = async (data: FormSchema) => {
+  const onSubmit = async (data: any) => {
     try {
-      // Immediately enter processing state; mock progress UI will manage 5-minute interval
       setUploadState("processing");
-      if (!uploadedObjects.length) {
-        toast.error("Please upload at least one file before submitting");
-        setUploadState("idle");
-        return;
+      if (isAcademic) {
+        if (!uploadedObjects.length) {
+          toast.error("Please upload at least one file before submitting");
+          setUploadState("idle");
+          return;
+        }
+        const payload = {
+          contentCategory: ContentCategory.ACADEMIC,
+          metadata: {
+            board: (watch as any)("board"),
+            grade: grade!,
+            subject: subject!,
+            resourceType: resourceType!,
+            chapterNumber,
+            chapterName,
+          },
+          uploadedObjects,
+        } as any;
+        await ingestAcademic(payload);
+        toast.success("Ingestion started");
+      } else if (isInterview) {
+        // Fire one job per row
+        for (const row of items) {
+          try {
+            if (row.ingestType === InterviewIngestType.REPO) {
+              await ingestRepoWeb({
+                mode: "repo",
+                repoUrl: row.url,
+                paths: [],
+                topic: row.topic as any,
+                maxFiles: 200,
+              } as any);
+            } else {
+              // derive domain from URL
+              const u = new URL(row.url);
+              await ingestRepoWeb({
+                mode: "web",
+                seedUrl: row.url,
+                domain: u.hostname,
+                prefix: undefined,
+                depth: 2,
+                maxPages: 50,
+                crawlDelayMs: 300,
+                topic: row.topic as any,
+              } as any);
+            }
+          } catch (err: any) {
+            toast.error("Failed to start ingestion", { description: err?.message ?? "Error" });
+          }
+        }
+        toast.success("Ingestion started for all rows");
       }
-      const payload = {
-        contentCategory: ContentCategory.ACADEMIC,
-        metadata: {
-          board: (watch as any)("board"),
-          grade: grade!,
-          subject: subject!,
-          resourceType: resourceType!,
-          chapterNumber,
-          chapterName,
-        },
-        uploadedObjects,
-      } as any;
-
-      await ingestAcademic(payload);
       setUploadState("completed");
-      toast.success("Ingestion started");
     } catch (e) {
       setUploadState("failed");
     }
@@ -186,13 +247,9 @@ export default function UploadForm() {
   const disabled = uploadState === "submitting" || uploadState === "processing" || isUploadingFiles;
   const dropzoneDisabled =
     disabled || (contentCategory as any) !== ContentCategory.ACADEMIC || !isAcademicRequiredFieldsFilled;
-  const submitDisabled =
-    disabled ||
-    hasUploadFailed ||
-    !isAcademicRequiredFieldsFilled ||
-    !files ||
-    (files as any).length === 0 ||
-    !isAcademic;
+  const submitDisabled = isAcademic
+    ? disabled || hasUploadFailed || !isAcademicRequiredFieldsFilled || !files || (files as any).length === 0
+    : disabled || !isInterview || items.length === 0 || items.some((r) => !r.url || !r.subtopic);
 
   if (uploadState === "processing") {
     return <Loader />;
@@ -201,7 +258,7 @@ export default function UploadForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
       <div className='grid gap-4'>
-        <div className='grid gap-2'>
+        <div className='grid gap-2 sm:max-w-sm'>
           <FormLabel required>Content category</FormLabel>
           <Combobox
             value={contentCategory as any}
@@ -216,6 +273,161 @@ export default function UploadForm() {
             <ErrorMessage message={(errors as any).contentCategory.message as string} />
           )}
         </div>
+
+        {isInterview && (
+          <div className='rounded-lg border p-4 shadow-sm bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40'>
+            <div className='grid gap-4'>
+              <div className='grid gap-2 sm:max-w-sm'>
+                <FormLabel>Interview Streams</FormLabel>
+                <Combobox
+                  value={stream as any}
+                  onChange={(val) => setValue("stream", val as any, { shouldValidate: true })}
+                  options={[{ label: InterviewStream.FRONTEND_REACT, value: InterviewStream.FRONTEND_REACT }] as any}
+                  placeholder='Select stream'
+                  disabled={disabled}
+                />
+              </div>
+
+              <div className='grid gap-3'>
+                {items.map((row, idx) => {
+                  const subtopicOptions = [
+                    ...INTERVIEW_SUBTOPICS[row.topic as InterviewTopic].map((s) => ({ label: s, value: s })),
+                    { label: "Other", value: "__other__" },
+                  ];
+                  return (
+                    <div
+                      key={idx}
+                      className='grid gap-3 sm:grid-cols-[160px_240px_220px_minmax(520px,1fr)_auto] sm:items-start'
+                    >
+                      <div className='grid gap-1'>
+                        <FormLabel>Topic</FormLabel>
+                        <Combobox
+                          value={row.topic}
+                          onChange={(val) => {
+                            const next = items.slice();
+                            next[idx] = {
+                              ...row,
+                              topic: val as InterviewTopic,
+                              subtopic: INTERVIEW_SUBTOPICS[val as InterviewTopic][0] ?? "",
+                            };
+                            setValue("items", next as any, { shouldValidate: true });
+                          }}
+                          options={INTERVIEW_TOPIC_OPTIONS as any}
+                          placeholder='Select topic'
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className='grid gap-1'>
+                        <FormLabel>Subtopic</FormLabel>
+                        <Combobox
+                          value={row.subtopic as any}
+                          onChange={(val) => {
+                            if (val === "__other__") {
+                              (document.getElementById(`custom-subtopic-${idx}`) as HTMLInputElement)?.focus();
+                              setOpenModalIndex(idx);
+                              return;
+                            }
+                            const next = items.slice();
+                            next[idx] = { ...row, subtopic: val };
+                            setValue("items", next as any, { shouldValidate: true });
+                          }}
+                          options={subtopicOptions as any}
+                          placeholder='Select subtopic'
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className='grid gap-1'>
+                        <FormLabel>Ingest Type</FormLabel>
+                        <Combobox
+                          value={row.ingestType}
+                          onChange={(val) => {
+                            const next = items.slice();
+                            next[idx] = { ...row, ingestType: val as InterviewIngestType };
+                            setValue("items", next as any, { shouldValidate: true });
+                          }}
+                          options={INTERVIEW_INGEST_TYPE_OPTIONS as any}
+                          placeholder='Select ingest type'
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className='grid gap-1'>
+                        <FormLabel>URL</FormLabel>
+                        <Input
+                          value={row.url}
+                          onChange={(e) => {
+                            const next = items.slice();
+                            next[idx] = { ...row, url: e.target.value };
+                            setValue("items", next as any, { shouldValidate: true });
+                          }}
+                          type='url'
+                          inputMode='url'
+                          placeholder={
+                            row.ingestType === InterviewIngestType.REPO
+                              ? "https://github.com/owner/repo"
+                              : "https://developer.mozilla.org/"
+                          }
+                          title={
+                            row.ingestType === InterviewIngestType.REPO
+                              ? "Enter a public GitHub docs repository URL"
+                              : "Enter a website seed URL to crawl within the same domain"
+                          }
+                          aria-label='Source URL'
+                          className='w-full'
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className='flex gap-2 pt-6 justify-end'>
+                        {idx === 0 ? (
+                          <Button
+                            type='button'
+                            variant='secondary'
+                            onClick={() =>
+                              setValue(
+                                "items",
+                                [
+                                  ...items,
+                                  {
+                                    topic: items[items.length - 1]?.topic ?? InterviewTopic.REACT,
+                                    subtopic:
+                                      items[items.length - 1]?.subtopic ?? INTERVIEW_SUBTOPICS[InterviewTopic.REACT][0],
+                                    ingestType: items[items.length - 1]?.ingestType ?? InterviewIngestType.REPO,
+                                    url: "",
+                                  },
+                                ] as any,
+                                { shouldValidate: true }
+                              )
+                            }
+                            title='Add row'
+                            aria-label='Add row'
+                          >
+                            <PlusIcon size={16} />
+                          </Button>
+                        ) : (
+                          <Button
+                            type='button'
+                            variant='destructive'
+                            onClick={() => {
+                              const next = items.filter((_, i) => i !== idx);
+                              setValue("items", next as any, { shouldValidate: true });
+                            }}
+                            title='Delete row'
+                            aria-label='Delete row'
+                          >
+                            <TrashIcon size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {isAcademic && (
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
@@ -304,32 +516,65 @@ export default function UploadForm() {
           </div>
         )}
 
-        <div className='grid gap-2'>
-          <FormLabel required>Files</FormLabel>
-          <FileDropzone
-            onDrop={onDrop}
-            accept={ACCEPTED_MIME_TYPES as any}
-            multiple={true}
-            disabled={dropzoneDisabled}
-            description='Drag and drop PDF files here, or click to browse'
-            hint='Only PDF files are accepted'
-          />
-          {errors.files && <ErrorMessage message={errors.files.message as string} />}
+        {isAcademic && (
+          <div className='grid gap-2'>
+            <FormLabel required>Files</FormLabel>
+            <FileDropzone
+              onDrop={onDrop}
+              accept={ACCEPTED_MIME_TYPES as any}
+              multiple={true}
+              disabled={dropzoneDisabled}
+              description='Drag and drop PDF files here, or click to browse'
+              hint='Only PDF files are accepted'
+            />
+            {(errors as any).files && <ErrorMessage message={(errors as any).files.message as string} />}
 
-          {files && files.length > 0 && (
-            <ul className='mt-2 space-y-1'>
-              {files.map((file, idx) => (
-                <li key={`${file.name}-${idx}`} className='text-xs'>
-                  {file.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {files && files.length > 0 && (
+              <ul className='mt-2 space-y-1'>
+                {files.map((file, idx) => (
+                  <li key={`${file.name}-${idx}`} className='text-xs'>
+                    {file.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className='flex items-center gap-3'>
-        <Button type='submit' size='lg' disabled={submitDisabled} className='w-full'>
+      {/* Modal for custom subtopic */}
+      <Dialog open={openModalIndex !== null} onOpenChange={(v) => !v && setOpenModalIndex(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add custom subtopic</DialogTitle>
+          </DialogHeader>
+          <Input
+            id={openModalIndex !== null ? `custom-subtopic-${openModalIndex}` : undefined}
+            value={customSubtopic}
+            onChange={(e) => setCustomSubtopic(e.target.value)}
+            placeholder='Enter subtopic name'
+          />
+          <DialogFooter>
+            <Button
+              type='button'
+              onClick={() => {
+                if (openModalIndex === null) return;
+                const next = items.slice();
+                next[openModalIndex] = { ...next[openModalIndex], subtopic: customSubtopic.trim() };
+                setValue("items", next as any, { shouldValidate: true });
+                setCustomSubtopic("");
+                setOpenModalIndex(null);
+              }}
+              disabled={!customSubtopic.trim()}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className='flex items-center gap-3 justify-end'>
+        <Button type='submit' size='lg' disabled={submitDisabled} className='sm:min-w-44'>
           Submit
         </Button>
 

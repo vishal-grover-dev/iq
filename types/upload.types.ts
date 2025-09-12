@@ -1,5 +1,6 @@
 export enum EContentCategory {
   ACADEMIC = "Academic",
+  INTERVIEW_STREAMS = "Interview Streams",
   COMPETITIVE_EXAM = "Competitive Exam",
   VIDEO_SUBTITLES = "Video (Subtitles)",
 }
@@ -95,4 +96,33 @@ export interface IAcademicPathContext {
   board: EEducationBoard;
   grade: EAcademicClass;
   subject: EAcademicSubject;
+}
+
+// Interview Streams types
+
+export enum EInterviewStream {
+  FRONTEND_REACT = "Front-end with React",
+}
+
+export enum EInterviewTopic {
+  REACT = "React",
+  JAVASCRIPT = "JavaScript",
+}
+
+export enum EInterviewIngestType {
+  REPO = "Docs Repo (GitHub)",
+  WEB = "Website (Crawl)",
+}
+
+export interface IInterviewIngestItem {
+  topic: EInterviewTopic;
+  subtopic: string; // includes predefined or user-entered value
+  ingestType: EInterviewIngestType;
+  url: string;
+}
+
+export interface IInterviewStreamsFormValues {
+  contentCategory: EContentCategory.INTERVIEW_STREAMS;
+  stream: EInterviewStream;
+  items: IInterviewIngestItem[];
 }

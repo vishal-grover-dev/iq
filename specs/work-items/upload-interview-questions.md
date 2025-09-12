@@ -59,18 +59,33 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 - React → topic=React; subtopic from section (Hooks, Performance, Context). Version=18/19 tags from repo.
 - TS → topic=TypeScript; subtopics per handbook sections (Types, Generics, Narrowing, JSX).
 
-## Upload UI Enhancements (Web Ingest Mode)
+## Interview Streams UI (Finalized for v1)
 
-- Add a new tab/section: "Web ingest" next to current upload.
-- Fields:
-  - Mode: Repo (default) | Web
-  - Repo URL(s): text area (one per line)
-  - Path filters: optional glob/prefix
-  - Topic: select (React, JS, TS, HTML, CSS)
-  - Version tag: optional text (e.g., React 18)
-  - Max files/pages: default 200
-  - Submit → shows Ingestion ID + live status (queued→processing→done)
-- For Web mode: Seed URL, domain, prefix, depth, max pages, crawl delay.
+- Purpose: Admin can curate sources for interview content without dealing with files.
+- Default category: `Interview Streams` (replaces the need for a separate web-ingest tab).
+- Stream selector: single option for now — `Front-end with React`.
+- Rows (repeatable): each row represents one source to ingest.
+  - Fields per row
+    - `Topic` (combobox): `React` | `JavaScript`.
+    - `Subtopic` (combobox): predefined list based on Topic plus `Other`.
+      - If `Other` is chosen, open modal to input a custom subtopic; save back into row.
+    - `Ingest Type` (combobox): `Docs Repo (GitHub)` | `Website (Crawl)`.
+    - `URL` (input):
+      - For Repo: `https://github.com/owner/repo` (public docs repos only in v1).
+      - For Website: seed URL within the allowed domain (small crawl, sitemap-limited mindset).
+  - Row controls
+    - First row shows an Add button.
+    - Subsequent rows show a Delete button.
+- Submission behavior
+  - For each row, start an ingestion job:
+    - Repo → `POST /api/ingest/repo` with { repoUrl, paths: [], topic, maxFiles: 200 }.
+    - Website → `POST /api/ingest/web` with { seedUrl, domain(hostname of URL), depth: 2, maxPages: 50, crawlDelayMs: 300, topic }.
+  - Show a success toast when jobs are enqueued.
+
+### Academic Upload (unchanged)
+
+- When `Academic` is selected, show the original fields (Board, Class, Subject, Resource type, optional chapter, Files dropzone).
+- Client uploads PDFs to Supabase Storage, then `POST /api/ingest/academic` with uploaded object metadata.
 
 ## Retrieval for Generation
 
@@ -127,9 +142,8 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
   - Retrieval API implemented (`app/api/retrieval/query/route.ts`) using hybrid search (vector+FTS) and optional reranking.
 
 - NEXT:
-  - Implement repo/web ingest endpoints and processing flow per this doc (jobs, parsing Markdown/MDX, labeling).
+  - Polish ingestion status tracking UI (poll by `ingestionId`).
   - Implement MCQ generation route and persistence; wire minimal quiz UI to consume generated items.
-  - Add Upload UI “Web ingest” tab and status tracking for jobs.
 
 - Notes:
   - Embedding dimension standardized at 1536‑d using OpenAI. Keep the rest of the flow but ensure all ingestion modes use OpenAI embeddings.

@@ -97,6 +97,9 @@
 - `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
 - `langchain.utils.ts`: Combined PDF extraction and text chunking (LangChain-based).
  - `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
+ - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
+ - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
+ - `interview-streams-options.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
 
 ### services
 
@@ -122,10 +125,14 @@
 - `001-Storage-Academics-RLS-02-Sep-25.sql`: Creates `academics` bucket if missing; adds RLS policies (public read, authenticated insert/update/delete).
  - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
  - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
+ - `004-Repo-Labels.sql`: Adds `labels` jsonb to `documents` and `document_chunks` + GIN indexes.
 
 ### app/api
 
 - `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
+ - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
+ - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
+ - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
  

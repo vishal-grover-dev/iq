@@ -5,6 +5,9 @@ import {
   EAcademicSubject,
   EEducationBoard,
   EAcademicResourceType,
+  EInterviewStream,
+  EInterviewTopic,
+  EInterviewIngestType,
 } from "@/types/upload.types";
 export const baseSchema = z.object({
   files: z
@@ -28,8 +31,22 @@ export const academicSchema = baseSchema.extend({
 
 export const formSchema = z.discriminatedUnion("contentCategory", [
   academicSchema,
-  baseSchema.extend({ contentCategory: z.literal(EContentCategory.COMPETITIVE_EXAM) }),
-  baseSchema.extend({ contentCategory: z.literal(EContentCategory.VIDEO_SUBTITLES) }),
+  z.object({ contentCategory: z.literal(EContentCategory.COMPETITIVE_EXAM) }),
+  z.object({ contentCategory: z.literal(EContentCategory.VIDEO_SUBTITLES) }),
+  z.object({
+    contentCategory: z.literal(EContentCategory.INTERVIEW_STREAMS),
+    stream: z.nativeEnum(EInterviewStream).default(EInterviewStream.FRONTEND_REACT),
+    items: z
+      .array(
+        z.object({
+          topic: z.nativeEnum(EInterviewTopic),
+          subtopic: z.string().min(1, "Subtopic is required"),
+          ingestType: z.nativeEnum(EInterviewIngestType),
+          url: z.string().url("Enter a valid URL"),
+        })
+      )
+      .min(1, "Add at least one item"),
+  }),
 ]);
 
 export type TFormSchema = z.infer<typeof formSchema>;

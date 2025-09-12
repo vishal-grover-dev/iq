@@ -42,3 +42,7 @@ When creating files:
 - Enforce this directory structure and naming convention for all future code generations.
 - Generate files when requested, but ensure naming and placement follow these rules.
 - Remind me if I attempt to break these rules.
+
+### Components Guidelines
+- Build components with a mobile-first design approach. Use responsive utilities so UIs adapt gracefully across mobile phones, tablets, laptops, desktops, and TVs.
+- Keep React components around 200 lines. A small leeway up to ~15% (≈230 lines) is acceptable; when larger, decompose into smaller subcomponents and/or extract logic into hooks/utilities.

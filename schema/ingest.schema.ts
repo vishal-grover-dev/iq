@@ -40,3 +40,34 @@ export const ingestResponseSchema = z.object({
 });
 
 export type TIngestResponse = z.infer<typeof ingestResponseSchema>;
+
+// Repo/Web ingestion (Interview Questions v1)
+export const ingestRepoRequestSchema = z.object({
+  mode: z.literal("repo"),
+  repoUrl: z.string().url(),
+  paths: z.array(z.string()).default([]),
+  topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  version: z.string().optional(),
+  maxFiles: z.number().int().positive().max(200).default(200),
+});
+
+export const ingestWebRequestSchema = z.object({
+  mode: z.literal("web"),
+  seedUrl: z.string().url(),
+  domain: z.string().min(1),
+  prefix: z.string().optional(),
+  depth: z.number().int().min(0).max(4).default(2),
+  maxPages: z.number().int().positive().max(200).default(200),
+  crawlDelayMs: z.number().int().min(0).max(5000).default(500),
+  topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  version: z.string().optional(),
+});
+
+export const ingestRepoOrWebRequestSchema = z.discriminatedUnion("mode", [
+  ingestRepoRequestSchema,
+  ingestWebRequestSchema,
+]);
+
+export type TIngestRepoRequest = z.infer<typeof ingestRepoRequestSchema>;
+export type TIngestWebRequest = z.infer<typeof ingestWebRequestSchema>;
+export type TIngestRepoOrWebRequest = z.infer<typeof ingestRepoOrWebRequestSchema>;

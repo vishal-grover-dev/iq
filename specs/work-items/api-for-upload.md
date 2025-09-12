@@ -3,8 +3,8 @@
 ## Summary
 
 - Purpose: Persist upload metadata, then generate text chunks and vector embeddings into pgvector (Supabase).
-  - Embeddings provider: Hugging Face Inference API using Mixedbread "MxBai Embed Large V1" (1024-d) via a server-only HTTP client (axios interceptors).
-  - Keep the embedding dimension standardized at 1024 to match database schema and retrieval.
+  - Embeddings provider: OpenAI `text-embedding-3-small` (1536-d) via server-only OpenAI SDK.
+  - Keep the embedding dimension standardized at 1536 to match database schema and retrieval.
 
 ## API Endpoint
 
@@ -67,7 +67,7 @@ On error:
   - `chunk_index` int
   - `content` text
   - `tokens` int
-  - `embedding` vector(1024) — matches Mixedbread MxBai Embed Large V1 output dimension
+  - `embedding` vector(1536) — matches OpenAI `text-embedding-3-small` output dimension
 
 Suggested RLS:
 
@@ -81,7 +81,7 @@ Suggested RLS:
    - Fetch file from Supabase Storage (service role)
    - Parse to text (PDF.js for PDF; DOCX via Mammoth later)
    - Chunk text (LangChain `RecursiveCharacterTextSplitter` 1–2k chars, 10–15% overlap)
-   - Get embeddings with Hugging Face Inference (MxBai Embed Large V1, 1024-d) via server-only axios client
+   - Get embeddings with OpenAI `text-embedding-3-small` (1536-d) via server OpenAI SDK
    - Upsert to `document_chunks` (content, tokens, embedding)
 4. Update `ingestions.status='completed'` and return summary.
 
@@ -92,18 +92,13 @@ Suggested RLS:
 - Client upload remains on the browser using anon key; the API only reads metadata and performs ingestion.
 - Use Supabase server client with Service Role for Storage reads and DB writes.
 
-## Embedding Models (HF/OR)
+## Embedding Model
 
-- mxbai-embed-large (Mixedbread, 1024-d) — Standard for this project. Use Hugging Face Inference by default.
-- BAAI/bge-m3 (BAAI, 1024-d): All‑in‑one family; solid semantic embeddings.
-- nomic-ai/nomic-embed-text-v1.5 (Nomic, 768-d): Lightweight; good cost/quality tradeoff.
-- jinaai/jina-embeddings-v2-base-en (Jina, 768-d): Competitive on MTEB; English-focused.
-- Snowflake/snowflake-arctic-embed-l (1024-d): High-quality, permissive license.
+- OpenAI `text-embedding-3-small` (1536-d) — Standard for this project. Use for both indexing and queries.
 
 Notes:
 
-- Standardize on a single embedding space across indexing and queries. Project default: 1024‑d (mxbai/bge‑m3/arctic‑embed‑l). If switching to 768‑d (nomic/jina), migrate the column to `vector(768)`.
-- "Free" status on OpenRouter can change; prefer Hugging Face for embeddings by default. Probe availability and fall back between HF and OR as needed.
+- Standardize on a single embedding space across indexing and queries. Project default: 1536‑d. If changing providers/models, create a new migration.
 
 ## Pseudocode (Next.js Route Handler)
 

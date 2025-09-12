@@ -2,11 +2,10 @@ import OpenAI from "openai";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 
 /**
- * getOpenAIEmbeddings
- * Server-only: Uses OpenAI `text-embedding-3-small` (1536-d) to embed an array of texts.
- * Returns embeddings aligned to input order.
+ * getEmbeddings
+ * Server-only: Returns 1536-d embeddings for the provided texts using OpenAI `text-embedding-3-small`.
  */
-export async function getOpenAIEmbeddings(texts: string[]): Promise<number[][]> {
+export async function getEmbeddings(texts: string[]): Promise<number[][]> {
   if (!texts || texts.length === 0) return [];
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
@@ -19,10 +18,10 @@ export async function getOpenAIEmbeddings(texts: string[]): Promise<number[][]> 
 }
 
 /**
- * rerankWithOpenAI
- * Server-only LLM-as-reranker using gpt-4o-mini. Returns scores per text in input order.
+ * rerank
+ * Server-only LLM-as-reranker using `gpt-4o-mini`. Returns one score per input text, same order.
  */
-export async function rerankWithOpenAI(query: string, texts: string[]): Promise<number[]> {
+export async function rerank(query: string, texts: string[]): Promise<number[]> {
   if (!query || texts.length === 0) return [];
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });

@@ -5,7 +5,7 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 ## Goals
 
 - Ingest authoritative docs (repos first) for React/JS/TS/HTML/CSS.
-- Normalize, chunk, and embed text into pgvector (1024‑d) with labels.
+- Normalize, chunk, and embed text into pgvector (1536‑d) with labels.
 - Expose minimal APIs to enqueue ingestion jobs, track status, and generate questions.
 
 ## Non‑Goals (v1)
@@ -27,7 +27,7 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 
 - `ingestions` (type: "repo" | "web", status, source, params, counts)
 - `documents` (id, ingestion_id, url_or_path, title, version, labels jsonb)
-- `document_chunks` (id, document_id, chunk_index, content, tokens, embedding vector(1024), labels jsonb)
+- `document_chunks` (id, document_id, chunk_index, content, tokens, embedding vector(1536), labels jsonb)
 - Labels shape: `{ topic, area?, subtopic?, version? }`
 
 ## API Endpoints (v1)
@@ -44,13 +44,13 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
   2. Parse Markdown/MDX → extract title/headings/prose/code.
   3. Normalize → sections; derive labels from path/breadcrumbs.
   4. Chunk (1–2k chars, 10–15% overlap) and tokenize count.
-  5. Embed (HF embeddings 1024‑d) → upsert `document_chunks`.
+  5. Embed (OpenAI embeddings 1536‑d) → upsert `document_chunks`.
   6. Update counts; mark completed.
 
 ## Chunking & Embeddings
 
 - Chunker: recursive character splitter; try to respect headings; keep code blocks intact when possible.
-- Embeddings: Hugging Face Inference (Mixedbread 1024‑d) via existing server client.
+- Embeddings: OpenAI `text-embedding-3-small` (1536‑d) via server OpenAI SDK.
 - Backoff/retry on 429/5xx; batch size 64–128 tokens equivalent.
 
 ## Categorization Rules
@@ -97,7 +97,7 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 ## Existing capabilities to reuse (repo paths)
 
 - Axios clients and interceptors: `services/http.services.ts`
-- Embeddings client (HF 1024‑d): `services/embeddings.services.ts`
+- Embeddings client: `services/openai.services.ts`
 - Supabase server/browser utils: `utils/supabase.utils.ts`
 - Text extraction/chunking helpers (adapt parts): `utils/langchain.utils.ts`
 - Ingestion API scaffolding (pattern to mirror): `app/api/ingest/academic/route.ts`
@@ -118,3 +118,18 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 - M2: Web ingest fallback (sitemap‑limited), MDN JS subset embedded.
 - M3: MCQ generation route + minimal quiz UI consuming generated items.
 - M4: Adaptive drills using attempts data.
+
+## Status
+
+- DONE:
+  - OpenAI-only migration in effect: embeddings use `text-embedding-3-small` (1536‑d) with optional LLM rerank. See `specs/work-items/openai-only-migration.md`.
+  - Academic PDF ingestion route implemented (`app/api/ingest/academic/route.ts`); chunks stored with 1536‑d embeddings.
+  - Retrieval API implemented (`app/api/retrieval/query/route.ts`) using hybrid search (vector+FTS) and optional reranking.
+
+- NEXT:
+  - Implement repo/web ingest endpoints and processing flow per this doc (jobs, parsing Markdown/MDX, labeling).
+  - Implement MCQ generation route and persistence; wire minimal quiz UI to consume generated items.
+  - Add Upload UI “Web ingest” tab and status tracking for jobs.
+
+- Notes:
+  - Embedding dimension standardized at 1536‑d using OpenAI. Keep the rest of the flow but ensure all ingestion modes use OpenAI embeddings.

@@ -22,7 +22,7 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 
 - **Seeded crawl:** Admin provides seed URL(s) and domain/prefix rules (e.g., MDN JavaScript Guide). System crawls within constraints, respecting robots.txt and rate limits.
 - **Extraction & normalization:** Parse main content (titles, headings, prose, code blocks). Normalize, de‑duplicate, and chunk (1–2k chars, 10–15% overlap).
-- **Embeddings:** Create 1024‑d embeddings (Hugging Face) and store in `document_chunks` for retrieval.
+- **Embeddings:** Create 1536‑d embeddings (OpenAI `text-embedding-3-small`) and store in `document_chunks` for retrieval.
 - **Categorization:** Assign labels per document/chunk: `{ topic, area, subtopic, version }` (e.g., topic: JavaScript, area: Async, subtopic: Promises, version: ES6+). Derive from URL structure and breadcrumbs; maintain synonym rules.
 
 ### 2) AI‑Generated MCQs with Labels and Citations
@@ -56,7 +56,7 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, TanStack Query.
 - **Backend:** Next.js API routes for ingestion, retrieval, MCQ generation, and attempts. Background job/worker for crawling to avoid serverless timeouts (v1: limit to ≤200 pages/job if needed).
 - **Data & storage:** Supabase Postgres with pgvector; tables for `ingestions`, `documents`, `document_chunks`, `mcq_items`, `mcq_explanations`, `mcq_attempts`.
-- **AI services:** Hugging Face embeddings (1024‑d). Optional reranker (OpenRouter/HF) later.
+- **AI services:** OpenAI embeddings (1536‑d) and optional LLM-as-reranker (`gpt-4o-mini`).
 - **Security:** RLS on tables, deviceAnonId for pre‑auth tracking, rate limits on crawl and generation.
 - **Payments (v1.2):** Razorpay/Cashfree orders + verification; GST invoice PDF; entitlements.
 

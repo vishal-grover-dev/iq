@@ -33,9 +33,9 @@ When creating files:
 - Services must only contain API-facing functions with JSDoc (≥ 2 lines explaining purpose/behavior).
 - Move helpers to `utils/` and shared types/interfaces to `types/`.
 - Server-only vs Client usage:
-  - Keep secrets on the server. Functions that require secrets (e.g., Hugging Face embeddings using `HF_KEY`) must be called only in API routes/server actions and SHOULD NOT have a React Query hook.
+  - Keep secrets on the server. Functions that require secrets (e.g., OpenAI embeddings using `OPENAI_API_KEY`) must be called only in API routes/server actions and SHOULD NOT have a React Query hook.
   - Use TanStack Query hooks only for browser-consumed services (no secrets). Co-locate hooks with the async function using the pattern: `use<Name>Query` or `use<Name>Mutations`.
-  - Example: `getEmbeddingsBatch` is invoked from the ingestion API route and remains a direct awaited call; do not expose it to the client.
+  - Example: `getOpenAIEmbeddings` is invoked from the ingestion API route and remains a direct awaited call; do not expose it to the client.
   - Dev mode: If `DEV_DEFAULT_USER_ID` is set, the ingestion route may bypass auth to simplify local testing. Remove/disable for production.
 
 ### Your Role

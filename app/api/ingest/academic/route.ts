@@ -4,7 +4,7 @@ import { ingestAcademicRequestSchema } from "@/schema/ingest.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { SUPABASE_RAG_BUCKET, DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { extractTextFromPdfBufferLC, chunkTextLC } from "@/utils/langchain.utils";
-import { getOpenAIEmbeddings } from "@/services/openai.services";
+import { getEmbeddings } from "@/services/ai.services";
 import { extractChapterFromFilename, extractChapterFromText, buildChapterTitle } from "@/utils/ingest.utils";
 
 export const runtime = "nodejs";
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       const chunks = await chunkTextLC(text, { chunkSize: 1800, overlap: 200 });
       totalChunks += chunks.length;
 
-      const embeddings1536 = await getOpenAIEmbeddings(chunks.map((c) => c.content));
+      const embeddings1536 = await getEmbeddings(chunks.map((c) => c.content));
 
       const rows = chunks.map((c, i) => ({
         document_id: doc.id,

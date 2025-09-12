@@ -101,7 +101,7 @@
 ### services
 
 - `upload.services.ts`: Supabase Storage uploads for academic content with directory helpers.
-- `openai.services.ts`: OpenAI server-only client for embeddings and reranking.
+- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings` and `rerank`.
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
  - `retrieval.services.ts`: Retrieval API client functions and hooks.
@@ -113,10 +113,9 @@
 ### specs/work-items
 
 - `upload-flow.md`: Work items and flow notes for the upload feature.
- - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenRouter and pgvector.
+ - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenAI and pgvector.
  - `retrieval-phase.md`: Plan for retrieval UI and backend (hybrid search, contracts, endpoints).
  - `upload-interview-questions.md`: Upload/indexing/embeddings plan for interview MCQs (repo-first ingestion).
- - `openai-only-migration.md`: Plan to switch to OpenAI embeddings + LLM reranker and remove HF code.
 
 ### migrations
 
@@ -127,6 +126,6 @@
 ### app/api
 
 - `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
- - `api/retrieval/query/route.ts`: Retrieval API route (POST) performing hybrid search.
+ - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
  

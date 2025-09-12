@@ -46,10 +46,9 @@
 
 - **Langchain.js** - Framework for building AI applications and agents
 - **OpenAI SDK** - Official OpenAI API client for JavaScript
-- **OpenRouter** - Access to various open-source models via OpenAI-compatible API
-- **Hugging Face Inference API** - Primary provider for embeddings (Mixedbread MxBai Embed Large V1, 1024-d)
 - **LangSmith** - Observability and monitoring platform for AI agents
-- **Reranker Model** – BAAI bge-reranker-base (via OpenRouter preferred; HF Inference fallback) for improved retrieval accuracy
+- **OpenAI Embeddings** - `text-embedding-3-small` (1536‑d) for indexing and queries
+- **Reranker** – LLM-as-reranker using `gpt-4o-mini` returning list-wise JSON
 
 ### File Processing
 

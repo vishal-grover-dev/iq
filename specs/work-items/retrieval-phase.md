@@ -15,9 +15,9 @@ Define the end-to-end retrieval experience and backend functionality that powers
 
 - topK: 8
 - alpha (hybrid blend): 0.5
-- reranker: BAAI bge-reranker-base via OpenRouter (fallback: BAAI/bge-reranker-base on Hugging Face Inference)
+- reranker: LLM-as-reranker using `gpt-4o-mini` (list-wise JSON)
 - subject scope: subject-wide across resource types by default
-- embeddings provider: Hugging Face Inference (Mixedbread MxBai Embed Large V1, 1024-d). Use the same model for indexing and queries.
+- embeddings provider: OpenAI `text-embedding-3-small` (1536-d). Use the same model for indexing and queries.
 
 Non-goals (v1):
 
@@ -87,7 +87,7 @@ Non-goals (v1):
 
 2. Vector search
 
-- Compute embedding of the text query using the same model and dimension (1024-d). Prefer Hugging Face Inference; optionally use OpenRouter if HF is throttled.
+- Compute embedding of the text query using the same model and dimension (1536-d) via OpenAI.
 - `select ... order by embedding <-> query_embedding limit topK*3` from `document_chunks` constrained to candidate `document_id` set.
 
 3. Keyword search (optional FTS)
@@ -123,16 +123,12 @@ Note: Use a single normalization approach project-wide (e.g., vectorSimilarity =
 
 ## Reranker Configuration (v1)
 
-- Goal: Improve precision@K by applying a cross-encoder over the top N (e.g., topK\*3) fused candidates.
-- Providers
-  - Default: BAAI `bge-reranker-base` via OpenRouter (OpenAI-compatible SDK).
-  - Alternative: BAAI `bge-reranker-base` via Hugging Face Inference or Cohere Rerank.
-- Request shape: array of { query, passage } pairs; returns per-passage relevance scores.
+- Goal: Improve precision@K by applying LLM-as-reranker over the top N (e.g., topK\*3) fused candidates.
+- Provider: OpenAI `gpt-4o-mini` returning strict JSON with per-passage scores.
 - Flow: hybrid retrieve → rerank with user/enhanced query (+ Bloom hint, see Bloom section) → sort by rerankScore → take topK → include fusedScore for debug.
 - Timeouts/fallbacks: 2–4s timeout. On timeout, use fused order.
 - Config flags
   - enableRerank: boolean (default true)
-  - rerankerProvider: "openrouter-bge" | "cohere"
   - rerankFanout: number (default topK\*3)
 
 ## Types & Contracts
@@ -185,10 +181,10 @@ Bloom-related (v1):
 
 ## Open Questions
 
-- Should we standardize embeddings to OpenRouter (OpenAI SDK) instead of HF for parity? If yes, update `embeddings.services.ts` to use one provider for both ingestion and retrieval.
+- None specific to provider parity after OpenAI standardization.
 - What is the default K for generation prompts (8 vs 12)?
 - Do we need per-board stopword tweaks for FTS?
-- Which reranker provider to standardize on for v1: OpenRouter BAAI vs Cohere?
+- Which reranker configuration to standardize on for v1: OpenAI `gpt-4o-mini` params and fanout?
 - Query enhancement trigger: manual button only or also auto-run on debounce?
 
 ## v2 Considerations

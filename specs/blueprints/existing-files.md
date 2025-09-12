@@ -12,6 +12,7 @@
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
+ 
 
 ### specs/blueprints
 
@@ -20,6 +21,7 @@
 - `prd.md`: Product requirements document.
 - `existing-files.md`: This index of current files.
 - `env-examples.md`: Example environment variables and configuration.
+- `resources-for-frontend.md`: Topics, subtopics, and ingestion sources for React-focused frontend content.
 
 ### app
 
@@ -80,11 +82,13 @@
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
 - `upload.types.ts`: Types for the upload flow. Includes `E*` enums, `IAcademicUploadFormValues`, `TUploadState`, and `IAcademicPathContext`.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
+ - `retrieval.types.ts`: Retrieval contracts including filters, requests, responses, and Bloom enums.
 
 ### schema
 
 - `upload.schema.ts`: Zod schema and validation for the upload flow.
 - `ingest.schema.ts`: Zod schema for ingestion API request/response.
+ - `retrieval.schema.ts`: Zod schemas for retrieval requests/responses and query enhancement.
 
 ### utils
 
@@ -97,9 +101,10 @@
 ### services
 
 - `upload.services.ts`: Supabase Storage uploads for academic content with directory helpers.
-- `embeddings.services.ts`: Hugging Face embeddings client.
+- `openai.services.ts`: OpenAI server-only client for embeddings and reranking.
 - `ingest.services.ts`: Client helper to call ingestion API.
-- `http.services.ts`: Axios clients with interceptors (API and Hugging Face).
+- `http.services.ts`: Axios clients with interceptors (API only).
+ - `retrieval.services.ts`: Retrieval API client functions and hooks.
 
 ### constants
 
@@ -110,12 +115,18 @@
 - `upload-flow.md`: Work items and flow notes for the upload feature.
  - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenRouter and pgvector.
  - `retrieval-phase.md`: Plan for retrieval UI and backend (hybrid search, contracts, endpoints).
+ - `upload-interview-questions.md`: Upload/indexing/embeddings plan for interview MCQs (repo-first ingestion).
+ - `openai-only-migration.md`: Plan to switch to OpenAI embeddings + LLM reranker and remove HF code.
 
 ### migrations
 
 - `001-Storage-Academics-RLS-02-Sep-25.sql`: Creates `academics` bucket if missing; adds RLS policies (public read, authenticated insert/update/delete).
  - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
+ - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
 
 ### app/api
 
 - `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
+ - `api/retrieval/query/route.ts`: Retrieval API route (POST) performing hybrid search.
+ - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
+ 

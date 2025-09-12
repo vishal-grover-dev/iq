@@ -4,7 +4,7 @@ import { ingestAcademicRequestSchema } from "@/schema/ingest.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { SUPABASE_RAG_BUCKET, DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { extractTextFromPdfBufferLC, chunkTextLC } from "@/utils/langchain.utils";
-import { getEmbeddingsBatch } from "@/services/embeddings.services";
+import { getOpenAIEmbeddings } from "@/services/openai.services";
 import { extractChapterFromFilename, extractChapterFromText, buildChapterTitle } from "@/utils/ingest.utils";
 
 export const runtime = "nodejs";
@@ -109,21 +109,14 @@ export async function POST(req: NextRequest) {
       const chunks = await chunkTextLC(text, { chunkSize: 1800, overlap: 200 });
       totalChunks += chunks.length;
 
-      const batch = await getEmbeddingsBatch(chunks.map((c) => ({ id: `${doc.id}:${c.index}`, text: c.content })));
+      const embeddings1536 = await getOpenAIEmbeddings(chunks.map((c) => c.content));
 
-      // Map back to chunk index
-      const embeddingsByIndex = new Map<number, number[]>();
-      for (const item of batch) {
-        const idx = Number(item.id.split(":")[1]);
-        embeddingsByIndex.set(idx, item.embedding);
-      }
-
-      const rows = chunks.map((c) => ({
+      const rows = chunks.map((c, i) => ({
         document_id: doc.id,
         chunk_index: c.index,
         content: c.content,
         tokens: c.tokens,
-        embedding: embeddingsByIndex.get(c.index) as unknown as any,
+        embedding: embeddings1536[i] as unknown as any,
       }));
 
       const { error: insertChunksError } = await supabase.from("document_chunks").insert(rows);

@@ -11,8 +11,8 @@ export const SUPABASE_RAG_BUCKET = "rag";
 // Application URL
 export const NEXT_PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-export const HF_URL = process.env.HF_URL ?? "";
-export const HF_KEY = process.env.HF_KEY ?? "";
 
 // Dev-only: fallback user id to bypass auth during local development
 export const DEV_DEFAULT_USER_ID = process.env.DEV_DEFAULT_USER_ID ?? "";
+
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";

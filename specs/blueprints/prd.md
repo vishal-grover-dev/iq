@@ -88,8 +88,30 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 
 - After completing any task, respond in 2–5 bullets: either provide a concise explanation when asked/queried, or outline the next set of actions when operating in agent/task mode.
 
+## UI Change Verification (visual & a11y)
+
+- For every UI-affecting change, verify appearance and basic accessibility using the built-in visual feedback harness.
+- Run Playwright visual checks and review diffs for `/` and `/upload` on desktop and mobile profiles. Update baselines only when changes are intentional and improve clarity or elegance.
+- Review logged accessibility findings (title presence, button labels, focus states) and address critical/obvious items within the scope of the change.
+- Keep the experience elegant, legible, and consistent with shadcn/ui patterns; prefer incremental improvements to polish with each UI edit.
+
+### Motion & Transitions Guidelines
+
+- Animate opacity and transform (translate/scale) only for most transitions; avoid animating layout properties to keep motion smooth and jank-free.
+- Timings: 120–200 ms for micro-interactions; 180–280 ms for menus/dialogs; 250–400 ms for overlays/page transitions. Use consistent timings for similar components.
+- Easing: use gentle ease-out or ease-in-out curves; avoid aggressive overshoot/bounce by default.
+- Respect user preferences: reduce or disable non-essential animations when `prefers-reduced-motion` is set; never block focus/interaction on long animations.
+- Keep motion subtle: small distances (5–12 px) and low-scale changes (e.g., 0.96→1) feel polished and professional.
+
 ## Dependency Management
 
 - The assistant has discretion to add runtime or dev dependencies when required to meet the scope efficiently.
 - Choices should align with the documented tech stack, be widely used, and minimize bloat.
 - At the end of each task, the assistant will list any newly added dependencies along with a brief note explaining their purpose and where they are used in the codebase.
+
+## Work Items Task Checklists
+
+- For every new feature added under `specs/work-items/*.md`, append a final "Tasks" section containing a Markdown checklist.
+- Author tasks as clear, action-oriented items. Use `- [ ]` for open tasks.
+- On completion, update items to `- [x]` and include a brief status note inline or as an indented sub-bullet (e.g., links to PRs/files, follow-ups).
+- Keep the checklist in sync during implementation so it reflects current progress and any notes.

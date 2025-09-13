@@ -17,6 +17,19 @@
   - Note: Import components with the `Icon` suffix (e.g., `SunDimIcon`, `MoonIcon`, `LinkedinLogoIcon`).
   - Guideline: Do not use `duotone` icons; prefer `regular`, `bold`, or `fill` weights.
 
+### Motion & Animations
+
+- Purpose: keep interactions feeling responsive, clean, and fluid while respecting accessibility and performance.
+- What to animate: prefer opacity and transform (translate/scale) only; avoid layout-affecting properties (width/height/top/left) to prevent jank.
+- Durations: micro-interactions 120–200 ms; menus/dialogs 180–280 ms; overlays/pages 250–400 ms. Orchestrations may chain up to ~600 ms total.
+- Easing: use gentle ease-out or ease-in-out curves that avoid bouncy/overshoot by default. Reserve spring-like motion for subtle, playful contexts only.
+- Consistency: apply consistent timings/easings across similar components (buttons, lists, modals). Keep distances small (5–12 px) and avoid excessive movement.
+- Accessibility: honor reduced motion preferences by disabling or simplifying animations. Ensure focus states remain visible and do not rely solely on motion.
+- Libraries: use built-in shadcn/Radix transitions for simple states; for entrance/exit, presence, and shared layout transitions prefer a dedicated motion library (e.g., Framer Motion). Lazy-load advanced motion features when possible.
+- Performance: limit simultaneous animated elements, prefer GPU-friendly transforms, and avoid animating large backgrounds or heavy shadows.
+- Testing: keep animation timings stable; disable long-running animations during visual tests to reduce snapshot flakiness.
+- Installed: `framer-motion` is added to the project for smooth, accessible animations.
+
 ### State Management
 
 - **Jotai** - Atomic state management for client-side state

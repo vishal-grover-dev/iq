@@ -29,6 +29,10 @@ When creating files:
 - Prefix interfaces with `I` (e.g., `IAcademicPathContext`).
 - Prefix types with `T` and enums with `E`.
 
+### TypeScript Guidelines
+- Avoid using `any` unless absolutely necessary and temporary. Prefer explicit types, generics, `unknown`, or `never`, and narrow with type guards.
+- Do not export public APIs that use `any`. If a boundary forces `any` (e.g., poorly typed third‑party code), isolate it locally and add a brief comment explaining why.
+
 ### Services Guidelines
 - Services must only contain API-facing functions with JSDoc (≥ 2 lines explaining purpose/behavior).
 - Move helpers to `utils/` and shared types/interfaces to `types/`.

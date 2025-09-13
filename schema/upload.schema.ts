@@ -40,7 +40,7 @@ export const formSchema = z.discriminatedUnion("contentCategory", [
       .array(
         z.object({
           topic: z.nativeEnum(EInterviewTopic),
-          subtopic: z.string().min(1, "Subtopic is required"),
+          subtopic: z.string().optional(),
           ingestType: z.nativeEnum(EInterviewIngestType),
           url: z.string().url("Enter a valid URL"),
         })

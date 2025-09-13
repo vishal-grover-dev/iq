@@ -104,10 +104,33 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 - One‑tap flag removes item from rotation and writes to a review table.
 - Weekly pass to fix/remove flagged items; keep attribution/citations intact.
 
+## Status & Progress Visibility (v1)
+
+- Status endpoint: GET /api/ingest/:id returns a lightweight status document including id, status (queued|processing|completed|failed), created_at, metadata, and a progress object.
+  - Progress (derived, no migration required):
+    - documentsProcessed: count of documents for the ingestion
+    - chunksProcessed: count of document_chunks joined to those documents
+    - vectorsStored: same as chunksProcessed
+    - coverage: distinct labels seen so far (topic, subtopic, version)
+    - recent: up to 5 most recently inserted documents (title/path)
+- In‑flight progress (written incrementally by the job into ingestions.metadata.progress):
+  - totalPlanned: total files/pages enumerated (maxFiles/maxPages after listing/crawl plan)
+  - processed: number completed so far
+  - currentPathOrUrl: file path or URL currently being processed
+  - step: crawling | chunking | embedding
+  - errorsCount: number of non‑fatal errors
+  - lastUpdatedAt: ISO timestamp for UI freshness
+- Topic coverage for react.dev and similar sources: derive subtopic labels at document insert time using simple path heuristics (e.g., learn, reference, hooks). The status endpoint can report distinct subtopics covered so far.
+- UI: poll the status endpoint every 2–3 seconds while status=processing; display “Processing processed/totalPlanned; current: currentPathOrUrl; step.”
+- Optional (granular tracing): add an ingestion_events table via a new migration (do not modify existing migrations) to record step‑level messages with timestamps and a minimal meta payload; expose a streaming or polled feed for live logs.
+
 ## Observability
 
 - Log per ingestion: files processed, chunks, vectors, ms per step.
 - Log per generation: provider latency, acceptance rate, regen count.
+- Status visibility: status endpoint exposes progress counts (documentsProcessed, chunksProcessed/vectorsStored), coverage (labels), recent items, and in‑flight fields (step, currentPathOrUrl, processed/totalPlanned). UI polls every 2–3 seconds until completion/failure.
+- Optional events: when enabled, persist step‑level ingestion events (stage, message, meta, timestamp) and surface them in a live console; otherwise rely on status polling.
+- Include current step and current path/URL in logs to aid troubleshooting; increment errorsCount for non‑fatal issues and keep lastUpdatedAt fresh for the UI.
 
 ## Existing capabilities to reuse (repo paths)
 
@@ -147,3 +170,19 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 
 - Notes:
   - Embedding dimension standardized at 1536‑d using OpenAI. Keep the rest of the flow but ensure all ingestion modes use OpenAI embeddings.
+
+## Tasks
+
+- [x] Enhance ingestion status endpoint to include derived progress/coverage/recent/inflight
+- [x] Add MCQ tables (`mcq_items`, `mcq_explanations`) with RLS and indexes via new migration
+- [x] Add label-based retrieval RPC (`retrieval_hybrid_by_labels`) via new migration
+- [x] Add generation schemas/types for MCQ requests/responses and item validation
+- [x] Implement `POST /api/generate/mcq` route (v1 placeholder synthesis) with persistence
+- [x] Add client service and hook for MCQ generation
+- [x] Build minimal UI action to trigger MCQ generation for selected topic/subtopic
+  - Implemented per-row Generate button in `components/upload/interviewSection.component.tsx` invoking `useGenerateMcqMutations`; toasts on success/error. Visual baselines updated.
+- [ ] QA: Generate sample MCQs for React topics; review citations and labels
+- [ ] Improve generation: replace placeholder synthesis with LLM prompt using retrieved context
+- [ ] Update docs: add examples and notes on generation params and expected outputs
+- [x] Change UX: Submit enqueues all ingestions; show progress; modal to confirm Generate after indexing completes
+  - Implemented: repo/web routes split into create (pending) and process with progress updates. UI polls and displays completion modal.

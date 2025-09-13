@@ -10,6 +10,14 @@
 - If anything is unclear during a task or question, ask for clarification immediately; efficiency and correctness are priorities.
 - Be honest, transparent, and direct; candid questions and blunt feedback are welcome.
 
+## Visual verification for UI changes
+
+- When making any UI change, run visual and accessibility checks locally before concluding the task:
+  - Visual snapshots: `pnpm test:e2e` (or update baselines with `pnpm test:e2e:update`).
+  - Review diffs under `test-results/*-diff.png` and ensure the UI remains elegant and functional across desktop and mobile profiles.
+  - Accessibility smoke checks are non-blocking; still review the logged issues and address critical items (e.g., missing titles/labels) opportunistically.
+
+
 ## Context inclusion
 
 - Always include these `specs/blueprints` files in context (pin or @-include):
@@ -17,3 +25,9 @@
   - `specs/blueprints/tech-stack.md`
   - `specs/blueprints/directory-structure.md`
   - `specs/blueprints/existing-files.md`
+
+## Work Items Task Checklists
+
+- After adding explanations for any new feature in `specs/work-items/*.md`, append a final "Tasks" section with a Markdown checklist (`- [ ]`).
+- As work progresses, update items to `- [x]` when completed and add brief notes inline or as indented sub-bullets (e.g., links to PRs/files, follow-ups).
+- Treat the checklist as the source of truth for progress; keep it synchronized with the implementation status.

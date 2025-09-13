@@ -3,9 +3,6 @@ import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { ingestWebRequestSchema } from "@/schema/ingest.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
-import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { getEmbeddings } from "@/services/ai.services";
-import { chunkTextLC } from "@/utils/langchain.utils";
 
 export const runtime = "nodejs";
 
@@ -21,7 +18,7 @@ export async function POST(req: NextRequest) {
     const parsed = ingestWebRequestSchema.parse(body);
 
     const supabase = getSupabaseServiceRoleClient();
-    const { data: ingestionInsert, error: ingestionError } = await supabase
+    const { data: row, error } = await supabase
       .from("ingestions")
       .insert([
         {
@@ -29,73 +26,30 @@ export async function POST(req: NextRequest) {
           content_category: "interview-docs",
           metadata: {
             topic: parsed.topic,
+            subtopic: parsed.subtopic ?? null,
             version: parsed.version ?? null,
             mode: "web",
             seedUrl: parsed.seedUrl,
             domain: parsed.domain,
             prefix: parsed.prefix ?? null,
+            depth: parsed.depth,
+            maxPages: parsed.maxPages,
+            crawlDelayMs: parsed.crawlDelayMs,
           },
           objects: [],
-          status: "processing",
+          status: "pending",
         },
       ])
       .select("id")
       .single();
-    if (ingestionError || !ingestionInsert) throw new Error(ingestionError?.message ?? "Failed to create ingestion");
-    const ingestionId = ingestionInsert.id as string;
+    if (error || !row) throw new Error(error?.message ?? "Failed to create ingestion");
 
-    const pages = await crawlWebsite({
-      seedUrl: parsed.seedUrl,
-      domain: parsed.domain,
-      prefix: parsed.prefix,
-      depth: parsed.depth,
-      maxPages: parsed.maxPages,
-      crawlDelayMs: parsed.crawlDelayMs,
-    });
-
-    let totalChunks = 0;
-    let totalVectors = 0;
-    for (const p of pages) {
-      const { data: docInsert, error: docError } = await supabase
-        .from("documents")
-        .insert([
-          {
-            ingestion_id: ingestionId,
-            bucket: "web",
-            path: p.url,
-            mime_type: "text/html",
-            title: p.title,
-            labels: { topic: parsed.topic, version: parsed.version ?? null },
-          },
-        ])
-        .select("id")
-        .single();
-      if (docError || !docInsert) throw new Error(docError?.message ?? "Failed to create document");
-      const documentId = docInsert.id as string;
-
-      const chunks = await chunkTextLC(p.content, { chunkSize: 1800, overlap: 200 });
-      totalChunks += chunks.length;
-      const embeddings = await getEmbeddings(chunks.map((c) => c.content));
-      const rows = chunks.map((c, i) => ({
-        document_id: documentId,
-        chunk_index: c.index,
-        content: c.content,
-        tokens: c.tokens,
-        embedding: embeddings[i] as unknown as any,
-        labels: { topic: parsed.topic, version: parsed.version ?? null },
-      }));
-      const { error: insertErr } = await supabase.from("document_chunks").insert(rows);
-      if (insertErr) throw new Error(insertErr.message);
-      totalVectors += rows.length;
-    }
-
-    await supabase.from("ingestions").update({ status: "completed" }).eq("id", ingestionId);
     return NextResponse.json({
       ok: true,
-      ingestionId,
-      message: "Web ingestion completed",
-      chunks: totalChunks,
-      vectors: totalVectors,
+      ingestionId: row.id as string,
+      message: "Ingestion created",
+      chunks: 0,
+      vectors: 0,
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });

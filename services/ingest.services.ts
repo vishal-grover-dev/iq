@@ -45,5 +45,16 @@ export async function getIngestionStatus(ingestionId: string) {
     error?: string | null;
     created_at: string;
     metadata: any;
+    progress?: any;
+    inflight?: any;
   };
+}
+
+/**
+ * Trigger processing for a created ingestion. Endpoint differs by mode.
+ */
+export async function processIngestion(mode: "repo" | "web", ingestionId: string) {
+  const path = mode === "repo" ? "/api/ingest/repo/process" : "/api/ingest/web/process";
+  const res = await apiClient.post(path, { ingestionId });
+  return ingestResponseSchema.parse(res.data);
 }

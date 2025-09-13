@@ -47,6 +47,7 @@ export const ingestRepoRequestSchema = z.object({
   repoUrl: z.string().url(),
   paths: z.array(z.string()).default([]),
   topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  subtopic: z.string().optional(),
   version: z.string().optional(),
   maxFiles: z.number().int().positive().max(200).default(200),
 });
@@ -60,6 +61,7 @@ export const ingestWebRequestSchema = z.object({
   maxPages: z.number().int().positive().max(200).default(200),
   crawlDelayMs: z.number().int().min(0).max(5000).default(500),
   topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  subtopic: z.string().optional(),
   version: z.string().optional(),
 });
 

@@ -12,6 +12,7 @@
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
+ - `playwright.config.ts`: Playwright configuration (webServer runs Next dev; Chromium + mobile profiles).
  
 
 ### specs/blueprints
@@ -61,10 +62,14 @@
 ### components/upload
 
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
+ - `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal.
+ - `academicSection.component.tsx`: Subcomponent rendering Academic fields and file dropzone.
+  - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary and Generate action.
 
 ### hooks
 
 - `useTheme.hook.ts`: Custom hook for accessing theme context and state management.
+ - `useInterviewIngestion.hook.ts`: Hook to create, process, and poll repo/web ingestions and return coverage.
 
 ### public
 
@@ -89,6 +94,7 @@
 - `upload.schema.ts`: Zod schema and validation for the upload flow.
 - `ingest.schema.ts`: Zod schema for ingestion API request/response.
  - `retrieval.schema.ts`: Zod schemas for retrieval requests/responses and query enhancement.
+- `generation.schema.ts`: Zod schemas for MCQ generation requests/responses and item validation.
 
 ### utils
 
@@ -108,6 +114,7 @@
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
  - `retrieval.services.ts`: Retrieval API client functions and hooks.
+- `generation.services.ts`: Client service and hook for MCQ generation.
 
 ### constants
 
@@ -123,11 +130,16 @@
 ### migrations
 
 - `001-Storage-Academics-RLS-02-Sep-25.sql`: Creates `academics` bucket if missing; adds RLS policies (public read, authenticated insert/update/delete).
- - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
- - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
- - `004-Repo-Labels.sql`: Adds `labels` jsonb to `documents` and `document_chunks` + GIN indexes.
+- `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
+- `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
+- `004-MCQ-And-Label-Retrieval.sql`: Creates MCQ tables and adds label-based retrieval RPC `retrieval_hybrid_by_labels`.
 
 ### app/api
+
+### tests (Playwright)
+
+- `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
+- `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
 
 - `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
  - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
@@ -135,4 +147,5 @@
  - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
+- `api/generate/mcq/route.ts`: MCQ generation route (POST) retrieving by labels and persisting items.
  

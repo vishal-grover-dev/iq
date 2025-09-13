@@ -5,6 +5,8 @@ import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai.services";
+import { deriveLabelsFromUrl, extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
+import { createHash } from "crypto";
 
 export const runtime = "nodejs";
 
@@ -43,28 +45,98 @@ export async function POST(req: NextRequest) {
       await supabase.from("ingestions").update({ metadata: nextMeta }).eq("id", ingestionId);
     };
 
+    const writeEvent = async (
+      stage: string,
+      message: string,
+      level: "info" | "warn" | "error" = "info",
+      meta?: Record<string, any>
+    ) => {
+      await supabase
+        .from("ingestion_events")
+        .insert({ ingestion_id: ingestionId, stage, level, message, meta: meta ?? null });
+    };
+
     await supabase.from("ingestions").update({ status: "processing" }).eq("id", ingestionId);
     await updateProgress({ step: "crawling", errorsCount: 0 });
+    await writeEvent("start", "Web ingestion started", "info", { meta });
 
     const pages = await crawlWebsite({
-      seedUrl: meta.seedUrl,
+      seedUrl: meta.seedUrl ?? undefined,
+      seeds: Array.isArray(meta.seeds) ? (meta.seeds as string[]) : undefined,
       domain: meta.domain,
       prefix: meta.prefix ?? undefined,
       depth: meta.depth ?? 2,
       maxPages: meta.maxPages ?? 50,
       crawlDelayMs: meta.crawlDelayMs ?? 300,
+      includePatterns: Array.isArray(meta.includePatterns) ? (meta.includePatterns as string[]) : undefined,
+      excludePatterns: Array.isArray(meta.excludePatterns) ? (meta.excludePatterns as string[]) : undefined,
+      depthMap:
+        typeof meta.depthMap === "object" && meta.depthMap ? (meta.depthMap as Record<string, number>) : undefined,
     });
     await updateProgress({ totalPlanned: pages.length, processed: 0 });
+    await writeEvent("planning", `Planned ${pages.length} pages`);
 
     let totalChunks = 0;
     let totalVectors = 0;
     const topic: string = meta.topic;
     const subtopic: string | null = (meta.subtopic ?? "").trim() === "" ? null : meta.subtopic;
     const version: string | null = meta.version ?? null;
+    const seenHashes = new Set<string>();
+    const shinglesList: Array<Set<string>> = [];
+
+    // Batch processing for better performance
+    const BATCH_SIZE = 5; // Process 5 pages at a time
+    const embeddingBatch: Array<{ documentId: string; chunks: any[]; url: string }> = [];
 
     for (let i = 0; i < pages.length; i++) {
       const p = pages[i];
       await updateProgress({ step: "chunking", currentPathOrUrl: p.url, processed: i });
+      await writeEvent("fetch", `Fetched ${p.url}`, "info", { title: p.title });
+
+      // Content quality assessment
+      const qualityCheck = assessContentQuality(p.content, p.html);
+      if (!qualityCheck.isAcceptable) {
+        await writeEvent("quality", `Skipped low-quality page: ${qualityCheck.reasons.join(", ")}`, "info", {
+          url: p.url,
+          score: qualityCheck.score,
+        });
+        continue;
+      }
+
+      // Dedup by content hash
+      const normalized = p.content.replace(/\s+/g, " ").trim();
+      const hashHex = createHash("sha256").update(normalized).digest("hex");
+      if (seenHashes.has(hashHex)) {
+        await writeEvent("dedup", "Skipped duplicate page (hash)", "info", { url: p.url });
+        continue;
+      }
+
+      // Near-duplicate (similarity-lite) using 5-word shingles and Jaccard similarity
+      const tokens = normalized
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean);
+      const shingles: string[] = [];
+      for (let j = 0; j + 4 < tokens.length; j++) shingles.push(tokens.slice(j, j + 5).join(" "));
+      const shingleSet = new Set(shingles);
+      let isNearDup = false;
+      for (const prior of shinglesList) {
+        // Jaccard
+        let inter = 0;
+        for (const s of shingleSet) if (prior.has(s)) inter++;
+        const union = prior.size + shingleSet.size - inter;
+        const jaccard = union > 0 ? inter / union : 0;
+        if (jaccard >= 0.9) {
+          isNearDup = true;
+          break;
+        }
+      }
+      if (isNearDup) {
+        await writeEvent("dedup", "Skipped near-duplicate page (jaccard >= 0.9)", "info", { url: p.url });
+        continue;
+      }
+      seenHashes.add(hashHex);
+      shinglesList.push(shingleSet);
       const { data: docInsert, error: docError } = await supabase
         .from("documents")
         .insert([
@@ -74,7 +146,14 @@ export async function POST(req: NextRequest) {
             path: p.url,
             mime_type: "text/html",
             title: p.title,
-            labels: { topic, subtopic, version },
+            labels: (() => {
+              const derivedLabels = deriveLabelsFromUrl(p.url, topic);
+              return {
+                topic: derivedLabels.topic,
+                subtopic: derivedLabels.subtopic ?? subtopic,
+                version: derivedLabels.version ?? version,
+              };
+            })(),
           },
         ])
         .select("id")
@@ -82,26 +161,62 @@ export async function POST(req: NextRequest) {
       if (docError || !docInsert) throw new Error(docError?.message ?? "Failed to create document");
       const documentId = docInsert.id as string;
 
-      const chunks = await chunkTextLC(p.content, { chunkSize: 1800, overlap: 200 });
+      const mainHtml = extractMainContent(p.html);
+      const textForChunking = mainHtml
+        ? mainHtml
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+        : p.content;
+      const chunks = await chunkTextLC(textForChunking, { chunkSize: 1800, overlap: 200 });
       totalChunks += chunks.length;
-      await updateProgress({ step: "embedding" });
-      const embeddings = await getEmbeddings(chunks.map((c) => c.content));
-      const rows = chunks.map((c, idx) => ({
-        document_id: documentId,
-        chunk_index: c.index,
-        content: c.content,
-        tokens: c.tokens,
-        embedding: embeddings[idx] as unknown as any,
-        labels: { topic, subtopic, version },
-      }));
-      const { error: insertErr } = await supabase.from("document_chunks").insert(rows);
-      if (insertErr) throw new Error(insertErr.message);
-      totalVectors += rows.length;
+
+      // Add to batch for embedding processing
+      embeddingBatch.push({ documentId, chunks, url: p.url });
+
+      // Process batch when it reaches BATCH_SIZE or at the end
+      if (embeddingBatch.length >= BATCH_SIZE || i === pages.length - 1) {
+        await updateProgress({ step: "embedding" });
+
+        // Collect all chunks for batch embedding
+        const allChunksForEmbedding = embeddingBatch.flatMap((item) => item.chunks.map((c) => c.content));
+        const embeddings = await getEmbeddings(allChunksForEmbedding);
+
+        let embeddingIndex = 0;
+        for (const batchItem of embeddingBatch) {
+          const rows = batchItem.chunks.map((c, idx) => ({
+            document_id: batchItem.documentId,
+            chunk_index: c.index,
+            content: c.content,
+            tokens: c.tokens,
+            embedding: embeddings[embeddingIndex + idx] as unknown as any,
+            labels: (() => {
+              const derivedLabels = deriveLabelsFromUrl(batchItem.url, topic);
+              return {
+                topic: derivedLabels.topic,
+                subtopic: derivedLabels.subtopic ?? subtopic,
+                version: derivedLabels.version ?? version,
+              };
+            })(),
+          }));
+
+          const { error: insertErr } = await supabase.from("document_chunks").insert(rows);
+          if (insertErr) throw new Error(insertErr.message);
+          totalVectors += rows.length;
+          embeddingIndex += batchItem.chunks.length;
+          await writeEvent("ingest", `Inserted ${rows.length} chunks`, "info", { url: batchItem.url });
+        }
+
+        // Clear the batch
+        embeddingBatch.length = 0;
+      }
+
       await updateProgress({ processed: i + 1 });
     }
 
     await supabase.from("ingestions").update({ status: "completed" }).eq("id", ingestionId);
     await updateProgress({ step: "completed" });
+    await writeEvent("complete", "Web ingestion completed");
 
     return NextResponse.json({
       ok: true,

@@ -13,6 +13,7 @@
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
  - `playwright.config.ts`: Playwright configuration (webServer runs Next dev; Chromium + mobile profiles).
+ - `scripts/db.sh`: Helper to run psql queries/files against Supabase pooler URL in `supabase/.temp/pooler-url`.
  
 
 ### specs/blueprints
@@ -105,6 +106,7 @@
  - `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
+ - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
  - `interview-streams-options.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
 
 ### services
@@ -134,6 +136,7 @@
 - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
 - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
 - `004-MCQ-And-Label-Retrieval.sql`: Creates MCQ tables and adds label-based retrieval RPC `retrieval_hybrid_by_labels`.
+ - `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
 
 ### app/api
 
@@ -145,6 +148,8 @@
 - `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
  - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
  - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
+ - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
+ - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
  - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.

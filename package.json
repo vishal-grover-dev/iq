@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start -p 3050",
     "lint": "eslint",
+    "db:psql": "bash scripts/db.sh psql",
+    "db:query": "bash scripts/db.sh query",
+    "db:migrate:events": "bash scripts/db.sh file migrations/005-Ingestion-Events.sql",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
     "test:e2e:ui": "playwright test --ui"

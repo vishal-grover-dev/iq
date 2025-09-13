@@ -33,14 +33,24 @@ Goal: A robust, domain‑agnostic ingestion pipeline that scales from React‑on
 
 ## Tasks
 
-- [ ] Add `seeds[]`, include/exclude, depthMap to schema and processor
-- [ ] Implement site adapter interface; add React adapter
-- [ ] Add `ingestion_events` table + writes; expose in status
-- [ ] Add dedup (hash) + near‑dup (simhash‑lite) gating
-- [ ] Add dry‑run “plan” endpoint for previewing crawl scope
-- [ ] Add incremental recrawl (ETag/Last‑Modified) (post‑MVP)
-- [ ] Add LLM fallback labeler with budget guard (post‑MVP)
-- [ ] Add adapters for Angular/Vue/MDN/Node/TS (post‑MVP)
+- [x] Add `seeds[]`, include/exclude, depthMap to schema and processor
+  - Implemented in `schema/ingest.schema.ts`, `utils/web-crawler.utils.ts`, and web ingestion routes. Back‑compat kept for `seedUrl`.
+- [x] Implement site adapter interface; add React adapter
+  - Added `utils/web-react-adapter.utils.ts` and integrated in `api/ingest/web/process/route.ts` (label derivation + main content selection).
+- [x] Add `ingestion_events` table + writes; expose in status
+  - Added migration `005-Ingestion-Events.sql`; events written from repo/web processors; surfaced in status as `events`.
+- [x] Add dedup (hash) + near‑dup (simhash‑lite) gating
+  - Implemented SHA‑256 hash dedup and 5‑word shingle Jaccard≥0.9 near‑dup skip with events.
+- [x] Add dry‑run "plan" endpoint for previewing crawl scope
+  - Added `app/api/ingest/web/plan/route.ts` returning planned pages (count + titles).
+- [x] Add error recovery and retry logic for failed page fetches
+  - Implemented `fetchWithRetry` with exponential backoff, rate limit handling, and timeout protection.
+- [x] Add content quality filters (minimum length, language detection)
+  - Added `isContentQualityAcceptable` function with English detection, error page filtering, and content-to-noise ratio checks.
+- [x] Optimize embedding API calls with better batching
+  - Implemented batch processing (5 pages at a time) to reduce API calls and improve performance.
+- [x] Improve robots.txt parsing and caching
+  - Added in-memory caching for robots.txt with 1-hour TTL and retry logic for failed fetches.
 
 ## Notes
 

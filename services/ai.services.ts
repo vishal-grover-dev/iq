@@ -91,3 +91,109 @@ export async function rerank(query: string, texts: string[]): Promise<number[]> 
   }
   return scores;
 }
+
+/**
+ * generateMcqsFromContexts
+ * Server-only helper: Given a query and a list of contextual passages, ask the LLM to propose
+ * MCQs (question, 4 options, correctIndex, explanation) with citations by context index.
+ * Returns up to `count` well-formed items. Post-processing/validation happens in the route.
+ */
+export async function generateMcqsFromContexts(args: {
+  query: string;
+  contexts: Array<{ content: string; title?: string | null }>;
+  count: number;
+  difficulty?: string;
+  bloomLevels?: string[];
+  topic: string;
+  subtopic?: string | null;
+  version?: string | null;
+}): Promise<
+  Array<{
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+    citationIndices: number[];
+  }>
+> {
+  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+  const { query, contexts, count, difficulty, bloomLevels, topic, subtopic, version } = args;
+  const sys = [
+    "You create multiple-choice questions grounded STRICTLY in the provided contexts.",
+    "Rules:",
+    "- Always produce exactly 4 options.",
+    "- Choose the single best correctIndex (0-3).",
+    "- Keep questions concise and unambiguous.",
+    "- Cite at least 1 relevant context by its index in citationIndices.",
+    "- Return STRICT JSON: { items: [{ question, options, correctIndex, explanation, citationIndices: number[] }] }.",
+  ].join("\n");
+
+  const ctxPreview = contexts
+    .slice(0, Math.max(4, Math.min(contexts.length, 12)))
+    .map((c, i) => `${i}. ${(c.title ? `[${c.title}] ` : "")}${c.content.slice(0, 600)}`)
+    .join("\n\n");
+
+  const user = [
+    `Topic: ${topic}${subtopic ? ` / ${subtopic}` : ""}${version ? ` (v${version})` : ""}`,
+    `Query: ${query || topic}`,
+    `Target count: ${count}`,
+    difficulty ? `Difficulty: ${difficulty}` : "",
+    bloomLevels && bloomLevels.length ? `Bloom: ${bloomLevels.join(", ")}` : "",
+    "Contexts (index: text):",
+    ctxPreview,
+    'Return JSON only: { "items": [ { "question": string, "options": string[4], "correctIndex": 0-3, "explanation": string, "citationIndices": number[] } ] }',
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const res = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: sys },
+      { role: "user", content: user },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  let parsed: any = {};
+  try {
+    parsed = JSON.parse(res.choices[0]?.message?.content ?? "{}");
+  } catch {
+    parsed = {};
+  }
+  const items: any[] = Array.isArray(parsed.items) ? parsed.items : [];
+  const out: Array<{
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+    citationIndices: number[];
+  }> = [];
+  for (const it of items) {
+    if (
+      typeof it?.question === "string" &&
+      Array.isArray(it?.options) &&
+      it.options.length === 4 &&
+      typeof it?.correctIndex === "number" &&
+      it.correctIndex >= 0 &&
+      it.correctIndex <= 3 &&
+      typeof it?.explanation === "string"
+    ) {
+      const cits = Array.isArray(it.citationIndices)
+        ? it.citationIndices.filter((n: any) => Number.isInteger(n) && n >= 0 && n < contexts.length)
+        : [];
+      out.push({
+        question: it.question,
+        options: it.options.slice(0, 4).map((s: any) => String(s)),
+        correctIndex: it.correctIndex,
+        explanation: it.explanation,
+        citationIndices: cits.length ? cits : [0],
+      });
+    }
+    if (out.length >= count) break;
+  }
+  return out.slice(0, count);
+}

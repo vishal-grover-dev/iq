@@ -182,7 +182,8 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 - [x] Build minimal UI action to trigger MCQ generation for selected topic/subtopic
   - Implemented per-row Generate button in `components/upload/interviewSection.component.tsx` invoking `useGenerateMcqMutations`; toasts on success/error. Visual baselines updated.
 - [ ] QA: Generate sample MCQs for React topics; review citations and labels
-- [ ] Improve generation: replace placeholder synthesis with LLM prompt using retrieved context
+- [x] Improve generation: replace placeholder synthesis with LLM prompt using retrieved context
+  - Implemented: retrieval + LLM rerank + `generateMcqsFromContexts` with strict JSON → validated and persisted.
 - [ ] Update docs: add examples and notes on generation params and expected outputs
 - [x] Change UX: Submit enqueues all ingestions; show progress; modal to confirm Generate after indexing completes
   - Implemented: repo/web routes split into create (pending) and process with progress updates. UI polls and displays completion modal.
@@ -203,13 +204,23 @@ Out of scope (now):
 - Full incremental recrawls with ETag/Last-Modified (planned separately).
 
 Tasks
-- [ ] Add include and exclude patterns and per-section depth to the web ingestion schema and route
-- [ ] Support multiple seeds per job; plan BFS per seed within domain/prefix bounds
-- [ ] Implement React-specific label derivation for topic, subtopic, and version
-- [ ] Introduce ingestion events (new table via a new migration) and write step-level messages
-- [ ] Extend status endpoint coverage: distinct subtopics and versions with counts
-- [ ] Add deduplication (hash) and near-duplicate skip (similarity-lite), logging decisions to events
-- [ ] Expose admin controls: includePatterns, excludePatterns, depthMap, maxPages, crawlDelayMs
-- [ ] Apply safety rails: hard cap per job and default polite crawl delays
+- [x] Add include and exclude patterns and per-section depth to the web ingestion schema and route
+  - Implemented in `schema/ingest.schema.ts`, `utils/web-crawler.utils.ts`, and `app/api/ingest/web/*`.
+- [x] Support multiple seeds per job; plan BFS per seed within domain/prefix bounds
+  - Implemented via `seeds[]` parameter in schema and crawler.
+- [x] Implement universal label derivation for topic, subtopic, and version
+  - Implemented `utils/intelligent-web-adapter.utils.ts`; web processor uses it instead of site-specific adapters.
+- [x] Introduce ingestion events (new table via a new migration) and write step-level messages
+  - Implemented `005-Ingestion-Events.sql`; events written from repo/web processors.
+- [x] Extend status endpoint coverage: distinct subtopics and versions with counts
+  - Implemented in `app/api/ingest/[id]/route.ts`; surfaced as `coverage` and `events`.
+- [x] Add deduplication (hash) and near-duplicate skip (similarity-lite), logging decisions to events
+  - Implemented SHA-256 hash dedup and 5-word shingles Jaccard≥0.9 skip with events.
+- [x] Expose admin controls: includePatterns, excludePatterns, depthMap, maxPages, crawlDelayMs
+  - Supported via ingestion metadata; validated in schema; consumed by web processor.
+- [x] Apply safety rails: hard cap per job and default polite crawl delays
+  - Defaults: maxPages=50, depth=2, crawlDelayMs=300; overridable within bounds.
 - [ ] QA: run a wide React reference crawl; verify coverage breadth and embeddings counts
-- [ ] Document defaults and React-only scope in a dedicated work item for intelligent ingestion
+  - Pending: run crawl and review coverage/embeddings; adjust heuristics if needed.
+- [ ] Documentation: update to reflect universal heuristics and defaults; remove React-only references
+  - Pending: refresh docs and examples.

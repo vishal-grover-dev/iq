@@ -51,8 +51,20 @@ export async function POST(req: NextRequest) {
       await supabase.from("ingestions").update({ metadata: nextMeta }).eq("id", ingestionId);
     };
 
+    const writeEvent = async (
+      stage: string,
+      message: string,
+      level: "info" | "warn" | "error" = "info",
+      meta?: Record<string, any>
+    ) => {
+      await supabase
+        .from("ingestion_events")
+        .insert({ ingestion_id: ingestionId, stage, level, message, meta: meta ?? null });
+    };
+
     await supabase.from("ingestions").update({ status: "processing" }).eq("id", ingestionId);
     await updateProgress({ step: "validating", errorsCount: 0 });
+    await writeEvent("start", "Repo ingestion started", "info", { repoUrl });
 
     // Basic validation
     try {
@@ -63,12 +75,14 @@ export async function POST(req: NextRequest) {
         .from("ingestions")
         .update({ status: "failed", error: e?.message ?? "Invalid repository URL" })
         .eq("id", ingestionId);
+      await writeEvent("error", e?.message ?? "Invalid repository URL", "error");
       return NextResponse.json({ ok: false, message: e?.message ?? "Invalid repository URL" }, { status: 400 });
     }
 
     await updateProgress({ step: "planning" });
     const files = await getRepoMarkdownFiles(repoUrl, (meta.paths as string[]) ?? [], maxFiles);
     await updateProgress({ totalPlanned: files.length, processed: 0 });
+    await writeEvent("planning", `Planned ${files.length} files`);
 
     let totalChunks = 0;
     let totalVectors = 0;
@@ -76,6 +90,7 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       await updateProgress({ step: "chunking", currentPathOrUrl: f.path, processed: i });
+      await writeEvent("fetch", `Fetched ${f.path}`);
 
       const { data: docInsert, error: docError } = await supabase
         .from("documents")
@@ -111,10 +126,12 @@ export async function POST(req: NextRequest) {
       totalVectors += rows.length;
 
       await updateProgress({ processed: i + 1 });
+      await writeEvent("ingest", `Inserted ${rows.length} chunks`, "info", { path: f.path });
     }
 
     await supabase.from("ingestions").update({ status: "completed" }).eq("id", ingestionId);
     await updateProgress({ step: "completed" });
+    await writeEvent("complete", "Repo ingestion completed");
 
     return NextResponse.json({
       ok: true,

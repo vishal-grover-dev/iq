@@ -68,6 +68,26 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       .order("id", { ascending: false })
       .limit(5);
 
+    // Coverage counts
+    const coverageCounts = {
+      subtopics: Array.from(subtopicSet).reduce<Record<string, number>>((acc, s) => {
+        acc[s] = (documentsRows ?? []).filter((d: any) => (d?.labels?.subtopic ?? null) === s).length;
+        return acc;
+      }, {}),
+      versions: Array.from(versionSet).reduce<Record<string, number>>((acc, v) => {
+        acc[v] = (documentsRows ?? []).filter((d: any) => (d?.labels?.version ?? null) === v).length;
+        return acc;
+      }, {}),
+    } as const;
+
+    // Recent events (best-effort, last 10)
+    const { data: recentEvents } = await supabase
+      .from("ingestion_events")
+      .select("created_at, stage, level, message")
+      .eq("ingestion_id", id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
     const response = {
       ok: true,
       ...data,
@@ -79,6 +99,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
           topics: Array.from(topicSet),
           subtopics: Array.from(subtopicSet),
           versions: Array.from(versionSet),
+          counts: coverageCounts,
         },
         recent: (recentDocs ?? []).map((d: any) => ({
           title: (d?.title as string | null) ?? null,
@@ -86,6 +107,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
         })),
       },
       inflight: (data?.metadata as any)?.progress ?? null,
+      events: recentEvents ?? [],
     } as const;
 
     return NextResponse.json(response);

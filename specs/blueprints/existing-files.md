@@ -126,6 +126,7 @@
  - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenAI and pgvector.
  - `retrieval-phase.md`: Plan for retrieval UI and backend (hybrid search, contracts, endpoints).
  - `upload-interview-questions.md`: Upload/indexing/embeddings plan for interview MCQs (repo-first ingestion).
+ - `intelligent-web-ingestion.md`: Design and tasks for robust, scalable web ingestion (MVP scoped to React; future streams documented for scale-out).
 
 ### migrations
 

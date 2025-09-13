@@ -186,3 +186,30 @@ Scope: Implement repo/web ingestion, chunking, embeddings, and storage to enable
 - [ ] Update docs: add examples and notes on generation params and expected outputs
 - [x] Change UX: Submit enqueues all ingestions; show progress; modal to confirm Generate after indexing completes
   - Implemented: repo/web routes split into create (pending) and process with progress updates. UI polls and displays completion modal.
+
+## Intelligent Web Ingestion (MVP: React-only)
+
+Purpose: Make web ingestion more robust and topic-aware for React documentation now, with a design we can extend later without rework.
+
+Scope (now):
+- Seeds: reference section roots and targeted subsections (for example, core, DOM, server/client, compiler), bounded by domain/prefix and polite rate limits; seeds are provided at runtime.
+- Adaptive labeling: derive topic, subtopic, and version from URL segments, headings, and breadcrumbs using deterministic React-specific rules.
+- Crawl planner knobs: include and exclude patterns, per-section depth, maximum pages, and crawl delay.
+- Quality gates: boilerplate removal, deduplication, section-aware chunking (approximately 1–2k characters, light overlap), embeddings at 1536 dimensions.
+- Observability: step-level ingestion events; coverage summary showing documents, chunks, distinct subtopics and versions; recent items and error samples.
+
+Out of scope (now):
+- Non-React streams (Angular, Vue, Node, etc.).
+- Full incremental recrawls with ETag/Last-Modified (planned separately).
+
+Tasks
+- [ ] Add include and exclude patterns and per-section depth to the web ingestion schema and route
+- [ ] Support multiple seeds per job; plan BFS per seed within domain/prefix bounds
+- [ ] Implement React-specific label derivation for topic, subtopic, and version
+- [ ] Introduce ingestion events (new table via a new migration) and write step-level messages
+- [ ] Extend status endpoint coverage: distinct subtopics and versions with counts
+- [ ] Add deduplication (hash) and near-duplicate skip (similarity-lite), logging decisions to events
+- [ ] Expose admin controls: includePatterns, excludePatterns, depthMap, maxPages, crawlDelayMs
+- [ ] Apply safety rails: hard cap per job and default polite crawl delays
+- [ ] QA: run a wide React reference crawl; verify coverage breadth and embeddings counts
+- [ ] Document defaults and React-only scope in a dedicated work item for intelligent ingestion

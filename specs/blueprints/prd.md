@@ -115,3 +115,11 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 - Author tasks as clear, action-oriented items. Use `- [ ]` for open tasks.
 - On completion, update items to `- [x]` and include a brief status note inline or as an indented sub-bullet (e.g., links to PRs/files, follow-ups).
 - Keep the checklist in sync during implementation so it reflects current progress and any notes.
+
+## SQL & Migrations Workflow
+
+- Engineers may execute SQL directly from the terminal against Supabase (psql or Supabase CLI) for rapid iteration.
+- After any schema‑affecting change (tables, columns, indexes, constraints, policies/RLS, RPCs/functions, triggers), create a new `.sql` file under `migrations/` with the next sequence number and a descriptive name.
+- Never modify existing migration files. Treat migrations as immutable history. If adjustments are needed, add a new migration instead.
+- When SQL is executed manually, ensure the corresponding migration file accurately captures the exact statements applied so other environments remain reproducible.
+- The migration files committed to version control are the source of truth. CLI conveniences (e.g., pushing/pulling schema) may be used, but do not replace writing migrations.

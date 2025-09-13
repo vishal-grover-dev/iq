@@ -31,3 +31,10 @@
 - After adding explanations for any new feature in `specs/work-items/*.md`, append a final "Tasks" section with a Markdown checklist (`- [ ]`).
 - As work progresses, update items to `- [x]` when completed and add brief notes inline or as indented sub-bullets (e.g., links to PRs/files, follow-ups).
 - Treat the checklist as the source of truth for progress; keep it synchronized with the implementation status.
+
+## SQL & migrations
+
+- You may run schema SQL directly from the terminal (psql or Supabase CLI).
+- After applying any schema change manually, immediately create a new migration file under `migrations/` capturing the same SQL. Do not alter existing migrations.
+- Migration naming: use the next incremental number and a short, descriptive title (e.g., `005-Add-Quiz-Attempts.sql`).
+- The repo’s migration files are authoritative; local or remote schema must be converged by running these migrations.

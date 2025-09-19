@@ -105,7 +105,7 @@
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
- - `interview-streams-options.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
+ - `interview-streams.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 

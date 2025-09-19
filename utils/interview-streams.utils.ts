@@ -510,7 +510,7 @@ export async function runCatalogIngestion(params?: {
                   prefix: undefined,
                   topic: topic as EInterviewTopic,
                   subtopic: item.subtopic,
-                  depth: 1,
+                  depth: 2,
                   maxPages: 10,
                   crawlDelayMs: 1000,
                   includePatterns: [],

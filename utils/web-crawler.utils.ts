@@ -214,7 +214,8 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
             const lnUrl = new URL(ln);
             if (lnUrl.hostname !== domain) continue;
             if (prefix && !lnUrl.pathname.startsWith(prefix)) continue;
-            if (includeRegexes.length > 0 && !includeRegexes.some((re) => re.test(lnUrl.pathname))) continue;
+            // Loosen include filtering at shallow depth to avoid empty crawls when patterns are too narrow
+            if (includeRegexes.length > 0 && d >= 1 && !includeRegexes.some((re) => re.test(lnUrl.pathname))) continue;
             if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(lnUrl.pathname)))
               continue;
           } catch {

@@ -205,7 +205,8 @@ export function assessContentQuality(
     const htmlLength = html.length;
     const ratio = textLength / htmlLength;
 
-    if (ratio < 0.1) {
+    // Be more permissive: documentation sites often have heavy markup/scripts.
+    if (ratio < 0.03) {
       reasons.push("Low content-to-markup ratio");
       score -= 20;
     }
@@ -239,7 +240,8 @@ export function assessContentQuality(
   }
 
   return {
-    isAcceptable: score >= 50,
+    // Slightly relax acceptance threshold to reduce false negatives on docs pages
+    isAcceptable: score >= 40,
     reasons,
     score,
   };

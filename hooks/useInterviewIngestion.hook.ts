@@ -54,17 +54,46 @@ export function useInterviewIngestion() {
             createdIds.push(ingestionId);
           } else {
             const u = new URL(row.url);
-            const { ingestionId } = await ingestRepoWeb({
+            // Smart, generic defaults derived from the provided URL (no hardcoded domains)
+            const payload: any = {
               mode: "web",
-              seedUrl: row.url,
+              seeds: [row.url],
               domain: u.hostname,
               prefix: undefined,
-              depth: 2,
-              maxPages: 50,
+              depth: 3,
+              maxPages: 200,
               crawlDelayMs: 300,
               topic: row.topic as any,
               subtopic: row.subtopic,
-            } as any);
+            };
+
+            // Heuristic: if the seed path starts with a well-known docs section
+            // (e.g., /reference, /docs, /learn, /guide), bias crawling to that section
+            // and allow an extra level of depth for that section.
+            const pathSegments = u.pathname.split("/").filter(Boolean);
+            const localeOrVersion = /^(?:[a-z]{2}-[A-Z]{2}|v?\d+(?:\.\d+)*)$/; // e.g., en-US, v19, 19.1
+            const candidate = (() => {
+              if (pathSegments.length === 0) return null;
+              const first = pathSegments[0];
+              if (localeOrVersion.test(first) && pathSegments.length > 1) return pathSegments[1];
+              return first;
+            })();
+            const docsSections = new Set([
+              "reference",
+              "docs",
+              "documentation",
+              "learn",
+              "guide",
+              "guides",
+              "handbook",
+              "api",
+            ]);
+            if (candidate && docsSections.has(candidate.toLowerCase())) {
+              payload.includePatterns = [`^\/${candidate}`];
+              payload.depthMap = { [`/${candidate}`]: 3 };
+            }
+
+            const { ingestionId } = await ingestRepoWeb(payload as any);
             createdIds.push(ingestionId);
           }
         } catch (err) {

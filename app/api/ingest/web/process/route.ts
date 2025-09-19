@@ -7,6 +7,9 @@ import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai.services";
 import { deriveLabelsFromUrl, extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
 import { createHash } from "crypto";
+import { externalGetWithRetry } from "@/services/http.services";
+import { suggestCrawlHeuristics } from "@/services/ai.services";
+import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 
@@ -60,21 +63,66 @@ export async function POST(req: NextRequest) {
     await updateProgress({ step: "crawling", errorsCount: 0 });
     await writeEvent("start", "Web ingestion started", "info", { meta });
 
+    // AI planner suggestions (optional). Use if meta.useAiPlanner or when no include/depthMap provided.
+    let incPatterns: string[] | undefined =
+      Array.isArray(meta.includePatterns) && meta.includePatterns.length
+        ? (meta.includePatterns as string[])
+        : undefined;
+    let excPatterns: string[] | undefined =
+      Array.isArray(meta.excludePatterns) && meta.excludePatterns.length
+        ? (meta.excludePatterns as string[])
+        : undefined;
+    let dmapFinal: Record<string, number> | undefined =
+      meta.depthMap && Object.keys(meta.depthMap).length ? (meta.depthMap as Record<string, number>) : undefined;
+    let seedsEffective: string[] | undefined =
+      Array.isArray(meta.seeds) && meta.seeds.length ? (meta.seeds as string[]) : undefined;
+    if (meta.useAiPlanner || (!incPatterns && !dmapFinal)) {
+      const firstSeed = seedsEffective && seedsEffective.length ? seedsEffective[0] : undefined;
+      if (firstSeed) {
+        const html = await externalGetWithRetry(firstSeed);
+        if (html) {
+          const $ = cheerio.load(html);
+          const navPaths: Array<{ path: string; title?: string | null }> = $("a[href]")
+            .map((_, el) => $(el).attr("href") || "")
+            .get()
+            .filter(Boolean)
+            .slice(0, 50)
+            .map((href) => {
+              try {
+                const u = new URL(href, firstSeed);
+                return u.hostname.endsWith(meta.domain) ? { path: u.pathname, title: null } : null;
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean) as Array<{ path: string; title?: string | null }>;
+          const ai = await suggestCrawlHeuristics({ url: firstSeed, htmlPreview: html, navigationPreview: navPaths });
+          if (!incPatterns || incPatterns.length === 0) incPatterns = ai.includePatterns;
+          if (!dmapFinal) dmapFinal = ai.depthMap;
+          if ((!seedsEffective || seedsEffective.length === 0) && ai.seeds && ai.seeds.length) {
+            seedsEffective = ai.seeds;
+          }
+          // Source-agnostic: do not inject hardcoded seeds or patterns for specific sites
+        }
+      }
+    }
+
     const pages = await crawlWebsite({
-      seedUrl: meta.seedUrl ?? undefined,
-      seeds: Array.isArray(meta.seeds) ? (meta.seeds as string[]) : undefined,
+      seeds: seedsEffective,
       domain: meta.domain,
       prefix: meta.prefix ?? undefined,
       depth: meta.depth ?? 2,
       maxPages: meta.maxPages ?? 50,
       crawlDelayMs: meta.crawlDelayMs ?? 300,
-      includePatterns: Array.isArray(meta.includePatterns) ? (meta.includePatterns as string[]) : undefined,
-      excludePatterns: Array.isArray(meta.excludePatterns) ? (meta.excludePatterns as string[]) : undefined,
-      depthMap:
-        typeof meta.depthMap === "object" && meta.depthMap ? (meta.depthMap as Record<string, number>) : undefined,
+      includePatterns: incPatterns,
+      excludePatterns: excPatterns,
+      depthMap: dmapFinal,
     });
     await updateProgress({ totalPlanned: pages.length, processed: 0 });
     await writeEvent("planning", `Planned ${pages.length} pages`);
+
+    // Selection is source-agnostic: take up to maxPages
+    const selectedPages = pages.slice(0, meta.maxPages ?? pages.length);
 
     let totalChunks = 0;
     let totalVectors = 0;

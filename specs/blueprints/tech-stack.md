@@ -41,6 +41,10 @@
 - **ESLint** - Code linting and quality enforcement
 - **Prettier** - Code formatting
 
+### HTTP Client (Frontend Guideline)
+
+- Prefer Axios for all HTTP requests in the frontend. Centralize configuration and interceptors in `services/http.services.ts` and consume the exported clients in hooks/services. Avoid using `fetch` directly in the UI code so headers, errors, and credentials are consistently handled.
+
 ## Backend Technology Stack
 
 ### API Framework
@@ -121,4 +125,8 @@
 ### External Services
 
 - **Supabase Storage** - File storage for documents and assets
+
+### HTTP Client (Backend Guideline)
+
+- Prefer Axios for server-side HTTP as well (e.g., calling external documentation sites, GitHub APIs). Use a dedicated external Axios instance without baseURL/credentials for cross-origin requests (see `services/http.services.ts`). Avoid using `fetch` in server routes to keep retry/backoff and timeouts consistent across the app.
 

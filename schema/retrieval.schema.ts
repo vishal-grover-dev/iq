@@ -34,7 +34,7 @@ export const retrievalItemSchema = z.object({
 });
 
 export const retrievalResponseSchema = z.object({
-  ok: z.literal(true),
+  ok: z.boolean(),
   items: z.array(retrievalItemSchema),
   debug: z
     .object({
@@ -52,7 +52,7 @@ export const retrievalEnhancementRequestSchema = z.object({
 });
 
 export const retrievalEnhancementResponseSchema = z.object({
-  ok: z.literal(true),
+  ok: z.boolean(),
   enhancedQuery: z.string().min(1),
   explanations: z.array(z.string()).default([]),
   termHighlights: z.array(z.string()).optional(),

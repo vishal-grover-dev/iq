@@ -17,20 +17,7 @@ export function slugify(input: string): string {
  * Produces a deterministic directory path for academic uploads based on contextual
  * metadata (board, class, and subject).
  */
-export function buildAcademicDirectoryPath(ctx: {
-  board: string;
-  grade: string;
-  subject: string;
-}): string {
-  const parts: string[] = [
-    "academic",
-    slugify(ctx.board),
-    `class-${slugify(ctx.grade)}`,
-    slugify(ctx.subject),
-  ];
-
-  return parts.join("/");
-}
+// Academic directory builder removed
 
 /**
  * Appends an ISO timestamp and short random token to the base filename to avoid

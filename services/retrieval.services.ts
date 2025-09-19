@@ -1,11 +1,11 @@
 import { apiClient } from "@/services/http.services";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
-  IRetrievalRequest,
-  IRetrievalResponse,
-  IRetrievalEnhancementRequest,
-  IRetrievalEnhancementResponse,
-} from "@/types/retrieval.types";
+  TRetrievalRequest as IRetrievalRequest,
+  TRetrievalResponse as IRetrievalResponse,
+  TRetrievalEnhancementRequest as IRetrievalEnhancementRequest,
+  TRetrievalEnhancementResponse as IRetrievalEnhancementResponse,
+} from "@/schema/retrieval.schema";
 
 /**
  * Posts a retrieval query to the server. This calls a server API that computes the

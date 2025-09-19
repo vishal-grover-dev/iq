@@ -13,19 +13,10 @@ export interface ICompletionModalProps {
   open: boolean;
   topics: string[];
   subtopics: string[];
-  isGenerating?: boolean;
   onOpenChange: (open: boolean) => void;
-  onGenerate: () => Promise<void> | void;
 }
 
-export default function CompletionModal({
-  open,
-  topics,
-  subtopics,
-  isGenerating,
-  onOpenChange,
-  onGenerate,
-}: ICompletionModalProps) {
+export default function CompletionModal({ open, topics, subtopics, onOpenChange }: ICompletionModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -38,11 +29,6 @@ export default function CompletionModal({
           {topics.length > 0 && <p className='text-sm'>Topics: {topics.join(", ")}</p>}
           {subtopics.length > 0 && <p className='text-sm'>Subtopics: {subtopics.join(", ")}</p>}
         </div>
-        <DialogFooter>
-          <Button type='button' onClick={() => onGenerate()} disabled={!!isGenerating}>
-            Generate
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -64,8 +64,7 @@
 
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
  - `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal.
- - `academicSection.component.tsx`: Subcomponent rendering Academic fields and file dropzone.
-  - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary and Generate action.
+  - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary (no generation action).
 
 ### hooks
 
@@ -86,7 +85,7 @@
 ### types
 
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
-- `upload.types.ts`: Types for the upload flow. Includes `E*` enums, `IAcademicUploadFormValues`, `TUploadState`, and `IAcademicPathContext`.
+- `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
  - `retrieval.types.ts`: Retrieval contracts including filters, requests, responses, and Bloom enums.
 
@@ -95,28 +94,27 @@
 - `upload.schema.ts`: Zod schema and validation for the upload flow.
 - `ingest.schema.ts`: Zod schema for ingestion API request/response.
  - `retrieval.schema.ts`: Zod schemas for retrieval requests/responses and query enhancement.
-- `generation.schema.ts`: Zod schemas for MCQ generation requests/responses and item validation.
 
 ### utils
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
 - `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
-- `upload.utils.ts`: Upload helpers (slugify, path builder, timestamped filenames).
+- `upload.utils.ts`: Upload helpers (slugify, timestamped filenames). Academic path builder deprecated.
 - `langchain.utils.ts`: Combined PDF extraction and text chunking (LangChain-based).
  - `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
  - `interview-streams-options.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
+ 
+ - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 
 ### services
 
-- `upload.services.ts`: Supabase Storage uploads for academic content with directory helpers.
 - `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings` and `rerank`.
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
  - `retrieval.services.ts`: Retrieval API client functions and hooks.
-- `generation.services.ts`: Client service and hook for MCQ generation.
 
 ### constants
 
@@ -124,11 +122,7 @@
 
 ### specs/work-items
 
-- `upload-flow.md`: Work items and flow notes for the upload feature.
- - `api-for-upload.md`: API spec for ingestion endpoint and embeddings pipeline using OpenAI and pgvector.
- - `retrieval-phase.md`: Plan for retrieval UI and backend (hybrid search, contracts, endpoints).
- - `upload-interview-questions.md`: Upload/indexing/embeddings plan for interview MCQs (repo-first ingestion).
- - `intelligent-web-ingestion.md`: Design and tasks for robust, scalable web ingestion (MVP scoped to React; future streams documented for scale-out).
+- `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Generation is removed and will be redesigned separately.
 
 ### migrations
 
@@ -145,13 +139,14 @@
 - `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
 - `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
 
-- `api/ingest/academic/route.ts`: Ingestion API route (POST) for academic documents.
  - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
  - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
- - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
- - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
+- `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
  - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
-- `api/generate/mcq/route.ts`: MCQ generation route (POST) retrieving by labels and persisting items.
+ 
+Updates:
+- `api/ingest/web/plan/route.ts`: Added `returnAllPages` and `applyQuotas` flags; response includes `aiUsed`. MDN-specific sections removed; source-agnostic.
+- `api/ingest/web/process/route.ts`: Simplified selection to source-agnostic cap by `maxPages`; removed MDN-specific quotas.
  

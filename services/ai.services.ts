@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
+import { parseJsonObject } from "@/utils/json.utils";
 
 /**
  * getEmbeddings
@@ -76,12 +77,7 @@ export async function rerank(query: string, texts: string[]): Promise<number[]> 
     response_format: { type: "json_object" },
   });
   const content = res.choices[0]?.message?.content ?? "{}";
-  let parsed: any;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = { items: [] };
-  }
+  const parsed = parseJsonObject<any>(content, { items: [] });
   const scores: number[] = Array(texts.length).fill(0);
   const items: Array<{ index: number; score: number }> = Array.isArray(parsed.items) ? parsed.items : [];
   for (const it of items) {
@@ -93,64 +89,76 @@ export async function rerank(query: string, texts: string[]): Promise<number[]> 
 }
 
 /**
- * generateMcqsFromContexts
- * Server-only helper: Given a query and a list of contextual passages, ask the LLM to propose
- * MCQs (question, 4 options, correctIndex, explanation) with citations by context index.
- * Returns up to `count` well-formed items. Post-processing/validation happens in the route.
+ * suggestCrawlHeuristics
+ * Server-only helper: Given a seed URL and its HTML content, ask the LLM to propose
+ * generic crawl heuristics as strict JSON: includePatterns (regex strings anchored to pathname),
+ * optional depthMap (pathname prefix -> depth number 0-5), and optional additional seeds
+ * limited to the same domain.
  */
-export async function generateMcqsFromContexts(args: {
-  query: string;
-  contexts: Array<{ content: string; title?: string | null }>;
-  count: number;
-  difficulty?: string;
-  bloomLevels?: string[];
-  topic: string;
-  subtopic?: string | null;
-  version?: string | null;
-}): Promise<
-  Array<{
-    question: string;
-    options: string[];
-    correctIndex: number;
-    explanation: string;
-    citationIndices: number[];
-  }>
-> {
+export async function suggestCrawlHeuristics(args: {
+  url: string;
+  htmlPreview: string;
+  navigationPreview?: Array<{ path: string; title?: string | null }>; // optional sampled links
+}): Promise<{
+  includePatterns: string[];
+  depthMap?: Record<string, number>;
+  seeds?: string[];
+}> {
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
-  const { query, contexts, count, difficulty, bloomLevels, topic, subtopic, version } = args;
+  const { url, htmlPreview, navigationPreview } = args;
   const sys = [
-    "You create multiple-choice questions grounded STRICTLY in the provided contexts.",
+    "You design safe crawl heuristics for documentation sites.",
     "Rules:",
-    "- Always produce exactly 4 options.",
-    "- Choose the single best correctIndex (0-3).",
-    "- Keep questions concise and unambiguous.",
-    "- Cite at least 1 relevant context by its index in citationIndices.",
-    "- Return STRICT JSON: { items: [{ question, options, correctIndex, explanation, citationIndices: number[] }] }.",
+    "- Propose regexes that match pathname prefixes for docs sections only (e.g., ^/docs, ^/reference).",
+    "- Prefer 1-3 concise includePatterns.",
+    "- depthMap keys are pathname prefixes; values are integers 0-5.",
+    "- seeds must be same-origin URLs, minimal in number (<=3), and representative sections.",
+    'Return STRICT JSON: { "includePatterns": string[], "depthMap"?: Record<string, number>, "seeds"?: string[] }',
   ].join("\n");
 
-  const ctxPreview = contexts
-    .slice(0, Math.max(4, Math.min(contexts.length, 12)))
-    .map((c, i) => `${i}. ${(c.title ? `[${c.title}] ` : "")}${c.content.slice(0, 600)}`)
-    .join("\n\n");
+  const doc = htmlPreview.slice(0, 5000);
+  const nav = (navigationPreview ?? [])
+    .slice(0, 20)
+    .map((l, i) => `${i}. ${l.path}${l.title ? ` — ${l.title}` : ""}`)
+    .join("\n");
+
+  // Few-shot examples (domain-agnostic)
+  const examples = [
+    {
+      seed: "https://example.dev/reference",
+      preview: "<title>Reference – Example</title>",
+      nav: ["/reference/api", "/reference/components", "/learn"],
+      out: {
+        includePatterns: ["^/reference"],
+        depthMap: { "/reference": 3 },
+        seeds: ["https://example.dev/reference"],
+      },
+    },
+    {
+      seed: "https://docs.site.org/guide/getting-started",
+      preview: "<title>Guide – Getting started</title>",
+      nav: ["/guide", "/api", "/blog"],
+      out: { includePatterns: ["^/guide"], depthMap: { "/guide": 2 }, seeds: ["https://docs.site.org/guide"] },
+    },
+  ];
 
   const user = [
-    `Topic: ${topic}${subtopic ? ` / ${subtopic}` : ""}${version ? ` (v${version})` : ""}`,
-    `Query: ${query || topic}`,
-    `Target count: ${count}`,
-    difficulty ? `Difficulty: ${difficulty}` : "",
-    bloomLevels && bloomLevels.length ? `Bloom: ${bloomLevels.join(", ")}` : "",
-    "Contexts (index: text):",
-    ctxPreview,
-    'Return JSON only: { "items": [ { "question": string, "options": string[4], "correctIndex": 0-3, "explanation": string, "citationIndices": number[] } ] }',
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+    `Seed URL: ${url}`,
+    "HTML Preview:",
+    doc,
+    navigationPreview && navigationPreview.length ? "Navigation Preview (paths):\n" + nav : "",
+    "Examples:",
+    ...examples.map(
+      (e, i) => `Ex${i + 1} Input: ${e.seed}\nNav: ${e.nav.join(", ")}\nEx${i + 1} Output: ${JSON.stringify(e.out)}`
+    ),
+    'Return JSON only: { "includePatterns": string[], "depthMap"?: {"/path": number}, "seeds"?: string[] }',
+  ].join("\n\n");
 
   const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.2,
+    temperature: 0,
     messages: [
       { role: "system", content: sys },
       { role: "user", content: user },
@@ -158,42 +166,27 @@ export async function generateMcqsFromContexts(args: {
     response_format: { type: "json_object" },
   });
 
-  let parsed: any = {};
-  try {
-    parsed = JSON.parse(res.choices[0]?.message?.content ?? "{}");
-  } catch {
-    parsed = {};
-  }
-  const items: any[] = Array.isArray(parsed.items) ? parsed.items : [];
-  const out: Array<{
-    question: string;
-    options: string[];
-    correctIndex: number;
-    explanation: string;
-    citationIndices: number[];
-  }> = [];
-  for (const it of items) {
-    if (
-      typeof it?.question === "string" &&
-      Array.isArray(it?.options) &&
-      it.options.length === 4 &&
-      typeof it?.correctIndex === "number" &&
-      it.correctIndex >= 0 &&
-      it.correctIndex <= 3 &&
-      typeof it?.explanation === "string"
-    ) {
-      const cits = Array.isArray(it.citationIndices)
-        ? it.citationIndices.filter((n: any) => Number.isInteger(n) && n >= 0 && n < contexts.length)
-        : [];
-      out.push({
-        question: it.question,
-        options: it.options.slice(0, 4).map((s: any) => String(s)),
-        correctIndex: it.correctIndex,
-        explanation: it.explanation,
-        citationIndices: cits.length ? cits : [0],
-      });
+  const parsed = parseJsonObject<any>(res.choices[0]?.message?.content ?? "{}", {});
+
+  const includePatterns: string[] = Array.isArray(parsed.includePatterns)
+    ? parsed.includePatterns.filter((s: any) => typeof s === "string" && s.length > 0).slice(0, 5)
+    : [];
+  const seeds: string[] | undefined = Array.isArray(parsed.seeds)
+    ? parsed.seeds.filter((s: any) => typeof s === "string" && s.startsWith(new URL(url).origin)).slice(0, 3)
+    : undefined;
+  const depthMap: Record<string, number> | undefined = (() => {
+    const obj = parsed.depthMap;
+    if (!obj || typeof obj !== "object") return undefined;
+    const out: Record<string, number> = {};
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (typeof k === "string" && typeof v === "number") {
+        const bounded = Math.max(0, Math.min(5, Math.floor(v)));
+        out[k] = bounded;
+      }
     }
-    if (out.length >= count) break;
-  }
-  return out.slice(0, count);
+    return Object.keys(out).length ? out : undefined;
+  })();
+
+  return { includePatterns, seeds, depthMap };
 }

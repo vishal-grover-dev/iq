@@ -21,7 +21,19 @@ type TInterviewSectionProps = {
   items: Array<{ topic: InterviewTopic; subtopic: string; ingestType: InterviewIngestType; url: string }>;
   stream?: InterviewStream;
   disabled?: boolean;
-  setValue: (name: string, value: unknown, options?: { shouldValidate?: boolean; shouldTouch?: boolean }) => void;
+  setValue: (
+    name:
+      | "contentCategory"
+      | "stream"
+      | "items"
+      | `items.${number}`
+      | `items.${number}.topic`
+      | `items.${number}.subtopic`
+      | `items.${number}.ingestType`
+      | `items.${number}.url`,
+    value: unknown,
+    options?: { shouldValidate?: boolean; shouldTouch?: boolean }
+  ) => void;
 };
 
 export default function InterviewSection({ items, stream, disabled, setValue }: TInterviewSectionProps) {

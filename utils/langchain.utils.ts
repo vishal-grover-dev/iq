@@ -2,8 +2,12 @@ import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ILangchainChunk } from "@/types/ingest.types";
 
-export async function extractTextFromPdfBufferLC(buffer: Buffer): Promise<{ text: string; numPages: number }> {
-  const loader = new WebPDFLoader(new Blob([buffer]), { splitPages: true });
+export async function extractTextFromPdfBufferLC(
+  buffer: ArrayBuffer | Uint8Array | Buffer
+): Promise<{ text: string; numPages: number }> {
+  const u8: Uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer as ArrayBuffer);
+  const ab = (u8.buffer as ArrayBuffer).slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+  const loader = new WebPDFLoader(new Blob([ab]), { splitPages: true });
   const docs = await loader.load();
   const text = docs.map((d) => d.pageContent).join("\n\n");
   const numPages = docs.length;

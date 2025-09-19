@@ -12,7 +12,7 @@ import {
   INTERVIEW_SUBTOPICS,
   INTERVIEW_TOPIC_OPTIONS,
   INTERVIEW_INGEST_TYPE_OPTIONS,
-} from "@/utils/interview-streams.utils";
+} from "@/constants/interview-streams.constants";
 import { FormLabel } from "@/components/ui/form-label";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";

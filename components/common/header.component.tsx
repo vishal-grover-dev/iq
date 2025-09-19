@@ -39,6 +39,14 @@ export function Header({ className }: THeaderProps) {
                   <Link href='/upload'>Upload</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  asChild
+                  className='text-sm font-medium text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300'
+                >
+                  <Link href='/generate/mcq'>Generate</Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
           <ThemeToggle />

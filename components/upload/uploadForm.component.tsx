@@ -9,7 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { FormLabel } from "@/components/ui/form-label";
 import { formSchema } from "@/schema/upload.schema";
-import { INTERVIEW_DEFAULT_STREAM, INTERVIEW_SUBTOPICS } from "@/utils/interview-streams.utils";
+import { INTERVIEW_DEFAULT_STREAM, INTERVIEW_SUBTOPICS } from "@/constants/interview-streams.constants";
 import { toast } from "sonner";
 import { useCallback, useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";

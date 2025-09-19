@@ -14,6 +14,7 @@ export default function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <head>
+        <title>IQ — Intelliqent Questions</title>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>

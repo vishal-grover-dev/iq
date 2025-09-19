@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { retrievalRequestSchema } from "@/schema/retrieval.schema";
+import { retrievalRequestSchema } from "@/schema/mcqRetrieval.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";

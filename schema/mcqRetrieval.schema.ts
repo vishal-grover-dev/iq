@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EBloomLevel } from "@/types/retrieval.types";
+import { EBloomLevel } from "@/types/mcq.types";
 
 export const retrievalFiltersSchema = z.object({
   board: z.string().min(1),
@@ -63,4 +63,3 @@ export type TRetrievalRequest = z.infer<typeof retrievalRequestSchema>;
 export type TRetrievalResponse = z.infer<typeof retrievalResponseSchema>;
 export type TRetrievalEnhancementRequest = z.infer<typeof retrievalEnhancementRequestSchema>;
 export type TRetrievalEnhancementResponse = z.infer<typeof retrievalEnhancementResponseSchema>;
-

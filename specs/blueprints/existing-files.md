@@ -87,14 +87,14 @@
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
 - `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
- - `retrieval.types.ts`: Retrieval contracts including filters, requests, responses, and Bloom enums.
+- `mcq.types.ts`: MCQ view models, difficulty enum, and Bloom enum.
  - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
 
 ### schema
 
 - `upload.schema.ts`: Zod schema and validation for the upload flow.
 - `ingest.schema.ts`: Zod schema for ingestion API request/response.
- - `retrieval.schema.ts`: Zod schemas for retrieval requests/responses and query enhancement.
+- `mcqRetrieval.schema.ts`: Combined schemas for retrieval requests/responses and enhancement.
 
 ### utils
 
@@ -106,7 +106,7 @@
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
- - `interview-streams.utils.ts`: Interview Streams options and catalog runner (`runCatalogIngestion`) with concurrency and logging.
+ - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 
@@ -115,11 +115,12 @@
 - `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings` and `rerank`.
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
- - `retrieval.services.ts`: Retrieval API client functions and hooks.
+- `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
 
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
+- `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
 
 ### data
 
@@ -156,9 +157,19 @@
  - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
+ - `api/generate/mcq/route.ts`: Placeholder route for MCQ generation (SSE scaffold).
+  - `api/generate/mcq/revise/route.ts`: Placeholder route for MCQ revision requests.
+  - `api/generate/mcq/save/route.ts`: Placeholder route for saving finalized MCQs.
+ - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
+ - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
+ - `components/generate/revisionBox.component.tsx`: Revision chat input component.
+ - `components/generate/automationModal.component.tsx`: Modal for automation controls and coverage placeholder.
+ - `services/mcq.services.ts`: MCQ API client functions and SSE opener.
  
 Updates:
 - `api/ingest/web/plan/route.ts`: Added `returnAllPages` and `applyQuotas` flags; response includes `aiUsed`. MDN-specific sections removed; source-agnostic.
 - `api/ingest/web/process/route.ts`: Simplified selection to source-agnostic cap by `maxPages`; removed MDN-specific quotas.
  - `specs/work-items`: Merged `ingestion-reliability-hardening.md` into `interview-ingestion-and-retrieval.md`; removed the former.
+ - `app/generate/mcq/page.tsx`: MCQ Generation page skeleton with MCQ card, persona panel, and revision box.
+ - `types/mcq.types.ts`: Types for MCQ view model.
  

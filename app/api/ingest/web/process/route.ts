@@ -118,11 +118,24 @@ export async function POST(req: NextRequest) {
       excludePatterns: excPatterns,
       depthMap: dmapFinal,
     });
-    await updateProgress({ totalPlanned: pages.length, processed: 0 });
-    await writeEvent("planning", `Planned ${pages.length} pages`);
-
-    // Selection is source-agnostic: take up to maxPages
-    const selectedPages = pages.slice(0, meta.maxPages ?? pages.length);
+    // Pre-filter pages that are already ingested (bucket:web, path=url) to avoid reprocessing
+    const plannedUrls = pages.map((p) => p.url);
+    const { data: existingDocs, error: existingErr } = await supabase
+      .from("documents")
+      .select("path")
+      .eq("bucket", "web")
+      .in("path", plannedUrls);
+    if (existingErr) {
+      await writeEvent("warn", `Could not pre-check existing documents: ${existingErr.message}`, "warn");
+    }
+    const existingSet = new Set<string>((existingDocs ?? []).map((d: any) => d.path));
+    const freshPages = pages.filter((p) => !existingSet.has(p.url));
+    const selectedPages = freshPages.slice(0, meta.maxPages ?? freshPages.length);
+    await updateProgress({ totalPlanned: selectedPages.length, processed: 0 });
+    await writeEvent(
+      "planning",
+      `Planned ${pages.length} pages; ${existingSet.size} already ingested; ${selectedPages.length} to process`
+    );
 
     let totalChunks = 0;
     let totalVectors = 0;
@@ -136,8 +149,8 @@ export async function POST(req: NextRequest) {
     const BATCH_SIZE = 5; // Process 5 pages at a time
     const embeddingBatch: Array<{ documentId: string; chunks: any[]; url: string }> = [];
 
-    for (let i = 0; i < pages.length; i++) {
-      const p = pages[i];
+    for (let i = 0; i < selectedPages.length; i++) {
+      const p = selectedPages[i];
       await updateProgress({ step: "chunking", currentPathOrUrl: p.url, processed: i });
       await writeEvent("fetch", `Fetched ${p.url}`, "info", { title: p.title });
 
@@ -185,29 +198,46 @@ export async function POST(req: NextRequest) {
       }
       seenHashes.add(hashHex);
       shinglesList.push(shingleSet);
-      const { data: docInsert, error: docError } = await supabase
+      // Insert document with unique (bucket, path) guard. On conflict, ignore and fetch existing id.
+      let documentId: string | null = null;
+      const upsertRes = await supabase
         .from("documents")
-        .insert([
-          {
-            ingestion_id: ingestionId,
-            bucket: "web",
-            path: p.url,
-            mime_type: "text/html",
-            title: p.title,
-            labels: (() => {
-              const derivedLabels = deriveLabelsFromUrl(p.url, topic);
-              return {
-                topic: topic ?? derivedLabels.topic,
-                subtopic: subtopic ?? derivedLabels.subtopic,
-                version: derivedLabels.version ?? version,
-              };
-            })(),
-          },
-        ])
-        .select("id")
-        .single();
-      if (docError || !docInsert) throw new Error(docError?.message ?? "Failed to create document");
-      const documentId = docInsert.id as string;
+        .upsert(
+          [
+            {
+              ingestion_id: ingestionId,
+              bucket: "web",
+              path: p.url,
+              mime_type: "text/html",
+              title: p.title,
+              labels: (() => {
+                const derivedLabels = deriveLabelsFromUrl(p.url, topic);
+                return {
+                  topic: topic ?? derivedLabels.topic,
+                  subtopic: subtopic ?? derivedLabels.subtopic,
+                  version: derivedLabels.version ?? version,
+                };
+              })(),
+            },
+          ],
+          { onConflict: "bucket,path", ignoreDuplicates: true }
+        )
+        .select("id");
+      if (upsertRes.error) {
+        throw new Error(upsertRes.error.message);
+      }
+      if (upsertRes.data && upsertRes.data.length > 0) {
+        documentId = upsertRes.data[0].id as string;
+      } else {
+        const { data: existingDoc, error: selErr } = await supabase
+          .from("documents")
+          .select("id")
+          .eq("bucket", "web")
+          .eq("path", p.url)
+          .single();
+        if (selErr || !existingDoc) throw new Error(selErr?.message ?? "Failed to get existing document id");
+        documentId = existingDoc.id as string;
+      }
 
       const mainHtml = extractMainContent(p.html);
       const textForChunking = mainHtml
@@ -223,7 +253,7 @@ export async function POST(req: NextRequest) {
       embeddingBatch.push({ documentId, chunks, url: p.url });
 
       // Process batch when it reaches BATCH_SIZE or at the end
-      if (embeddingBatch.length >= BATCH_SIZE || i === pages.length - 1) {
+      if (embeddingBatch.length >= BATCH_SIZE || i === selectedPages.length - 1) {
         await updateProgress({ step: "embedding" });
 
         // Collect all chunks for batch embedding

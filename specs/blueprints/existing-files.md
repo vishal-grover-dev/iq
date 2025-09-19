@@ -135,6 +135,7 @@
 - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
 - `004-MCQ-And-Label-Retrieval.sql`: Creates MCQ tables and adds label-based retrieval RPC `retrieval_hybrid_by_labels`.
  - `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
+ - `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
 
 ### app/api
 

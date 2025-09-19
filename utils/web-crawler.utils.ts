@@ -9,7 +9,43 @@ function sleep(ms: number): Promise<void> {
 function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
-    u.hash = ""; // drop anchors
+    // Lowercase hostname
+    u.hostname = u.hostname.toLowerCase();
+    // Drop fragment
+    u.hash = "";
+    // Remove common tracking params
+    const trackingParams = new Set([
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "gclid",
+      "fbclid",
+      "igshid",
+      "mc_cid",
+      "mc_eid",
+      "ref",
+      "ref_src",
+      "ref_url",
+    ]);
+    const keptParams: Array<[string, string]> = [];
+    u.searchParams.forEach((value, key) => {
+      if (!trackingParams.has(key.toLowerCase())) keptParams.push([key, value]);
+    });
+    // Sort params for determinism
+    keptParams.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
+    u.search = keptParams.length
+      ? "?" + keptParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&")
+      : "";
+    // Normalize default ports
+    if ((u.protocol === "http:" && u.port === "80") || (u.protocol === "https:" && u.port === "443")) {
+      u.port = "";
+    }
+    // Normalize pathname: collapse multiple slashes and remove trailing slash (except root)
+    let pathname = u.pathname.replace(/\/+/, "/");
+    if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
+    u.pathname = pathname;
     return u.toString();
   } catch {
     return url;
@@ -108,8 +144,9 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
 
   while (q.length > 0 && out.length < maxPages) {
     const { url, d } = q.shift()!;
-    if (visited.has(url)) continue;
-    visited.add(url);
+    const canonical = normalizeUrl(url);
+    if (visited.has(canonical)) continue;
+    visited.add(canonical);
 
     const u = new URL(url);
     if (u.hostname !== domain) continue;
@@ -120,7 +157,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
     if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(u.pathname))) continue;
     if (robots && !robots.isAllowed(url, "*")) continue;
 
-    const html = await externalGetWithRetry(url);
+    const html = await externalGetWithRetry(canonical);
     if (!html) continue;
 
     try {
@@ -135,7 +172,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
       // Apply content quality filters using centralized heuristic
       const quality = assessContentQuality(content, html);
       if (content.length > 0 && quality.isAcceptable && matchesInclude) {
-        out.push({ url, title, content, html, depth: d });
+        out.push({ url: canonical, title, content, html, depth: d });
       }
 
       const currentDepthLimit = (() => {
@@ -163,7 +200,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
           .filter(Boolean)
           .map((href) => {
             try {
-              return new URL(href, url).toString();
+              return new URL(href, canonical).toString();
             } catch {
               return "";
             }

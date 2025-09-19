@@ -1,4 +1,6 @@
 import { EInterviewIngestType, EInterviewStream, EInterviewTopic } from "@/types/upload.types";
+import { ingestRepoOrWeb } from "@/services/ingest.services";
+import { IIngestCatalogItem, IIngestRunResult, TIngestCatalog } from "@/types/interview-streams.types";
 
 export const INTERVIEW_DEFAULT_STREAM: EInterviewStream = EInterviewStream.FRONTEND_REACT;
 
@@ -14,6 +16,20 @@ export const INTERVIEW_TOPIC_OPTIONS = [
   { label: EInterviewTopic.PERFORMANCE, value: EInterviewTopic.PERFORMANCE },
   { label: EInterviewTopic.ACCESSIBILITY, value: EInterviewTopic.ACCESSIBILITY },
 ] as const;
+
+// Load catalog once and provide helpers
+export function loadIngestCatalog(): TIngestCatalog {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const catalog = require("@/data/interview-ingest-catalog.json") as TIngestCatalog;
+  return catalog;
+}
+
+export function getSubtopicsFromCatalog(topic: EInterviewTopic): readonly string[] {
+  const catalog = loadIngestCatalog();
+  const items = catalog[topic] ?? [];
+  if (items.length > 0) return items.map((i) => i.subtopic);
+  return INTERVIEW_SUBTOPICS[topic] ?? [];
+}
 
 // Predefined subtopics per topic; UI will also allow "Other" which opens a modal
 export const INTERVIEW_SUBTOPICS: Record<EInterviewTopic, readonly string[]> = {
@@ -157,3 +173,83 @@ export const INTERVIEW_INGEST_TYPE_OPTIONS = [
   { label: EInterviewIngestType.REPO, value: EInterviewIngestType.REPO },
   { label: EInterviewIngestType.WEB, value: EInterviewIngestType.WEB },
 ] as const;
+
+// Ingestion catalog processing
+export async function runCatalogIngestion(params?: {
+  topic?: string;
+  maxConcurrency?: number;
+}): Promise<IIngestRunResult> {
+  const catalog = loadIngestCatalog();
+  const topicKeys = params?.topic ? [params.topic] : Object.keys(catalog);
+  const maxConcurrency = Math.max(1, Math.min(params?.maxConcurrency ?? 4, 8));
+
+  const seenUrls = new Set<string>();
+  const queue: { topic: string; item: IIngestCatalogItem }[] = [];
+
+  for (const topic of topicKeys) {
+    const items = catalog[topic] ?? [];
+    for (const item of items) {
+      if (!item.embedded && item.url && !seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        queue.push({ topic, item });
+      }
+    }
+  }
+
+  let started = 0;
+  const ids: string[] = [];
+  const errors: IIngestRunResult["errors"] = [];
+
+  async function worker() {
+    while (true) {
+      const next = queue.shift();
+      if (!next) return;
+      const { topic, item } = next;
+      try {
+        const mode = item.ingestType === "repo" ? "repo" : "web";
+        if (mode === "web") {
+          const domain = new URL(item.url).hostname;
+          const result = await ingestRepoOrWeb({
+            mode: "web",
+            seeds: [item.url],
+            domain,
+            prefix: undefined,
+            topic: topic as EInterviewTopic,
+            subtopic: item.subtopic,
+            depth: 1,
+            maxPages: 10,
+            crawlDelayMs: 500,
+            includePatterns: [],
+            excludePatterns: [],
+            autoPlan: true,
+          } as any);
+          ids.push(result.ingestionId);
+        } else {
+          const result = await ingestRepoOrWeb({
+            mode: "repo",
+            repoUrl: item.url,
+            paths: [],
+            topic: topic as EInterviewTopic,
+            subtopic: item.subtopic,
+            maxFiles: 200,
+          } as any);
+          ids.push(result.ingestionId);
+        }
+        started++;
+      } catch (e: any) {
+        errors.push({ topic, subtopic: item.subtopic, url: item.url, error: e?.message ?? String(e) });
+      }
+    }
+  }
+
+  const workers = Array.from({ length: maxConcurrency }, () => worker());
+  await Promise.all(workers);
+
+  return {
+    attempted: queue.length + started,
+    started,
+    skippedDuplicateUrl: 0,
+    errors,
+    ids,
+  };
+}

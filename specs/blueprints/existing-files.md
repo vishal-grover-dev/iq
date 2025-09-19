@@ -120,6 +120,10 @@
 
 - `app.constants.ts`: Application constants from environment variables.
 
+### data
+
+- `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries (ingestType, url, embedded flag) used to automate seeding and ingestion.
+
 ### specs/work-items
 
 - `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Generation is removed and will be redesigned separately.

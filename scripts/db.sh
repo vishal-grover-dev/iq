@@ -56,8 +56,23 @@ case "$cmd" in
     fi
     "$PSQL_BIN" "$CONN" -v ON_ERROR_STOP=1 -f "$ROOT_DIR/$FILE"
     ;;
+  files)
+    shift
+    if [[ $# -lt 1 ]]; then
+      echo "Usage: bash scripts/db.sh files migrations/001-name.sql [migrations/002-name.sql ...]" >&2
+      exit 2
+    fi
+    for FILE in "$@"; do
+      if [[ ! -f "$ROOT_DIR/$FILE" ]]; then
+        echo "File not found: $FILE" >&2
+        exit 2
+      fi
+      echo "Running $FILE..."
+      "$PSQL_BIN" "$CONN" -v ON_ERROR_STOP=1 -f "$ROOT_DIR/$FILE"
+    done
+    ;;
   *)
-    echo "Usage: bash scripts/db.sh [psql|query|file]" >&2
+    echo "Usage: bash scripts/db.sh [psql|query|file|files]" >&2
     exit 2
     ;;
 esac

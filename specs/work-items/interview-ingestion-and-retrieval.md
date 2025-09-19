@@ -142,6 +142,12 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
   - Web → POST `/api/ingest/web` { seeds: [url], domain, includePatterns?, excludePatterns?, depth or depthMap, maxPages (≤50), crawlDelayMs (≥300), topic }.
 - Progress: poll status endpoint; show coverage and recent; display modal on completion.
 
+## Catalog-driven ingestion (ops)
+
+- Catalog: `data/interview-ingest-catalog.json` with `{ subtopic, ingestType, url, embedded }` per topic.
+- Utility: `runCatalogIngestion({ topic?, maxConcurrency?, logger? })` reads catalog, dedupes URLs, and enqueues repo/web ingestions. Defaults: all topics, concurrency=4, `console` logger.
+- Script: `pnpm run:catalog --topic=React --concurrency=4` for ad-hoc runs with ISO-timestamped logs.
+
 ## React Ingestion URL Map (react.dev)
 
 - React → Components & Props: https://react.dev/learn/passing-props-to-a-component

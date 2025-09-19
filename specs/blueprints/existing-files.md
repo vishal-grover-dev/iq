@@ -88,6 +88,7 @@
 - `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
  - `retrieval.types.ts`: Retrieval contracts including filters, requests, responses, and Bloom enums.
+ - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
 
 ### schema
 
@@ -105,7 +106,7 @@
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
- - `interview-streams.utils.ts`: Static options for Interview Streams (topics, subtopics, ingest types).
+ - `interview-streams.utils.ts`: Interview Streams options and catalog runner (`runCatalogIngestion`) with concurrency and logging.
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 
@@ -123,6 +124,10 @@
 ### data
 
 - `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries (ingestType, url, embedded flag) used to automate seeding and ingestion.
+
+### scripts
+
+- `scripts/run-catalog.ts`: CLI to run catalog-driven ingestion with structured logs. Usage: `pnpm run:catalog [--topic=React] [--concurrency=4]`.
 
 ### specs/work-items
 

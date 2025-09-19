@@ -27,7 +27,7 @@ export function deriveLabelsFromUrl(url: string, fallbackTopic?: string): IIntel
   else if (hostname.includes("nodejs") || hostname.includes("node")) topic = "Node.js";
   else if (hostname.includes("nextjs") || hostname.includes("next")) topic = "Next.js";
 
-  // Universal subtopic patterns
+  // Universal subtopic patterns (generic buckets filtered below)
   const commonPatterns = {
     // Documentation structure patterns
     learn: "Learn",
@@ -54,18 +54,40 @@ export function deriveLabelsFromUrl(url: string, fallbackTopic?: string): IIntel
     types: "Type System",
     generics: "Generics",
     interfaces: "Interfaces",
-  };
+  } as const;
+
+  const GENERIC_BUCKETS = new Set(["Learn", "Guide", "Documentation", "Tutorial", "Docs"]);
+
+  // Site-specific refinement: react.dev
+  if (hostname.includes("react.dev")) {
+    // reference pages → Reference/<leaf>
+    const refIdx = segments.indexOf("reference");
+    if (refIdx !== -1) {
+      // Use the last segment as the specific API (e.g., useState)
+      const leaf = segments.length > refIdx + 1 ? segments[segments.length - 1] : undefined;
+      if (leaf) {
+        subtopic = `Reference/${leaf}`;
+      } else {
+        subtopic = "Reference";
+      }
+    } else {
+      // Avoid setting generic "Learn" for /learn/*; keep null so explicit metadata can fill it
+      // Leave subtopic unset for learn pages unless other patterns match later
+    }
+  }
 
   // Look for subtopic patterns in path segments
-  for (const segment of segments) {
-    const lowerSegment = segment.toLowerCase().replace(/[-_]/g, "");
-    for (const [pattern, label] of Object.entries(commonPatterns)) {
-      if (lowerSegment.includes(pattern)) {
-        subtopic = label;
-        break;
+  if (!subtopic) {
+    for (const segment of segments) {
+      const lowerSegment = segment.toLowerCase().replace(/[-_]/g, "");
+      for (const [pattern, label] of Object.entries(commonPatterns)) {
+        if (lowerSegment.includes(pattern)) {
+          subtopic = label as string;
+          break;
+        }
       }
+      if (subtopic) break;
     }
-    if (subtopic) break;
   }
 
   // Enhanced subtopic for reference sections
@@ -74,6 +96,11 @@ export function deriveLabelsFromUrl(url: string, fallbackTopic?: string): IIntel
     if (nextSegment) {
       subtopic = `Reference/${nextSegment}`;
     }
+  }
+
+  // Filter out generic buckets unless nothing else is available
+  if (subtopic && GENERIC_BUCKETS.has(subtopic)) {
+    subtopic = null;
   }
 
   // Universal version detection

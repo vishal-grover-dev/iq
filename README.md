@@ -20,6 +20,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Catalog-driven ingestion (admin)
+
+- Data file: `data/interview-ingest-catalog.json` (topic → list of { subtopic, ingestType, url, embedded })
+- Run ingestion script:
+
+```bash
+pnpm run:catalog                    # process all topics
+pnpm run:catalog --topic=React      # only React
+pnpm run:catalog --concurrency=4    # control parallelism (1-8)
+```
+
+The script logs ISO-timestamped entries and returns attempted/started/ids/errors. Only entries with `embedded=false` are queued and URLs are de-duplicated in-batch.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

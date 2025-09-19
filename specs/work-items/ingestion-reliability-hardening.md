@@ -37,13 +37,12 @@
 
 ### Execution plan (tasks)
 
-- [ ] Implement seed normalization and catalog-level pre-dedupe in runner.
-- [ ] Add preflight check (skip if `documents(bucket='web', path=normalized)` exists) and update catalog without enqueuing.
-- [ ] Group work items by hostname/path key; process groups sequentially within a host to avoid races; keep cross-host concurrency.
-- [ ] Enhance completion verification and add a single retry with increased crawl delay.
-- [ ] Persist `documents.num_pages = chunks.length` for web ingestions during processing.
+- [x] Implement seed normalization and catalog-level pre-dedupe in runner.
+- [x] Add preflight check (skip if `documents(bucket='web', path=normalized)` exists) and update catalog without enqueuing.
+- [x] Group work items by hostname/path key; process groups sequentially within a host to avoid races; keep cross-host concurrency.
+- [x] Enhance completion verification and add a single retry with increased crawl delay.
+- [x] Persist `documents.num_pages = chunks.length` for web ingestions during processing.
 - [ ] Confirm label refinements (explicit subtopic preferred; generic buckets suppressed; `Reference/<leaf>` mapping for react.dev) across a sample run.
-- [ ] Update README with a short "Reset and re-run" section (no SQL), referencing scripts and checks.
 
 ### One-time validation run (operator playbook)
 

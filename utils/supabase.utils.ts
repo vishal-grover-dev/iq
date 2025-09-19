@@ -1,9 +1,5 @@
 import { createClient, type SupabaseClient, type SupabaseClientOptions } from "@supabase/supabase-js";
-import {
-  NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
-} from "@/constants/app.constants";
+import { NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_URL } from "@/constants/app.constants";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -16,7 +12,21 @@ let cachedServiceRoleClient: SupabaseClient | undefined;
  */
 export function getSupabaseBrowserClient(options?: SupabaseClientOptions<any>): SupabaseClient {
   if (!cachedBrowserClient) {
-    cachedBrowserClient = createClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      NEXT_PUBLIC_SUPABASE_URL) as string | undefined;
+    const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      NEXT_PUBLIC_SUPABASE_ANON_KEY) as string | undefined;
+    if (!supabaseUrl) {
+      throw new Error("Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in .env.local");
+    }
+    if (!anonKey) {
+      throw new Error(
+        "Missing Supabase anon key. Set NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY in .env.local"
+      );
+    }
+    cachedBrowserClient = createClient(supabaseUrl, anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -36,11 +46,18 @@ export function getSupabaseServiceRoleClient(options?: SupabaseClientOptions<any
   if (isBrowser) {
     throw new Error("getSupabaseServiceRoleClient must not be called in the browser");
   }
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || NEXT_PUBLIC_SUPABASE_URL) as
+    | string
+    | undefined;
+  if (!supabaseUrl) {
+    throw new Error("Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in .env.local");
+  }
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+  if (!serviceKey) {
     throw new Error("Missing environment variable: SUPABASE_SERVICE_ROLE_KEY");
   }
   if (!cachedServiceRoleClient) {
-    cachedServiceRoleClient = createClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    cachedServiceRoleClient = createClient(supabaseUrl, serviceKey, {
       auth: {
         // Never persist/refresh on server
         persistSession: false,

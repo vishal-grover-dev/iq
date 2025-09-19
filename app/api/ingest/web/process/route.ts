@@ -248,6 +248,10 @@ export async function POST(req: NextRequest) {
         : p.content;
       const chunks = await chunkTextLC(textForChunking, { chunkSize: 1800, overlap: 200 });
       totalChunks += chunks.length;
+      // Persist num_pages as a proxy: number of chunks for this HTML page
+      try {
+        await supabase.from("documents").update({ num_pages: chunks.length }).eq("id", documentId);
+      } catch {}
 
       // Add to batch for embedding processing
       embeddingBatch.push({ documentId, chunks, url: p.url });

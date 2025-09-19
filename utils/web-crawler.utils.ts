@@ -171,7 +171,9 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
 
       // Apply content quality filters using centralized heuristic
       const quality = assessContentQuality(content, html);
-      if (content.length > 0 && quality.isAcceptable && matchesInclude) {
+      // Always include depth 0 (seed) if it's acceptable quality, even if includePatterns
+      // do not match. This prevents zero-coverage runs when planner patterns are narrow.
+      if (content.length > 0 && quality.isAcceptable && (matchesInclude || d === 0)) {
         out.push({ url: canonical, title, content, html, depth: d });
       }
 

@@ -22,13 +22,13 @@
       "subtopic": "Events & Forms (Controlled)",
       "ingestType": "web",
       "url": "https://react.dev/learn/forms",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Lists & Keys (Reconciliation)",
       "ingestType": "web",
       "url": "https://react.dev/learn/rendering-lists",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Context API",
@@ -46,13 +46,13 @@
       "subtopic": "Hooks: useEffect",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useEffect",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Hooks: useLayoutEffect",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useLayoutEffect",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Hooks: useMemo",
@@ -70,7 +70,7 @@
       "subtopic": "Hooks: useRef",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useRef",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Hooks: useImperativeHandle",
@@ -88,7 +88,7 @@
       "subtopic": "Hooks: useSyncExternalStore",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useSyncExternalStore",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Hooks: useContext",
@@ -100,13 +100,13 @@
       "subtopic": "Hooks: useReducer",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useReducer",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Custom Hooks",
       "ingestType": "web",
       "url": "https://react.dev/learn/reusing-logic-with-custom-hooks",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Refs & DOM: Referencing Values",
@@ -124,13 +124,13 @@
       "subtopic": "Forwarding Refs",
       "ingestType": "web",
       "url": "https://react.dev/learn/reusing-logic-with-forwarding-refs",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Performance Optimization",
       "ingestType": "web",
       "url": "https://react.dev/learn/escape-hatches#optimizing-re-renders",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Memoization (React.memo/useMemo/useCallback)",
@@ -142,7 +142,7 @@
       "subtopic": "Error Boundaries",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Portals",
@@ -166,31 +166,31 @@
       "subtopic": "Concurrent Rendering (Basics)",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/useTransition",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Suspense (Intro)",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/Suspense",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Effects: Dependencies & Cleanup",
       "ingestType": "web",
       "url": "https://react.dev/learn/synchronizing-with-effects",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Controlled vs Uncontrolled Forms",
       "ingestType": "web",
       "url": "https://react.dev/learn/forms",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "Data Fetching Patterns (High-level)",
       "ingestType": "web",
       "url": "https://react.dev/learn/you-might-not-need-an-effect",
-      "embedded": true
+      "embedded": false
     },
     {
       "subtopic": "useTransition & useDeferredValue (Basics)",
@@ -202,7 +202,7 @@
       "subtopic": "Error Handling Patterns",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary",
-      "embedded": true
+      "embedded": false
     }
   ]
 }

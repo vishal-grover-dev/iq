@@ -142,6 +142,43 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
   - Web → POST `/api/ingest/web` { seeds: [url], domain, includePatterns?, excludePatterns?, depth or depthMap, maxPages (≤50), crawlDelayMs (≥300), topic }.
 - Progress: poll status endpoint; show coverage and recent; display modal on completion.
 
+## React Ingestion URL Map (react.dev)
+
+- React → Components & Props: https://react.dev/learn/passing-props-to-a-component
+- React → JSX & Rendering: https://react.dev/learn/writing-markup-with-jsx, https://react.dev/learn/conditional-rendering, https://react.dev/learn/rendering-lists, https://react.dev/learn/render-and-commit
+- React → State & Lifecycle: https://react.dev/learn/state-a-components-memory, https://react.dev/learn/preserving-and-resetting-state
+- React → Events & Forms (Controlled): https://react.dev/learn/responding-to-events, https://react.dev/learn/forms
+- React → Lists & Keys (Reconciliation): https://react.dev/learn/rendering-lists
+- React → Context API: https://react.dev/learn/passing-data-deeply-with-context, https://react.dev/reference/react/createContext, https://react.dev/reference/react/useContext
+- React → Hooks: useState: https://react.dev/reference/react/useState
+- React → Hooks: useEffect: https://react.dev/reference/react/useEffect, https://react.dev/learn/synchronizing-with-effects
+- React → Hooks: useLayoutEffect: https://react.dev/reference/react/useLayoutEffect
+- React → Hooks: useMemo: https://react.dev/reference/react/useMemo
+- React → Hooks: useCallback: https://react.dev/reference/react/useCallback
+- React → Hooks: useRef: https://react.dev/reference/react/useRef
+- React → Hooks: useImperativeHandle: https://react.dev/reference/react/useImperativeHandle
+- React → Hooks: useId: https://react.dev/reference/react/useId
+- React → Hooks: useSyncExternalStore: https://react.dev/reference/react/useSyncExternalStore
+- React → Hooks: useContext: https://react.dev/reference/react/useContext
+- React → Hooks: useReducer: https://react.dev/reference/react/useReducer
+- React → Custom Hooks: https://react.dev/learn/reusing-logic-with-custom-hooks
+- React → Refs & DOM: Referencing Values: https://react.dev/learn/referencing-values-with-refs
+- React → Refs & DOM: Manipulating the DOM: https://react.dev/learn/manipulating-the-dom-with-refs
+- React → Forwarding Refs: https://react.dev/learn/reusing-logic-with-forwarding-refs
+- React → Performance Optimization: https://react.dev/learn/escape-hatches#optimizing-re-renders, https://react.dev/reference/react/memo, https://react.dev/reference/react/lazy
+- React → Memoization (React.memo/useMemo/useCallback): https://react.dev/reference/react/memo, https://react.dev/reference/react/useMemo, https://react.dev/reference/react/useCallback
+- React → Error Boundaries: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+- React → Portals: https://react.dev/reference/react-dom/createPortal
+- React → Fragments: https://react.dev/reference/react/Fragment
+- React → Strict Mode: https://react.dev/reference/react/StrictMode
+- React → Concurrent Rendering (Basics): https://react.dev/reference/react/useTransition, https://react.dev/reference/react/useDeferredValue
+- React → Suspense (Intro): https://react.dev/reference/react/Suspense, https://react.dev/reference/react/lazy
+- React → Effects: Dependencies & Cleanup: https://react.dev/learn/synchronizing-with-effects, https://react.dev/learn/you-might-not-need-an-effect
+- React → Controlled vs Uncontrolled Forms: https://react.dev/learn/forms, https://react.dev/learn/referencing-values-with-refs
+- React → Data Fetching Patterns (High-level): https://react.dev/learn/you-might-not-need-an-effect, https://react.dev/learn/synchronizing-with-effects
+- React → useTransition & useDeferredValue (Basics): https://react.dev/reference/react/useTransition, https://react.dev/reference/react/useDeferredValue
+- React → Error Handling Patterns: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+
 ## Notes
 
 - Prefer repo-mode when possible for license clarity and clean content.

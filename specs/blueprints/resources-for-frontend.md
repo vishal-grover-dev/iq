@@ -64,6 +64,36 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
   - Next.js docs (vercel/next.js repo docs)
 - Ingestion: prefer docs repos; otherwise sitemap-limited fetch.
 
+### Rendering Strategies
+
+- Subtopics: client-side rendering (CSR), server-side rendering (SSR), static site generation (SSG), ISR (optional), hydration basics, trade-offs.
+- Primary sources:
+  - Next.js docs (rendering fundamentals)
+- Ingestion: concept-level sections from Next.js docs that define strategies and trade-offs.
+
+### Environment Variables (.env)
+
+- Subtopics: configuration separation, client vs server exposure, build-time vs runtime, secrets handling basics.
+- Primary sources:
+  - Next.js docs (environment variables)
+- Ingestion: concept-level pages only; avoid provider/tool-specific marketing content.
+
+### Bundling & Build Tools
+
+- Subtopics: Webpack (loaders, plugins, code splitting, tree shaking), Vite (dev server, HMR, build, plugins).
+- Primary sources:
+  - Webpack official docs
+  - Vite official docs
+- Ingestion: limit to terminology and core conceptual docs; skip exhaustive API references to reduce noise.
+
+### Deployment
+
+- Subtopics: Netlify/Vercel deploy basics, CI/CD overview, preview deployments, environment configuration, basic monitoring.
+- Primary sources:
+  - Netlify docs
+  - Vercel docs
+- Ingestion: platform docs at a conceptual level; exclude provider-specific tutorials that are not authoritative references.
+
 ### Testing
 
 - Subtopics: RTL queries, act, user-event, Jest matchers, mocking, async tests.
@@ -95,8 +125,17 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
 - TypeScript: `microsoft/TypeScript-Website` handbook Markdown; tag `TS 5.x`.
 - Redux/React Router/Next.js/Testing: prefer official docs repos; if not clean, use sitemap with path whitelist.
 
+## Supplementary Resources (non-ingestion)
+
+- UI/UX Design (for study only): inspiration (Dribbble, Behance), reading ("Don't Make Me Think", "The Design of Everyday Things"), design systems (Material Design), component libraries (Bootstrap). Not ingested.
+- Workflow & Tools (for study only): Git basics, task runners (Gulp) overview. Not ingested.
+- Extra Reading (for study only): Smashing Magazine, CSS‑Tricks. Not ingested.
+- Backend Resources (out of scope): Node.js official docs, database docs (PostgreSQL, MongoDB). Not ingested.
+- Version Control (for study only): GitHub/Bitbucket platform docs. Not ingested.
+- Style Guides (for study only): Airbnb JavaScript Style Guide, Google HTML/CSS Style Guide. Not ingested.
+
 ## Gaps and Future
 
 - Advanced React (concurrency deeper, Suspense data fetching) → later.
-- Tooling (Vite/Webpack/Babel) → later.
+- Tooling (deeper API coverage for Vite/Webpack/Babel) → later; current scope includes concept-level docs only.
 - GraphQL, CSS‑in‑JS specifics → optional.

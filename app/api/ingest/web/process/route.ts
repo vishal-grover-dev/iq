@@ -197,8 +197,8 @@ export async function POST(req: NextRequest) {
             labels: (() => {
               const derivedLabels = deriveLabelsFromUrl(p.url, topic);
               return {
-                topic: derivedLabels.topic,
-                subtopic: derivedLabels.subtopic ?? subtopic,
+                topic: topic ?? derivedLabels.topic,
+                subtopic: subtopic ?? derivedLabels.subtopic,
                 version: derivedLabels.version ?? version,
               };
             })(),
@@ -241,8 +241,9 @@ export async function POST(req: NextRequest) {
             labels: (() => {
               const derivedLabels = deriveLabelsFromUrl(batchItem.url, topic);
               return {
-                topic: derivedLabels.topic,
-                subtopic: derivedLabels.subtopic ?? subtopic,
+                // Prefer explicit labels from the form; fallback to derived when missing.
+                topic: topic ?? derivedLabels.topic,
+                subtopic: subtopic ?? derivedLabels.subtopic,
                 version: derivedLabels.version ?? version,
               };
             })(),

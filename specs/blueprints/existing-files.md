@@ -132,6 +132,7 @@
 ### specs/work-items
 
 - `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Generation is removed and will be redesigned separately.
+ - `generation-of-questions.md`: Work-item for the MCQ Generation page, personas, streaming, revision chat, and save flow to `mcq_items`.
 
 ### migrations
 

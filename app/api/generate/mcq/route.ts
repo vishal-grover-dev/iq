@@ -62,6 +62,39 @@ async function retrieveNeighbors(args: {
   }));
 }
 
+async function retrieveRecentMcqQuestions(args: {
+  userId: string;
+  topic: string;
+  subtopic?: string | null;
+  limit?: number;
+}): Promise<string[]> {
+  const supabase = getSupabaseServiceRoleClient();
+  const q = supabase
+    .from("mcq_items")
+    .select("question, subtopic, topic")
+    .eq("user_id", args.userId)
+    .eq("topic", args.topic)
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(args.limit ?? 12, 50)));
+  if (args.subtopic) q.eq("subtopic", args.subtopic);
+  const { data, error } = await q;
+  if (error) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of data ?? []) {
+    const s = String((r as any)?.question || "").trim();
+    if (s && !seen.has(s)) {
+      seen.add(s);
+      out.push(s);
+    }
+  }
+  // Add hardcoded banned gist observed repeatedly
+  out.push(
+    "What will happen when the button in the following code is clicked? Will it update the displayed count on the button?"
+  );
+  return out.slice(0, Math.max(1, Math.min(args.limit ?? 12, 50)));
+}
+
 export async function GET(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
@@ -84,12 +117,18 @@ export async function GET(req: NextRequest) {
         try {
           send("generation_started", { topic, subtopic, version });
           const context = await retrieveContextByLabels({ userId, topic, subtopic, version, query: q, topK: 8 });
-          const item = await generateMcqFromContext({
+          const negativeExamples = await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined });
+          let item = await generateMcqFromContext({
             topic,
             subtopic: subtopic ?? undefined,
             version: version ?? undefined,
             contextItems: context,
+            codingMode: true,
+            negativeExamples,
           });
+          if (typeof item.question === "string" && !item.question.includes("```") && item.code) {
+            item = { ...item, question: `${item.code}\n\n${item.question}` } as IMcqItemView;
+          }
           send("generation_complete", { item });
           const neighbors = await retrieveNeighbors({ userId, topic, subtopic, mcq: item, topK: 8 });
           send("neighbors", {
@@ -101,6 +140,7 @@ export async function GET(req: NextRequest) {
             mcq: item as IMcqItemView,
             contextItems: context,
             neighbors: neighbors.slice(0, 6),
+            codingMode: true,
           });
           send("judge_result", verdict);
           send("finalized", { ok: true });
@@ -200,6 +240,7 @@ export async function POST(req: NextRequest) {
       bloomLevel: blooms[Math.floor(Math.random() * blooms.length)],
       contextItems: context,
       codingMode,
+      negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
     });
 
     if (codingMode && typeof item.question === "string" && !item.question.includes("```")) {
@@ -212,6 +253,7 @@ export async function POST(req: NextRequest) {
         bloomLevel: blooms[Math.floor(Math.random() * blooms.length)],
         contextItems: context,
         codingMode: true,
+        negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
       });
     }
 

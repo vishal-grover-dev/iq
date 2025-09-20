@@ -86,6 +86,28 @@ Design and plan a new page to generate, review, and save high‑quality multiple
     - Content key: hash of a normalized question gist (text without markup/code formatting) to catch near duplicates
   - Recent window: maintain an in‑memory sliding window of recent content keys to prevent immediate repeats within a run
 
+## Reliability Hardening (Duplicates & Code Presence)
+
+- Duplication avoidance
+  - Generator negative examples: the prompt receives `negativeExamples` built from the user's most recent saved MCQs (plus a banned gist for a repeatedly observed item) to steer away from similar questions.
+    - Implementation: `utils/mcq-prompt.utils.ts` (user prompt includes an "Avoid similar gists" block), `services/ai.services.ts` (plumbs `negativeExamples` to the prompt builder), `app/api/generate/mcq/route.ts` (collects recent questions and passes them).
+  - Neighbor-aware Judge: the judge evaluates candidate MCQs alongside nearest neighbors returned by `retrieval_mcq_neighbors` and requests revision on similarity.
+    - Implementation: `services/ai.services.ts` (`judgeMcqQuality`), `utils/mcq-prompt.utils.ts` (Judge message emphasizes duplicate risk), `app/api/generate/mcq/route.ts` (fetches neighbors and passes to judge).
+  - Save-time dedupe: unique `content_key` (normalized question gist) rejects near-identical questions with a 409, preventing persistence of duplicates.
+    - Implementation: `app/api/generate/mcq/save/route.ts` (409 on `uq_mcq_items_content_key`), schema/migration in `migrations/007-MCQ-Embeddings-And-Dedupe.sql`.
+
+- Code presence enforcement
+  - Coding mode in prompts: when enabled, the Generator is instructed that a 3–8 line fenced code block is REQUIRED in the question. SSE path defaults to coding mode for stronger reliability.
+    - Implementation: `utils/mcq-prompt.utils.ts` (coding rules), `app/api/generate/mcq/route.ts` (SSE GET passes `codingMode: true`).
+  - Retry on missing code: if OpenAI omits code, a second attempt is triggered with stronger coding instructions.
+    - Implementation: `app/api/generate/mcq/route.ts` (POST path retry logic).
+  - Final injection guard: if still missing, a short snippet is extracted from retrieved context and prepended, or an existing `item.code` is fused into the question in the SSE flow.
+    - Implementation: `app/api/generate/mcq/route.ts` (code snippet injection; SSE GET prepends `item.code` when present).
+  - Persist code: `mcq_items.code` is written on save to preserve code snippets for downstream usage.
+    - Implementation: `app/api/generate/mcq/save/route.ts`; schema/migration in `migrations/008-MCQ-Code-Column.sql`.
+  - Observed repeat mitigation: the recurrent gist (button click count with refs) is added to negative examples to further reduce resurfacing.
+    - Implementation: `app/api/generate/mcq/route.ts` (recent question collector seeds a hardcoded banned gist).
+
 ## APIs (to be implemented later)
 
 - SSE Generation Stream
@@ -145,8 +167,10 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 - [ ] UI: Revision chat box wired to revision endpoint
 - [ ] UI: Add "Automate generation" button and modal with coverage matrix and controls
 - [ ] API: SSE generation stream (Generator → Judge → Finalize)
+  - Progress: SSE GET path now passes `codingMode: true`, supplies `negativeExamples`, streams neighbors, and instructs Judge with coding-mode emphasis.
 - [ ] API: Revision endpoint for chat‑driven edits
 - [ ] API: Save endpoint; persist to `mcq_items` with RLS‑safe scoping
+  - Progress: Endpoint persists `code` and returns 409 for duplicate `content_key` to prevent near-identical saves.
 - [ ] API: Automation plan and start (SSE) endpoints with coverage/exclusion constraints
 - [ ] Services: Axios clients and TanStack Query hooks where appropriate
 - [ ] Automation: Batch runner to reach 250–500 items across subtopics/Bloom/difficulty

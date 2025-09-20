@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         difficulty: payload.difficulty,
         bloom_level: payload.bloomLevel,
         question: payload.question,
+        code: payload.code ?? null,
         options: payload.options,
         correct_index: payload.correctIndex,
         citations: payload.citations ?? [],

@@ -404,11 +404,22 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     })
     .join("\n\n");
 
+  const negativeBlock = (() => {
+    const list = (args.negativeExamples ?? []).filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 8);
+    if (list.length === 0) return undefined;
+    return [
+      "Avoid generating MCQs similar to the following question gists:",
+      ...list.map((q, i) => `${i + 1}. ${q.slice(0, 240)}`),
+      "Do not copy these. Aim for different angles or scenarios.",
+    ].join("\n");
+  })();
+
   const user = [
     `Labels: ${labels}`,
     "Context (use for grounding and citations):",
     contextLines,
     mode === EPromptMode.FEW_SHOT ? "Examples (style reference):\n" + examplesBlock : undefined,
+    negativeBlock,
     args.codingMode
       ? "Task: Generate ONE coding MCQ. MUST include a short fenced code block (```js``` or ```tsx```) in the question. Ask about the code's behavior, bugs, or fixes. The code block should be 3-8 lines and relevant to the topic."
       : "Task: Generate one MCQ adhering to labels and grounded in the context.",

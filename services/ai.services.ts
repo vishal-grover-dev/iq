@@ -207,6 +207,7 @@ export async function generateMcqFromContext(args: {
   contextItems: Array<{ title?: string | null; url: string; content: string }>;
   mode?: EPromptMode;
   codingMode?: boolean;
+  negativeExamples?: string[];
 }): Promise<IMcqItemView> {
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
@@ -220,6 +221,7 @@ export async function generateMcqFromContext(args: {
     mode: args.mode ?? EPromptMode.FEW_SHOT,
     examplesCount: 12,
     codingMode: args.codingMode,
+    negativeExamples: args.negativeExamples,
   });
 
   const res = await client.chat.completions.create({

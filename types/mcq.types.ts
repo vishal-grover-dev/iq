@@ -48,6 +48,11 @@ export type TGeneratorBuildArgs = {
   mode?: EPromptMode;
   examplesCount?: number;
   codingMode?: boolean;
+  /**
+   * Optional list of brief question gists to avoid generating similar items to.
+   * Used to reduce duplicates by providing negative examples to the LLM.
+   */
+  negativeExamples?: string[];
 };
 
 export type TJudgeBuildArgs = {

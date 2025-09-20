@@ -139,7 +139,8 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 
 ## Tasks
 
-- [ ] UI: Build page structure, MCQ card, citations, metadata chips, and options UI
+- [x] UI: Build page structure, MCQ card, citations, metadata chips, and options UI
+  - Added proper text wrapping for long words and newline handling in MCQ questions
 - [ ] UI: Persona progress panel with streaming states (SSE)
 - [ ] UI: Revision chat box wired to revision endpoint
 - [ ] UI: Add "Automate generation" button and modal with coverage matrix and controls

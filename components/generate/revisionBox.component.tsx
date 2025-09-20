@@ -1,21 +1,19 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { postReviseMcq } from "@/services/mcq.services";
 
-export default function RevisionBox() {
+interface RevisionBoxProps {
+  onRevise: (instruction: string) => void;
+  isLoading?: boolean;
+}
+
+export default function RevisionBox({ onRevise, isLoading = false }: RevisionBoxProps) {
   const [value, setValue] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  async function onSend() {
+  function onSend() {
     if (!value.trim()) return;
-    setLoading(true);
-    try {
-      await postReviseMcq({ instruction: value });
-      setValue("");
-    } finally {
-      setLoading(false);
-    }
+    onRevise(value);
+    setValue("");
   }
 
   return (
@@ -34,8 +32,8 @@ export default function RevisionBox() {
           }}
           aria-label='Revision instruction'
         />
-        <Button size='sm' onClick={onSend} disabled={loading || !value.trim()}>
-          {loading ? "Sending…" : "Send"}
+        <Button size='sm' onClick={onSend} disabled={isLoading || !value.trim()}>
+          {isLoading ? "Revising…" : "Send"}
         </Button>
       </div>
     </div>

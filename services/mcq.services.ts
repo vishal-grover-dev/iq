@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/http.services";
+import type { IMcqItemView } from "@/types/mcq.types";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   TRetrievalRequest as IRetrievalRequest,
@@ -11,9 +12,9 @@ import type {
  * postGenerateMcq
  * Triggers MCQ generation via POST. For streaming, prefer openMcqSse().
  */
-export async function postGenerateMcq(payload: unknown): Promise<{ ok: boolean; message: string }> {
+export async function postGenerateMcq(payload: unknown): Promise<{ ok: boolean; item: IMcqItemView }> {
   const { data } = await apiClient.post("/api/generate/mcq", payload);
-  return data as { ok: boolean; message: string };
+  return data as { ok: boolean; item: IMcqItemView };
 }
 
 /**
@@ -33,27 +34,29 @@ export function openMcqSse(params?: Record<string, string | number | boolean | u
 
 /**
  * postReviseMcq
- * Applies a user instruction to the current MCQ and returns an updated version (placeholder).
+ * Applies a user instruction to the current MCQ and returns an updated version.
  */
-export async function postReviseMcq(payload: unknown): Promise<{ ok: boolean; message: string }> {
+export async function postReviseMcq(payload: unknown): Promise<{ ok: boolean; item: IMcqItemView; changes: string }> {
   const { data } = await apiClient.post("/api/generate/mcq/revise", payload);
-  return data as { ok: boolean; message: string };
+  return data as { ok: boolean; item: IMcqItemView; changes: string };
 }
 
 /**
  * postSaveMcq
  * Persists the finalized MCQ (placeholder until DB wiring is added).
  */
-export async function postSaveMcq(payload: unknown): Promise<{ ok: boolean; message: string }> {
+export async function postSaveMcq(
+  payload: unknown
+): Promise<{ ok: true; id: string } | { ok: false; duplicate?: boolean; message: string }> {
   const { data } = await apiClient.post("/api/generate/mcq/save", payload);
-  return data as { ok: boolean; message: string };
+  return data as { ok: true; id: string } | { ok: false; duplicate?: boolean; message: string };
 }
 
 export function useMcqMutations() {
   const generate = useMutation({ mutationFn: postGenerateMcq });
-  const revise = useMutation({ mutationFn: postReviseMcq });
   const save = useMutation({ mutationFn: postSaveMcq });
-  return { generate, revise, save };
+  const revise = useMutation({ mutationFn: postReviseMcq });
+  return { generate, save, revise };
 }
 
 /**

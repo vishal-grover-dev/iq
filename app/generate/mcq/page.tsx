@@ -8,13 +8,46 @@ import RevisionBox from "@/components/generate/revisionBox.component";
 import AutomationModal from "@/components/generate/automationModal.component";
 import { EBloomLevel } from "@/types/mcq.types";
 import { EDifficulty, IMcqItemView } from "@/types/mcq.types";
-import { openMcqSse, postGenerateMcq, postSaveMcq } from "@/services/mcq.services";
+import { openMcqSse, useMcqMutations } from "@/services/mcq.services";
 import { toast } from "sonner";
 
 export default function McqGenerationPage() {
   const [personaStatus, setPersonaStatus] = useState<{ generation?: string; judge?: string; finalized?: string }>({});
   const [openAutomation, setOpenAutomation] = useState(false);
+  const [revisionHistory, setRevisionHistory] = useState<
+    Array<{ instruction: string; timestamp: Date; changes: string }>
+  >([]);
   const sseRef = useRef<EventSource | null>(null);
+  const { generate: generateMutation, save: saveMutation, revise: reviseMutation } = useMcqMutations();
+
+  const handleRevise = (instruction: string) => {
+    if (reviseMutation.isPending) return;
+
+    reviseMutation.mutate(
+      { instruction, currentMcq: current },
+      {
+        onSuccess: (data) => {
+          if (data?.ok && data?.item) {
+            setCurrent(data.item);
+            setRevisionHistory((prev) => [
+              ...prev,
+              {
+                instruction,
+                timestamp: new Date(),
+                changes: data.changes || `Applied revision: "${instruction}"`,
+              },
+            ]);
+            toast.success("Question revised successfully");
+          } else {
+            toast.error("Failed to revise question");
+          }
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to revise question");
+        },
+      }
+    );
+  };
   const sample = useMemo<IMcqItemView>(
     () => ({
       topic: "React",
@@ -35,6 +68,7 @@ export default function McqGenerationPage() {
     []
   );
   const [current, setCurrent] = useState<IMcqItemView>(sample);
+  const [codingMode, setCodingMode] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -66,39 +100,106 @@ export default function McqGenerationPage() {
     setOpenAutomation(false);
   }
 
-  async function handleSubmit() {
-    try {
-      await postSaveMcq({ item: current });
-      toast.success("Saved question");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
-    }
-  }
+  const handleSubmit = () => {
+    saveMutation.mutate(
+      { item: current },
+      {
+        onSuccess: () => {
+          toast.success("Saved question");
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to save");
+        },
+      }
+    );
+  };
 
-  async function handleNext() {
-    try {
-      const res = await postGenerateMcq({ topic: current.topic, subtopic: current.subtopic });
-      toast.message(res?.message ?? "Generated next (placeholder)");
-      // Placeholder: keep same item until real generation is wired.
-      setPersonaStatus({});
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to generate next");
-    }
-  }
+  const handleSubmitAndNext = () => {
+    if (generateMutation.isPending || saveMutation.isPending) return;
+
+    // First save, then generate next
+    saveMutation.mutate(
+      { item: current },
+      {
+        onSuccess: () => {
+          toast.success("Saved question");
+          handleNext();
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to save");
+        },
+      }
+    );
+  };
+
+  const handleNext = () => {
+    if (generateMutation.isPending || saveMutation.isPending) return;
+
+    setPersonaStatus((s) => s);
+    // Do not pass subtopic so backend can diversify across React subtopics
+    generateMutation.mutate(
+      { topic: current.topic, codingMode },
+      {
+        onSuccess: (data) => {
+          if (data?.ok && data?.item) {
+            setCurrent(data.item);
+            setPersonaStatus({});
+            toast.success("Loaded next question");
+          } else {
+            toast.message("Generated next (placeholder)");
+          }
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to generate next");
+        },
+      }
+    );
+  };
 
   return (
     <div className='mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-3'>
       <div className='md:col-span-2'>
         <McqCard item={current} />
         <div className='mt-4'>
-          <RevisionBox />
+          <RevisionBox onRevise={handleRevise} isLoading={reviseMutation.isPending} />
         </div>
+        {revisionHistory.length > 0 && (
+          <div className='mt-4 rounded-lg border bg-white p-3 dark:border-gray-800 dark:bg-gray-950'>
+            <h3 className='mb-2 font-semibold text-sm'>Revision History</h3>
+            <div className='space-y-2 max-h-40 overflow-y-auto'>
+              {revisionHistory
+                .slice(-5)
+                .reverse()
+                .map((revision, index) => (
+                  <div key={index} className='text-xs border-l-2 border-blue-300 pl-2'>
+                    <div className='font-medium text-gray-700 dark:text-gray-300'>{revision.instruction}</div>
+                    <div className='text-gray-500 dark:text-gray-400'>
+                      {revision.timestamp.toLocaleTimeString()} - {revision.changes}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
         <div className='mt-3 flex items-center justify-end gap-2'>
-          <Button variant='secondary' onClick={handleNext} aria-label='Generate next question'>
-            Next
+          <label className='mr-auto flex items-center gap-2 text-sm'>
+            <input type='checkbox' checked={codingMode} onChange={(e) => setCodingMode(e.target.checked)} />
+            Coding questions
+          </label>
+          <Button
+            variant='secondary'
+            onClick={handleNext}
+            disabled={generateMutation.isPending || saveMutation.isPending}
+            aria-label='Generate next question'
+          >
+            {generateMutation.isPending ? "Generating..." : "Next"}
           </Button>
-          <Button onClick={handleSubmit} aria-label='Submit question'>
-            Submit
+          <Button
+            onClick={handleSubmitAndNext}
+            disabled={generateMutation.isPending || saveMutation.isPending}
+            aria-label='Submit question and generate next'
+          >
+            {saveMutation.isPending ? "Saving..." : generateMutation.isPending ? "Generating..." : "Submit and Next"}
           </Button>
         </div>
       </div>

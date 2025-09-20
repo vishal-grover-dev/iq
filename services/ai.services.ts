@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { parseJsonObject } from "@/utils/json.utils";
+import type { IMcqItemView, EBloomLevel, EDifficulty } from "@/types/mcq.types";
+import { EPromptMode } from "@/types/mcq.types";
+import { buildGeneratorMessages, buildJudgeMessages, buildReviserMessages } from "@/utils/mcq-prompt.utils";
 
 /**
  * getEmbeddings
@@ -189,4 +192,254 @@ export async function suggestCrawlHeuristics(args: {
   })();
 
   return { includePatterns, seeds, depthMap };
+}
+
+/**
+ * generateMcqFromContext
+ * Server-only: Generates one MCQ grounded in provided context using OpenAI chat with strict JSON output.
+ */
+export async function generateMcqFromContext(args: {
+  topic: string;
+  subtopic?: string | null;
+  version?: string | null;
+  difficulty?: EDifficulty;
+  bloomLevel?: EBloomLevel;
+  contextItems: Array<{ title?: string | null; url: string; content: string }>;
+  mode?: EPromptMode;
+  codingMode?: boolean;
+}): Promise<IMcqItemView> {
+  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+  const { system, user } = buildGeneratorMessages({
+    topic: args.topic,
+    subtopic: args.subtopic ?? undefined,
+    version: args.version ?? undefined,
+    difficulty: args.difficulty,
+    bloomLevel: args.bloomLevel,
+    contextItems: args.contextItems,
+    mode: args.mode ?? EPromptMode.FEW_SHOT,
+    examplesCount: 12,
+    codingMode: args.codingMode,
+  });
+
+  const res = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    response_format: { type: "json_object" },
+  });
+  const content = res.choices[0]?.message?.content ?? "{}";
+  const raw = parseJsonObject<any>(content, {});
+
+  // Coerce and validate minimal shape
+  const topic: string = String(raw.topic || args.topic || "");
+  const subtopic: string = String(raw.subtopic || args.subtopic || "");
+  const version: string | null = typeof raw.version === "string" ? raw.version : args.version ?? null;
+  const difficultyStr: string = String(raw.difficulty || args.difficulty || "Medium");
+  const bloomStr: string = String(raw.bloomLevel || args.bloomLevel || "Understand");
+  const question: string = String(raw.question || "");
+  const optionsArr: string[] = Array.isArray(raw.options) ? raw.options.map((o: any) => String(o)).slice(0, 4) : [];
+  const correctIndexNum: number = typeof raw.correctIndex === "number" ? raw.correctIndex : 0;
+  const citationsArr: Array<{ title?: string; url: string }> = Array.isArray(raw.citations)
+    ? raw.citations
+        .map((c: any) => ({ title: typeof c?.title === "string" ? c.title : undefined, url: String(c?.url || "") }))
+        .filter((c: any) => c.url)
+        .slice(0, 3)
+    : [];
+  const explanation: string | undefined = typeof raw.explanation === "string" ? raw.explanation : undefined;
+  const explanationBullets: string[] | undefined = Array.isArray(raw.explanationBullets)
+    ? raw.explanationBullets.map((s: any) => String(s)).slice(0, 5)
+    : undefined;
+
+  // Normalize code into a dedicated field; keep question prose-only
+  const codeFromRaw: string | undefined = typeof raw.code === "string" ? raw.code : undefined;
+  const normalizedCode: string | undefined = (() => {
+    if (!codeFromRaw || !codeFromRaw.trim()) return undefined;
+    const t = codeFromRaw.trim();
+    return t.startsWith("```") ? t : ["```tsx", t, "```"].join("\n");
+  })();
+  const finalQuestion: string = question;
+
+  const enumDifficulty = ((): EDifficulty => {
+    const s = difficultyStr.toLowerCase();
+    if (s === "easy") return "Easy" as EDifficulty;
+    if (s === "hard") return "Hard" as EDifficulty;
+    return "Medium" as EDifficulty;
+  })();
+  const enumBloom = ((): EBloomLevel => {
+    const s = bloomStr.toLowerCase();
+    if (s.startsWith("remember")) return "Remember" as EBloomLevel;
+    if (s.startsWith("understand")) return "Understand" as EBloomLevel;
+    if (s.startsWith("apply")) return "Apply" as EBloomLevel;
+    if (s.startsWith("analy")) return "Analyze" as EBloomLevel;
+    if (s.startsWith("evalu")) return "Evaluate" as EBloomLevel;
+    if (s.startsWith("create")) return "Create" as EBloomLevel;
+    return "Understand" as EBloomLevel;
+  })();
+
+  const options = ((): [string, string, string, string] => {
+    const filled = [...optionsArr];
+    while (filled.length < 4) filled.push("");
+    return [filled[0], filled[1], filled[2], filled[3]];
+  })();
+
+  const correctIndex = Math.max(0, Math.min(3, correctIndexNum | 0));
+
+  const out: IMcqItemView = {
+    topic: topic || args.topic,
+    subtopic: subtopic || args.subtopic || "",
+    version: version ?? undefined,
+    difficulty: enumDifficulty,
+    bloomLevel: enumBloom,
+    question: finalQuestion,
+    code: normalizedCode,
+    options,
+    correctIndex,
+    explanation,
+    explanationBullets,
+    citations: citationsArr,
+  };
+  return out;
+}
+
+/**
+ * reviseMcqWithContext
+ * Server-only: Revises an existing MCQ based on user instruction while maintaining quality and citations.
+ */
+export async function reviseMcqWithContext(args: {
+  currentMcq: IMcqItemView;
+  instruction: string;
+  contextItems: Array<{ title?: string | null; url: string; content: string }>;
+}): Promise<IMcqItemView> {
+  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+  const { system, user } = buildReviserMessages({
+    currentMcq: args.currentMcq,
+    instruction: args.instruction,
+    contextItems: args.contextItems,
+  });
+
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    temperature: 0.3, // Lower temperature for more focused revisions
+    max_tokens: 2000,
+    response_format: { type: "json_object" },
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) throw new Error("No response from OpenAI");
+
+  const raw = parseJsonObject(content, null) as any;
+  if (!raw) throw new Error("Invalid JSON response from OpenAI");
+
+  const question = typeof raw.question === "string" ? raw.question : args.currentMcq.question;
+  const optionsArr = Array.isArray(raw.options) ? raw.options.slice(0, 4) : args.currentMcq.options;
+  const correctIndexNum = typeof raw.correctIndex === "number" ? raw.correctIndex : args.currentMcq.correctIndex;
+  const difficultyStr = typeof raw.difficulty === "string" ? raw.difficulty : args.currentMcq.difficulty;
+  const bloomStr = typeof raw.bloomLevel === "string" ? raw.bloomLevel : args.currentMcq.bloomLevel;
+  const explanation = typeof raw.explanation === "string" ? raw.explanation : args.currentMcq.explanation;
+  const explanationBullets = Array.isArray(raw.explanationBullets)
+    ? raw.explanationBullets.map((s: any) => String(s)).slice(0, 5)
+    : args.currentMcq.explanationBullets;
+  const citationsArr = Array.isArray(raw.citations)
+    ? raw.citations.map((c: any) => ({
+        title: c.title ?? undefined,
+        url: c.url,
+      }))
+    : args.currentMcq.citations;
+
+  // Normalize code for revisions (keep prose-only question)
+  const codeFromRawRev: string | undefined = typeof raw.code === "string" ? raw.code : undefined;
+  const normalizedCodeRev: string | undefined = (() => {
+    if (!codeFromRawRev || !codeFromRawRev.trim()) return undefined;
+    const t = codeFromRawRev.trim();
+    return t.startsWith("```") ? t : ["```tsx", t, "```"].join("\n");
+  })();
+  const finalQuestionRev: string = question;
+
+  const enumDifficulty = ((): EDifficulty => {
+    const s = difficultyStr.toLowerCase();
+    if (s === "easy") return "Easy" as EDifficulty;
+    if (s === "hard") return "Hard" as EDifficulty;
+    return "Medium" as EDifficulty;
+  })();
+  const enumBloom = ((): EBloomLevel => {
+    const s = bloomStr.toLowerCase();
+    if (s.startsWith("remember")) return "Remember" as EBloomLevel;
+    if (s.startsWith("understand")) return "Understand" as EBloomLevel;
+    if (s.startsWith("apply")) return "Apply" as EBloomLevel;
+    if (s.startsWith("analy")) return "Analyze" as EBloomLevel;
+    if (s.startsWith("evalu")) return "Evaluate" as EBloomLevel;
+    if (s.startsWith("create")) return "Create" as EBloomLevel;
+    return "Understand" as EBloomLevel;
+  })();
+
+  const options = ((): [string, string, string, string] => {
+    const filled = [...optionsArr];
+    while (filled.length < 4) filled.push("");
+    return [filled[0], filled[1], filled[2], filled[3]];
+  })();
+
+  const correctIndex = Math.max(0, Math.min(3, correctIndexNum | 0));
+
+  const out: IMcqItemView = {
+    topic: args.currentMcq.topic, // Keep original topic
+    subtopic: args.currentMcq.subtopic, // Keep original subtopic
+    version: args.currentMcq.version, // Keep original version
+    difficulty: enumDifficulty,
+    bloomLevel: enumBloom,
+    question: finalQuestionRev,
+    code: normalizedCodeRev ?? args.currentMcq.code,
+    options,
+    correctIndex,
+    explanation,
+    explanationBullets,
+    citations: citationsArr,
+  };
+  return out;
+}
+
+/**
+ * judgeMcqQuality
+ * Server-only: Evaluates MCQ quality and returns a structured verdict for automation.
+ */
+export async function judgeMcqQuality(args: {
+  mcq: IMcqItemView;
+  contextItems: Array<{ title?: string | null; url: string; content: string }>;
+  neighbors?: Array<{ question: string; options: [string, string, string, string] }>;
+  codingMode?: boolean;
+}): Promise<{ verdict: "approve" | "revise"; reasons: string[]; suggestions?: string[] }> {
+  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+  const { system, user } = buildJudgeMessages({
+    mcq: args.mcq,
+    contextItems: args.contextItems,
+    neighbors: args.neighbors,
+    codingMode: args.codingMode,
+  });
+  const res = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    response_format: { type: "json_object" },
+  });
+  const content = res.choices[0]?.message?.content ?? "{}";
+  const parsed = parseJsonObject<any>(content, { verdict: "approve", reasons: [] });
+  const verdict = parsed.verdict === "revise" ? "revise" : "approve";
+  const reasons: string[] = Array.isArray(parsed.reasons) ? parsed.reasons.map((r: any) => String(r)) : [];
+  const suggestions: string[] | undefined = Array.isArray(parsed.suggestions)
+    ? parsed.suggestions.map((r: any) => String(r))
+    : undefined;
+  return { verdict, reasons, suggestions };
 }

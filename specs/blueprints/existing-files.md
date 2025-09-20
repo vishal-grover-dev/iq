@@ -87,7 +87,7 @@
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
 - `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
-- `mcq.types.ts`: MCQ view models, difficulty enum, and Bloom enum.
+- `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
  - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
 
 ### schema
@@ -109,10 +109,12 @@
  - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
+ - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
+ - `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
 
 ### services
 
-- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings` and `rerank`.
+- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings`, `rerank`, `generateMcqFromContext`, `reviseMcqWithContext`, and `judgeMcqQuality`.
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
@@ -143,6 +145,8 @@
 - `004-MCQ-And-Label-Retrieval.sql`: Creates MCQ tables and adds label-based retrieval RPC `retrieval_hybrid_by_labels`.
  - `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
  - `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
+ - `007-MCQ-Embeddings-And-Dedupe.sql`: Adds MCQ embeddings + content_key, ANN index, and `retrieval_mcq_neighbors` RPC for near-duplicate detection.
+ - `008-MCQ-Code-Column.sql`: Adds nullable `code` column to `mcq_items` for dedicated code snippets.
 
 ### app/api
 
@@ -158,18 +162,22 @@
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
  - `api/generate/mcq/route.ts`: Placeholder route for MCQ generation (SSE scaffold).
-  - `api/generate/mcq/revise/route.ts`: Placeholder route for MCQ revision requests.
+  - `api/generate/mcq/revise/route.ts`: MCQ revision API route (POST) that applies user instructions to revise existing MCQs with AI-powered context-aware revisions.
   - `api/generate/mcq/save/route.ts`: Placeholder route for saving finalized MCQs.
  - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
  - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
- - `components/generate/revisionBox.component.tsx`: Revision chat input component.
+ - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.
  - `components/generate/automationModal.component.tsx`: Modal for automation controls and coverage placeholder.
  - `services/mcq.services.ts`: MCQ API client functions and SSE opener.
  
 Updates:
 - `api/ingest/web/plan/route.ts`: Added `returnAllPages` and `applyQuotas` flags; response includes `aiUsed`. MDN-specific sections removed; source-agnostic.
 - `api/ingest/web/process/route.ts`: Simplified selection to source-agnostic cap by `maxPages`; removed MDN-specific quotas.
- - `specs/work-items`: Merged `ingestion-reliability-hardening.md` into `interview-ingestion-and-retrieval.md`; removed the former.
- - `app/generate/mcq/page.tsx`: MCQ Generation page skeleton with MCQ card, persona panel, and revision box.
- - `types/mcq.types.ts`: Types for MCQ view model.
+- `specs/work-items`: Merged `ingestion-reliability-hardening.md` into `interview-ingestion-and-retrieval.md`; removed the former.
+- `api/generate/mcq/revise/route.ts`: Implemented full revision functionality with AI-powered MCQ revision, context retrieval, and change feedback.
+- `services/ai.services.ts`: Added `reviseMcqWithContext` function for AI-powered MCQ revisions with fallback mechanisms.
+- `utils/mcq-prompt.utils.ts`: Added `buildReviserMessages` function for constructing revision prompts.
+- `types/mcq.types.ts`: Added `TReviserBuildArgs` interface for revision functionality.
+- `app/generate/mcq/page.tsx`: Enhanced with revision history tracking, TanStack Query integration, and revision feedback system.
+- `components/generate/revisionBox.component.tsx`: Updated with loading states and revision history integration.
  

@@ -4,6 +4,7 @@ import { parseJsonObject } from "@/utils/json.utils";
 import type { IMcqItemView, EBloomLevel, EDifficulty } from "@/types/mcq.types";
 import { EPromptMode } from "@/types/mcq.types";
 import { buildGeneratorMessages, buildJudgeMessages, buildReviserMessages } from "@/utils/mcq-prompt.utils";
+import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 
 /**
  * getEmbeddings
@@ -223,6 +224,47 @@ export async function generateMcqFromContext(args: {
     codingMode: args.codingMode,
     negativeExamples: args.negativeExamples,
   });
+  const buildSchema = () => ({
+    name: "mcq_item",
+    strict: true,
+    schema: (() => {
+      const citationsItem = {
+        type: "object",
+        additionalProperties: false,
+        properties: { title: { type: ["string", "null"] }, url: { type: "string" } },
+        required: ["title", "url"],
+      } as const;
+
+      const props: Record<string, any> = {
+        topic: { type: "string" },
+        subtopic: { type: "string" },
+        version: { type: ["string", "null"] },
+        difficulty: { type: "string" },
+        bloomLevel: { type: "string" },
+        question: { type: "string" },
+        options: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 4 },
+        correctIndex: { type: "number" },
+        explanation: { type: ["string", "null"] },
+        explanationBullets: { type: "array", items: { type: "string" } },
+        citations: { type: "array", items: citationsItem },
+      };
+
+      if (args.codingMode) {
+        props.code = { type: "string" };
+      }
+
+      return {
+        type: "object",
+        additionalProperties: false,
+        properties: props,
+        required: Object.keys(props),
+      };
+    })(),
+  });
+
+  const responseFormat: any = args.codingMode
+    ? { type: "json_schema", json_schema: buildSchema() }
+    : { type: "json_object" };
 
   const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -231,7 +273,7 @@ export async function generateMcqFromContext(args: {
       { role: "system", content: system },
       { role: "user", content: user },
     ],
-    response_format: { type: "json_object" },
+    response_format: responseFormat,
   });
   const content = res.choices[0]?.message?.content ?? "{}";
   const raw = parseJsonObject<any>(content, {});
@@ -256,14 +298,27 @@ export async function generateMcqFromContext(args: {
     ? raw.explanationBullets.map((s: any) => String(s)).slice(0, 5)
     : undefined;
 
-  // Normalize code into a dedicated field; keep question prose-only
+  // Normalize code into a dedicated field; also try extracting from question if missing
   const codeFromRaw: string | undefined = typeof raw.code === "string" ? raw.code : undefined;
+  const codeFromQuestion: string | undefined = (() => {
+    const hit = extractFirstCodeFence(question);
+    if (!hit) return undefined;
+    const lang = hit.lang && (hit.lang === "js" || hit.lang === "tsx") ? hit.lang : "tsx";
+    return ["```" + lang, hit.content, "```"].join("\n");
+  })();
   const normalizedCode: string | undefined = (() => {
-    if (!codeFromRaw || !codeFromRaw.trim()) return undefined;
-    const t = codeFromRaw.trim();
+    const source = codeFromRaw && codeFromRaw.trim() ? codeFromRaw : codeFromQuestion;
+    if (!source || !source.trim()) return undefined;
+    const t = source.trim();
     return t.startsWith("```") ? t : ["```tsx", t, "```"].join("\n");
   })();
   const finalQuestion: string = question;
+
+  if (args.codingMode && normalizedCode) {
+    if (questionRepeatsCodeBlock(finalQuestion, normalizedCode)) {
+      throw new Error("Question must reference the code snippet instead of repeating it verbatim.");
+    }
+  }
 
   const enumDifficulty = ((): EDifficulty => {
     const s = difficultyStr.toLowerCase();
@@ -290,7 +345,7 @@ export async function generateMcqFromContext(args: {
 
   const correctIndex = Math.max(0, Math.min(3, correctIndexNum | 0));
 
-  const out: IMcqItemView = {
+  let out: IMcqItemView = {
     topic: topic || args.topic,
     subtopic: subtopic || args.subtopic || "",
     version: version ?? undefined,
@@ -304,6 +359,93 @@ export async function generateMcqFromContext(args: {
     explanationBullets,
     citations: citationsArr,
   };
+
+  if (args.codingMode && out.code && questionRepeatsCodeBlock(out.question, out.code)) {
+    const repairSystem = [
+      "You output STRICT JSON only.",
+      "Do not repeat the fenced code block inside the question text.",
+      "Reference the snippet in prose (e.g., 'Given the code snippet below...') while keeping the standalone code field untouched.",
+    ].join(" ");
+    const repairUser = [
+      "Rewrite the question so it references the provided code snippet without duplicating the fenced block.",
+      "Preserve topic, subtopic, options, correctIndex, difficulty, bloomLevel, explanation, and citations.",
+      JSON.stringify(out),
+    ].join("\n\n");
+
+    const repair = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [
+        { role: "system", content: repairSystem },
+        { role: "user", content: repairUser },
+      ],
+      response_format: { type: "json_schema", json_schema: buildSchema() },
+    });
+    const repairedContent = repair.choices[0]?.message?.content ?? "{}";
+    const repairedRaw = parseJsonObject<any>(repairedContent, {});
+    if (repairedRaw && typeof repairedRaw.question === "string") {
+      out = {
+        ...out,
+        question: repairedRaw.question,
+        code: typeof repairedRaw.code === "string" && repairedRaw.code.trim() ? repairedRaw.code : out.code,
+      };
+    }
+
+    if (questionRepeatsCodeBlock(out.question, out.code)) {
+      throw new Error("Question must reference the code snippet instead of repeating it verbatim.");
+    }
+  }
+
+  // Enforce coding-mode contract: ensure a valid 3–50 line fenced block exists in `code`.
+  if (args.codingMode) {
+    const codeText = out.code ?? "";
+    if (!hasValidCodeBlock(codeText, { minLines: 3, maxLines: 50 })) {
+      // Repair pass: ask the model to return the SAME object with a valid fenced code block.
+      const repairSystem =
+        "You output STRICT JSON only. The object must include a 'code' string that contains a fenced js/tsx code block (3-50 lines). Do not add extra keys.";
+      const repairUser = [
+        "Repair this MCQ object by adding a valid fenced code block in the 'code' field.",
+        "Preserve topic, subtopic, difficulty, bloomLevel, options, correctIndex, citations.",
+        "Return JSON only.",
+        JSON.stringify({
+          topic,
+          subtopic,
+          version,
+          difficulty: enumDifficulty,
+          bloomLevel: enumBloom,
+          question: finalQuestion,
+          options,
+          correctIndex,
+          explanation,
+          explanationBullets,
+          citations: citationsArr,
+        }),
+      ].join("\n\n");
+
+      const repair = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        messages: [
+          { role: "system", content: repairSystem },
+          { role: "user", content: repairUser },
+        ],
+        response_format: { type: "json_schema", json_schema: buildSchema() },
+      });
+      const repairedContent = repair.choices[0]?.message?.content ?? "{}";
+      const repairedRaw = parseJsonObject<any>(repairedContent, {});
+      const repairedCode = typeof repairedRaw.code === "string" ? repairedRaw.code : undefined;
+      const fixed = (() => {
+        const t = (repairedCode ?? "").trim();
+        if (!t) return undefined;
+        return t.startsWith("```") ? t : ["```tsx", t, "```"].join("\n");
+      })();
+      if (!fixed || !hasValidCodeBlock(fixed, { minLines: 3, maxLines: 50 })) {
+        throw new Error("MissingCodeError: Model did not return required js/tsx fenced code block (3–50 lines)");
+      }
+      out = { ...out, code: fixed };
+    }
+  }
+
   return out;
 }
 

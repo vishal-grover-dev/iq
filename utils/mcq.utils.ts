@@ -23,3 +23,68 @@ export function computeMcqContentKey(item: IMcqItemView): string {
     .slice(0, 600);
   return crypto.createHash("sha256").update(gist).digest("hex");
 }
+
+/**
+ * Extracts the first fenced code block from text and returns its language, content, and line count.
+ */
+export function extractFirstCodeFence(text: string): { lang: string | null; content: string; lines: number } | null {
+  if (!text || typeof text !== "string") return null;
+  const match = text.match(/```([a-zA-Z0-9+_-]+)?\n([\s\S]*?)\n```/i);
+  if (!match) return null;
+  const lang = match[1] ? match[1].toLowerCase() : null;
+  const content = match[2] ?? "";
+  const lines = content.split(/\r?\n/).length;
+  return { lang, content, lines };
+}
+
+/**
+ * Returns true only if the question contains a js/tsx fenced block with 3–50 lines.
+ */
+export function hasValidCodeBlock(text: string, opts?: { minLines?: number; maxLines?: number }): boolean {
+  const { minLines = 3, maxLines = 50 } = opts || {};
+  const info = extractFirstCodeFence(text);
+  if (!info) return false;
+  const allowed = new Set(["js", "jsx", "ts", "tsx", "javascript", "typescript"]);
+  const langOk = !info.lang || allowed.has(info.lang);
+  return langOk && info.lines >= minLines && info.lines <= maxLines;
+}
+
+function normalizeCodeForComparison(input: string): string {
+  return input.replace(/\s+/g, " ").trim();
+}
+
+export function questionRepeatsCodeBlock(question: string, code?: string | null, tolerance: number = 12): boolean {
+  if (!question || !code) return false;
+  const questionFence = extractFirstCodeFence(question);
+  const codeFence = extractFirstCodeFence(code);
+  if (!questionFence || !codeFence) return false;
+  const questionNormalized = normalizeCodeForComparison(questionFence.content);
+  const codeNormalized = normalizeCodeForComparison(codeFence.content);
+  if (!questionNormalized || !codeNormalized) return false;
+  if (questionNormalized === codeNormalized) return true;
+  const distance = Math.abs(questionNormalized.length - codeNormalized.length);
+  if (distance > tolerance) return false;
+  return questionNormalized.includes(codeNormalized) || codeNormalized.includes(questionNormalized);
+}
+
+/**
+ * Validates core MCQ invariants and, when requireCode is true, enforces a 3–50 line fenced code block.
+ */
+export function validateMcq(item: IMcqItemView, requireCode: boolean): { ok: boolean; reasons: string[] } {
+  const reasons: string[] = [];
+  if (!item) reasons.push("Missing item");
+  if (!item.topic) reasons.push("Missing topic");
+  if (!item.subtopic) reasons.push("Missing subtopic");
+  if (!item.question || typeof item.question !== "string") reasons.push("Missing question");
+  if (!Array.isArray(item.options) || item.options.length !== 4) reasons.push("Options must have exactly 4 items");
+  if (typeof item.correctIndex !== "number" || item.correctIndex < 0 || item.correctIndex > 3)
+    reasons.push("correctIndex must be 0–3");
+  if (!Array.isArray(item.citations) || item.citations.length === 0) reasons.push("At least one citation required");
+
+  if (requireCode) {
+    if (!hasValidCodeBlock(item.question, { minLines: 3, maxLines: 50 })) {
+      reasons.push("Question must include a js/tsx fenced code block with 3–50 lines");
+    }
+  }
+  return { ok: reasons.length === 0, reasons };
+}

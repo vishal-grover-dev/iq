@@ -3,7 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { getEmbeddings, generateMcqFromContext, judgeMcqQuality } from "@/services/ai.services";
-import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
+import { buildMcqEmbeddingText, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";
 
@@ -126,8 +126,23 @@ export async function GET(req: NextRequest) {
             codingMode: true,
             negativeExamples,
           });
-          if (typeof item.question === "string" && !item.question.includes("```") && item.code) {
-            item = { ...item, question: `${item.code}\n\n${item.question}` } as IMcqItemView;
+          // Retry once if missing valid code block (3–50 lines). If still missing, fail-fast.
+          if (!hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+            const attempt = await generateMcqFromContext({
+              topic,
+              subtopic: subtopic ?? undefined,
+              version: version ?? undefined,
+              contextItems: context,
+              codingMode: true,
+              negativeExamples,
+            });
+            if (hasValidCodeBlock(attempt.code || attempt.question || "", { minLines: 3, maxLines: 50 })) {
+              item = attempt;
+            } else {
+              send("error", { message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines)." });
+              controller.close();
+              return;
+            }
           }
           send("generation_complete", { item });
           const neighbors = await retrieveNeighbors({ userId, topic, subtopic, mcq: item, topK: 8 });
@@ -243,9 +258,10 @@ export async function POST(req: NextRequest) {
       negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
     });
 
-    if (codingMode && typeof item.question === "string" && !item.question.includes("```")) {
-      console.log(`[MCQ Generation] First attempt failed to generate code, trying again with stronger coding prompt`);
-      item = await generateMcqFromContext({
+    // Retry if missing valid code block (3–50 lines)
+    if (codingMode && !hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+      console.log(`[MCQ Generation] First attempt missing valid code, retrying`);
+      const attempt = await generateMcqFromContext({
         topic,
         subtopic: subtopic ?? undefined,
         version: version ?? undefined,
@@ -255,35 +271,20 @@ export async function POST(req: NextRequest) {
         codingMode: true,
         negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
       });
-    }
-
-    // Final guard: if still no fenced code, inject a short snippet extracted from context
-    if (codingMode && typeof item.question === "string" && !item.question.includes("```")) {
-      console.log(`[MCQ Generation] OpenAI still didn't generate code, injecting from context`);
-      const pickSnippet = (): string | null => {
-        for (const c of context) {
-          const m = c.content.match(/```[a-zA-Z]*[\s\S]*?```/);
-          if (m && m[0]) return m[0];
-        }
-        for (const c of context) {
-          const lines = c.content.split(/\r?\n/);
-          const codey = lines
-            .filter((ln) => /(const |let |function |=>|return |<\w+|use[A-Z]\w+\()/i.test(ln))
-            .slice(0, 8);
-          if (codey.length >= 2) {
-            return ["```tsx", ...codey, "```"].join("\n");
-          }
-        }
-        return null;
-      };
-      const snippet = pickSnippet();
-      if (snippet) {
-        item = { ...item, question: `${snippet}\n\n${item.question}` } as IMcqItemView;
-        console.log(`[MCQ Generation] Injected code snippet into question`);
-      } else {
-        console.log(`[MCQ Generation] No code found in context to inject`);
+      if (hasValidCodeBlock(attempt.code || attempt.question || "", { minLines: 3, maxLines: 50 })) {
+        item = attempt;
       }
     }
+
+    // Fail-fast: if still missing a valid fenced code block after retry, return 400
+    if (codingMode && !hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+      return NextResponse.json(
+        { ok: false, message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines)." },
+        { status: 400 }
+      );
+    }
+
+    // Allow question to repeat code snippet; Judge persona handles duplication concerns
 
     // Fallback: ensure at least one citation
     if (!item.citations || item.citations.length === 0) {

@@ -19,7 +19,6 @@ function createBaseClient(baseURL: string, config?: { withAuth?: boolean }): Axi
 
 // Resolve a safe base URL for browser, server, or CLI contexts
 const RESOLVED_APP_URL = NEXT_PUBLIC_APP_URL || "http://localhost:3050";
-console.log("🚀 ~ RESOLVED_APP_URL:", RESOLVED_APP_URL);
 
 export const apiClient = createBaseClient(RESOLVED_APP_URL);
 

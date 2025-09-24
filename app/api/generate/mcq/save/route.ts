@@ -3,7 +3,12 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
-import { buildMcqEmbeddingText, computeMcqContentKey } from "@/utils/mcq.utils";
+import {
+  buildMcqEmbeddingText,
+  computeMcqContentKey,
+  hasValidCodeBlock,
+  questionRepeatsCodeBlock,
+} from "@/utils/mcq.utils";
 import { getEmbeddings } from "@/services/ai.services";
 
 export const runtime = "nodejs";
@@ -14,14 +19,39 @@ export async function POST(req: NextRequest) {
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
     if (!userId) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
 
-    // Accept both shapes: { item: IMcqItemView } or IMcqItemView directly
+    // Accept both shapes: { item: IMcqItemView, requireCode?: boolean } or IMcqItemView directly
     const body = (await req.json().catch(() => ({}))) as any;
     const payload = (body?.item ?? body) as IMcqItemView;
+    const requireCode: boolean = Boolean(body?.requireCode);
 
     // Minimal guard to avoid runtime errors
     if (!payload || typeof payload?.question !== "string" || !Array.isArray(payload?.options)) {
       return NextResponse.json({ ok: false, message: "Invalid payload" }, { status: 400 });
     }
+
+    // Enforce code presence only when requested
+    if (requireCode) {
+      const codeOk =
+        (typeof payload.code === "string" && payload.code.includes("```")) ||
+        hasValidCodeBlock(payload.question, { minLines: 3, maxLines: 50 });
+      if (!codeOk) {
+        return NextResponse.json(
+          { ok: false, message: "Question must include a js/tsx fenced code block (3–50 lines) before saving." },
+          { status: 400 }
+        );
+      }
+
+      if (questionRepeatsCodeBlock(payload.question, payload.code)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Remove the duplicate code block from the question; reference the snippet via prose instead.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const contentKey = computeMcqContentKey(payload);
     const [emb] = await getEmbeddings([buildMcqEmbeddingText(payload)]);
 

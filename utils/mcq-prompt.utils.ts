@@ -358,7 +358,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     "- Use exactly four plausible options and exactly one correct answer.",
     "- Ground content in the provided context and cite 1–2 most relevant sources.",
     args.codingMode
-      ? "- Coding mode is ON: Questions MUST include a short fenced code block (```js``` or ```tsx```) of 3-8 lines. Ask about the code's behavior, potential bugs, or correct fixes. Code blocks are REQUIRED."
+      ? "- Coding mode is ON: Questions MUST include a fenced code block (```js``` or ```tsx```) of 3-50 lines. Ask about the code's behavior, potential bugs, or correct fixes. Do NOT copy the snippet into the question text; reference the provided code field instead (e.g., 'Given the code snippet below...'). Code blocks are REQUIRED."
       : undefined,
     mode === EPromptMode.CHAIN_OF_THOUGHT
       ? "- Think step by step internally, but output ONLY the final JSON response."
@@ -421,7 +421,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     mode === EPromptMode.FEW_SHOT ? "Examples (style reference):\n" + examplesBlock : undefined,
     negativeBlock,
     args.codingMode
-      ? "Task: Generate ONE coding MCQ. MUST include a short fenced code block (```js``` or ```tsx```) in the question. Ask about the code's behavior, bugs, or fixes. The code block should be 3-8 lines and relevant to the topic."
+      ? "Task: Generate ONE coding MCQ. MUST include a fenced code block (```js``` or ```tsx```) in the question. Ask about the code's behavior, bugs, or fixes. The code block should be between 3 and 50 lines and relevant to the topic. Reference the snippet in prose instead of duplicating the entire fence inside the question body."
       : "Task: Generate one MCQ adhering to labels and grounded in the context.",
     'Return JSON only with keys: {"topic","subtopic","version","difficulty","bloomLevel","question","options","correctIndex","explanation","explanationBullets","citations"}',
   ]
@@ -484,7 +484,7 @@ export function buildJudgeMessages(args: TJudgeBuildArgs & { neighbors?: TNeighb
     "You are an MCQ quality judge. Evaluate clarity, correctness, option plausibility, single correct answer, appropriate difficulty and Bloom level, presence of citations grounded in context, and DUPLICATE RISK.",
     "Duplicate risk: If the MCQ is semantically similar to any provided neighbor items, mark verdict = 'revise' and explain.",
     args.codingMode
-      ? "Coding mode is ON: Prefer MCQs with a concise fenced code block. If none is present, or if the options do not reflect the code's behavior, mark 'revise' with reasons."
+      ? "Coding mode is ON: Ensure the MCQ includes a js/tsx fenced block between 3 and 50 lines. If none is present, if the block falls outside that range, or if the options do not reflect the code's behavior, mark 'revise' with reasons. Also, reject if the question body simply repeats the entire fenced snippet instead of referencing it in prose."
       : undefined,
     "Return STRICT JSON: { verdict: 'approve' | 'revise', reasons: string[], suggestions?: string[] }",
   ]

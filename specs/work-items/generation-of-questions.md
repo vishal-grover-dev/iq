@@ -96,17 +96,19 @@ Design and plan a new page to generate, review, and save high‑quality multiple
   - Save-time dedupe: unique `content_key` (normalized question gist) rejects near-identical questions with a 409, preventing persistence of duplicates.
     - Implementation: `app/api/generate/mcq/save/route.ts` (409 on `uq_mcq_items_content_key`), schema/migration in `migrations/007-MCQ-Embeddings-And-Dedupe.sql`.
 
-- Code presence enforcement
-  - Coding mode in prompts: when enabled, the Generator is instructed that a 3–8 line fenced code block is REQUIRED in the question. SSE path defaults to coding mode for stronger reliability.
-    - Implementation: `utils/mcq-prompt.utils.ts` (coding rules), `app/api/generate/mcq/route.ts` (SSE GET passes `codingMode: true`).
-  - Retry on missing code: if OpenAI omits code, a second attempt is triggered with stronger coding instructions.
-    - Implementation: `app/api/generate/mcq/route.ts` (POST path retry logic).
-  - Final injection guard: if still missing, a short snippet is extracted from retrieved context and prepended, or an existing `item.code` is fused into the question in the SSE flow.
-    - Implementation: `app/api/generate/mcq/route.ts` (code snippet injection; SSE GET prepends `item.code` when present).
-  - Persist code: `mcq_items.code` is written on save to preserve code snippets for downstream usage.
-    - Implementation: `app/api/generate/mcq/save/route.ts`; schema/migration in `migrations/008-MCQ-Code-Column.sql`.
-  - Observed repeat mitigation: the recurrent gist (button click count with refs) is added to negative examples to further reduce resurfacing.
-    - Implementation: `app/api/generate/mcq/route.ts` (recent question collector seeds a hardcoded banned gist).
+**Code presence enforcement (fail-fast, no injection)**
+
+- Strong contract: When coding mode is ON, the model MUST return a 3–50 line fenced `js`/`tsx` block in a required `code` field. If missing after a retry, generation fails. No server-side synthesis or injection.
+- Structured output: Switch chat `response_format` to a strict JSON schema with required `code` (string). Keep the existing prompt rule (“MUST include a fenced code block”) and back it with schema.
+- Two-stage loop (service-level):
+  1) Generate with schema. Validate with `hasValidCodeBlock` (3–50 lines) against `code` (or the first fenced block in `question`).
+  2) If invalid, run a repair pass with a terse instruction: “You omitted the required fenced code block. Return valid JSON with a 3–50 line `js/tsx` fence in `code`. Do not modify other fields.” Optionally escalate to a stronger model for the repair pass only.
+  3) If still invalid → throw. Routes surface a clear error (SSE `error` event or POST 400).
+- Retrieval bias: Mirror POST’s code-leaning query terms in GET/SSE before retrieval to increase the chance of code-heavy context.
+- Prompt hardening: Add “Return code in a dedicated `code` field (fenced) and reference it in `question`. This is mandatory.” to both system and user messages. Ensure examples include `code`.
+- Validation/normalization: Centralize in `generateMcqFromContext`; if `codingMode===true` and normalized `code` is absent after repair, throw a typed error. Consider widening acceptance to 3–10 lines if needed.
+- API/UI surfaces: SSE emits an `error` with reason (missing_code); POST returns 400; Save can enforce `requireCode=true`.
+- Observability: Log raw model JSON (short retention) and counters (attempts, repair_attempts, missing_code_errors, model_fallbacks) to verify compliance.
 
 ## APIs (to be implemented later)
 
@@ -168,11 +170,12 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 - [ ] UI: Add "Automate generation" button and modal with coverage matrix and controls
 - [ ] API: SSE generation stream (Generator → Judge → Finalize)
   - Progress: SSE GET path now passes `codingMode: true`, supplies `negativeExamples`, streams neighbors, and instructs Judge with coding-mode emphasis.
+  - Change: Fail-fast policy documented; final injection guard removed. Add distinct `missing_code` error event.
 - [ ] API: Revision endpoint for chat‑driven edits
 - [ ] API: Save endpoint; persist to `mcq_items` with RLS‑safe scoping
-  - Progress: Endpoint persists `code` and returns 409 for duplicate `content_key` to prevent near-identical saves.
+  - Progress: Endpoint persists `code`, returns 409 for duplicate `content_key`, and can enforce a fenced `js/tsx` code block via `requireCode=true` in the request.
 - [ ] API: Automation plan and start (SSE) endpoints with coverage/exclusion constraints
 - [ ] Services: Axios clients and TanStack Query hooks where appropriate
 - [ ] Automation: Batch runner to reach 250–500 items across subtopics/Bloom/difficulty
 - [ ] QA: Visual and a11y checks; review code‑block readability; verify citation linking
-- [ ] Docs: Update `specs/blueprints/existing-files.md` upon implementation completion
+- [x] Docs: Update this work-item with current reliability hardening and endpoint behavior

@@ -7,6 +7,7 @@ import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 
 import fs from "fs";
 import path from "path";
+import { normalizeUrl as normalizeUrlShared } from "@/utils/url.utils";
 
 function getCatalogPath(): string {
   return path.join(process.cwd(), "data", "interview-ingest-catalog.json");
@@ -31,43 +32,7 @@ function persistEmbeddedFlags(completedUrls: Set<string>, logger: ILogger, alsoM
     const current = JSON.parse(fs.readFileSync(catalogPath, "utf-8")) as TIngestCatalog;
     let updates = 0;
     // Local normalizer for comparison
-    const norm = (raw: string) => {
-      try {
-        const u = new URL(raw);
-        u.hostname = u.hostname.toLowerCase();
-        u.hash = "";
-        const tracking = new Set([
-          "utm_source",
-          "utm_medium",
-          "utm_campaign",
-          "utm_term",
-          "utm_content",
-          "gclid",
-          "fbclid",
-          "igshid",
-          "mc_cid",
-          "mc_eid",
-          "ref",
-          "ref_src",
-          "ref_url",
-        ]);
-        const kept: Array<[string, string]> = [];
-        u.searchParams.forEach((v, k) => {
-          if (!tracking.has(k.toLowerCase())) kept.push([k, v]);
-        });
-        kept.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
-        u.search = kept.length
-          ? "?" + kept.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&")
-          : "";
-        if ((u.protocol === "http:" && u.port === "80") || (u.protocol === "https:" && u.port === "443")) u.port = "";
-        let pathname = u.pathname.replace(/\/+/g, "/");
-        if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
-        u.pathname = pathname;
-        return u.toString();
-      } catch {
-        return raw;
-      }
-    };
+    const norm = (raw: string) => normalizeUrlShared(raw);
     const completedNorm = new Set<string>(Array.from(completedUrls).map(norm));
     const alsoNorm = new Set<string>(Array.from(alsoMarkEmbedded ?? new Set<string>()).map(norm));
     for (const topicKey of Object.keys(current)) {
@@ -114,42 +79,7 @@ export async function runCatalogIngestion(params?: {
 
   // URL normalization for dedupe and host grouping
   function normalizeUrl(raw: string): string {
-    try {
-      const u = new URL(raw);
-      u.hostname = u.hostname.toLowerCase();
-      u.hash = "";
-      // drop common tracking params; sort deterministically
-      const tracking = new Set([
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_term",
-        "utm_content",
-        "gclid",
-        "fbclid",
-        "igshid",
-        "mc_cid",
-        "mc_eid",
-        "ref",
-        "ref_src",
-        "ref_url",
-      ]);
-      const kept: Array<[string, string]> = [];
-      u.searchParams.forEach((v, k) => {
-        if (!tracking.has(k.toLowerCase())) kept.push([k, v]);
-      });
-      kept.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
-      u.search = kept.length
-        ? "?" + kept.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&")
-        : "";
-      if ((u.protocol === "http:" && u.port === "80") || (u.protocol === "https:" && u.port === "443")) u.port = "";
-      let pathname = u.pathname.replace(/\/+/g, "/");
-      if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
-      u.pathname = pathname;
-      return u.toString();
-    } catch {
-      return raw;
-    }
+    return normalizeUrlShared(raw);
   }
 
   const seenNormalized = new Set<string>();

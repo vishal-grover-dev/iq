@@ -2,55 +2,12 @@ import robotsParser from "robots-parser";
 import * as cheerio from "cheerio";
 import { assessContentQuality, extractMainContent } from "@/utils/intelligent-web-adapter.utils";
 import { externalGetWithRetry } from "@/services/http.services";
+import { normalizeUrl } from "@/utils/url.utils";
 function sleep(ms: number): Promise<void> {
   return new Promise((res) => setTimeout(res, ms));
 }
 
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    // Lowercase hostname
-    u.hostname = u.hostname.toLowerCase();
-    // Drop fragment
-    u.hash = "";
-    // Remove common tracking params
-    const trackingParams = new Set([
-      "utm_source",
-      "utm_medium",
-      "utm_campaign",
-      "utm_term",
-      "utm_content",
-      "gclid",
-      "fbclid",
-      "igshid",
-      "mc_cid",
-      "mc_eid",
-      "ref",
-      "ref_src",
-      "ref_url",
-    ]);
-    const keptParams: Array<[string, string]> = [];
-    u.searchParams.forEach((value, key) => {
-      if (!trackingParams.has(key.toLowerCase())) keptParams.push([key, value]);
-    });
-    // Sort params for determinism
-    keptParams.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
-    u.search = keptParams.length
-      ? "?" + keptParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&")
-      : "";
-    // Normalize default ports
-    if ((u.protocol === "http:" && u.port === "80") || (u.protocol === "https:" && u.port === "443")) {
-      u.port = "";
-    }
-    // Normalize pathname: collapse multiple slashes and remove trailing slash (except root)
-    let pathname = u.pathname.replace(/\/+/, "/");
-    if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
-    u.pathname = pathname;
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
+// normalizeUrl is centralized in utils/url.utils.ts
 
 // Content quality is now centralized via assessContentQuality() in intelligent-web-adapter.utils
 

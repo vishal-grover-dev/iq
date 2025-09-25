@@ -3,13 +3,9 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai.services";
-import { deriveLabelsFromUrl, extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
-import { createHash } from "crypto";
-import { externalGetWithRetry } from "@/services/http.services";
-import { suggestCrawlHeuristics } from "@/services/ai.services";
-import * as cheerio from "cheerio";
+import { prefilterExistingWebPages, assessAndPreparePage, insertChunksBatch } from "@/utils/ingest-web-process.utils";
+import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
 
 export const runtime = "nodejs";
 
@@ -63,78 +59,31 @@ export async function POST(req: NextRequest) {
     await updateProgress({ step: "crawling", errorsCount: 0 });
     await writeEvent("start", "Web ingestion started", "info", { meta });
 
-    // AI planner suggestions (optional). Use if meta.useAiPlanner or when no include/depthMap provided.
-    let incPatterns: string[] | undefined =
-      Array.isArray(meta.includePatterns) && meta.includePatterns.length
-        ? (meta.includePatterns as string[])
-        : undefined;
-    let excPatterns: string[] | undefined =
-      Array.isArray(meta.excludePatterns) && meta.excludePatterns.length
-        ? (meta.excludePatterns as string[])
-        : undefined;
-    let dmapFinal: Record<string, number> | undefined =
-      meta.depthMap && Object.keys(meta.depthMap).length ? (meta.depthMap as Record<string, number>) : undefined;
-    let seedsEffective: string[] | undefined =
-      Array.isArray(meta.seeds) && meta.seeds.length ? (meta.seeds as string[]) : undefined;
-    if (meta.useAiPlanner || (!incPatterns && !dmapFinal)) {
-      const firstSeed = seedsEffective && seedsEffective.length ? seedsEffective[0] : undefined;
-      if (firstSeed) {
-        const html = await externalGetWithRetry(firstSeed);
-        if (html) {
-          const $ = cheerio.load(html);
-          const navPaths: Array<{ path: string; title?: string | null }> = $("a[href]")
-            .map((_, el) => $(el).attr("href") || "")
-            .get()
-            .filter(Boolean)
-            .slice(0, 50)
-            .map((href) => {
-              try {
-                const u = new URL(href, firstSeed);
-                return u.hostname.endsWith(meta.domain) ? { path: u.pathname, title: null } : null;
-              } catch {
-                return null;
-              }
-            })
-            .filter(Boolean) as Array<{ path: string; title?: string | null }>;
-          const ai = await suggestCrawlHeuristics({ url: firstSeed, htmlPreview: html, navigationPreview: navPaths });
-          if (!incPatterns || incPatterns.length === 0) incPatterns = ai.includePatterns;
-          if (!dmapFinal) dmapFinal = ai.depthMap;
-          if ((!seedsEffective || seedsEffective.length === 0) && ai.seeds && ai.seeds.length) {
-            seedsEffective = ai.seeds;
-          }
-          // Source-agnostic: do not inject hardcoded seeds or patterns for specific sites
-        }
-      }
-    }
+    const planner = await resolvePlannerBootstrap({
+      domain: meta.domain,
+      seeds: meta.seeds,
+      includePatterns: meta.includePatterns,
+      excludePatterns: meta.excludePatterns,
+      depthMap: meta.depthMap,
+      useAiPlanner: meta.useAiPlanner,
+    });
 
     const pages = await crawlWebsite({
-      seeds: seedsEffective,
+      seeds: planner.seeds,
       domain: meta.domain,
       prefix: meta.prefix ?? undefined,
       depth: meta.depth ?? 2,
       maxPages: meta.maxPages ?? 50,
       crawlDelayMs: meta.crawlDelayMs ?? 300,
-      includePatterns: incPatterns,
-      excludePatterns: excPatterns,
-      depthMap: dmapFinal,
+      includePatterns: planner.includePatterns,
+      excludePatterns: planner.excludePatterns,
+      depthMap: planner.depthMap,
     });
-    // Pre-filter pages that are already ingested (bucket:web, path=url) to avoid reprocessing
-    const plannedUrls = pages.map((p) => p.url);
-    const { data: existingDocs, error: existingErr } = await supabase
-      .from("documents")
-      .select("path")
-      .eq("bucket", "web")
-      .in("path", plannedUrls);
-    if (existingErr) {
-      await writeEvent("warn", `Could not pre-check existing documents: ${existingErr.message}`, "warn");
-    }
-    const existingSet = new Set<string>((existingDocs ?? []).map((d: any) => d.path));
-    const freshPages = pages.filter((p) => !existingSet.has(p.url));
-    const selectedPages = freshPages.slice(0, meta.maxPages ?? freshPages.length);
+    const { selectedPages, existingCount } = await prefilterExistingWebPages(supabase, pages, meta.maxPages);
     await updateProgress({ totalPlanned: selectedPages.length, processed: 0 });
     await writeEvent(
       "planning",
-      `Planned ${pages.length} pages; ${existingSet.size} already ingested; ${selectedPages.length} to process`
+      `Planned ${pages.length} pages; ${existingCount} already ingested; ${selectedPages.length} to process`
     );
 
     let totalChunks = 0;
@@ -154,143 +103,49 @@ export async function POST(req: NextRequest) {
       await updateProgress({ step: "chunking", currentPathOrUrl: p.url, processed: i });
       await writeEvent("fetch", `Fetched ${p.url}`, "info", { title: p.title });
 
-      // Content quality assessment
-      const qualityCheck = assessContentQuality(p.content, p.html);
-      if (!qualityCheck.isAcceptable) {
-        await writeEvent("quality", `Skipped low-quality page: ${qualityCheck.reasons.join(", ")}`, "info", {
-          url: p.url,
-          score: qualityCheck.score,
-        });
+      const assessed = await assessAndPreparePage(
+        supabase,
+        ingestionId,
+        p,
+        { topic, subtopic, version },
+        seenHashes,
+        shinglesList
+      );
+      if (assessed.kind === "skip") {
+        const reason = assessed.reason;
+        await writeEvent(
+          reason === "low_quality" ? "quality" : "dedup",
+          reason === "low_quality"
+            ? "Skipped low-quality page"
+            : reason === "near_duplicate"
+            ? "Skipped near-duplicate page (jaccard >= 0.9)"
+            : "Skipped duplicate page (hash)",
+          "info",
+          { url: p.url }
+        );
         continue;
       }
-
-      // Dedup by content hash
-      const normalized = p.content.replace(/\s+/g, " ").trim();
-      const hashHex = createHash("sha256").update(normalized).digest("hex");
-      if (seenHashes.has(hashHex)) {
-        await writeEvent("dedup", "Skipped duplicate page (hash)", "info", { url: p.url });
-        continue;
-      }
-
-      // Near-duplicate (similarity-lite) using 5-word shingles and Jaccard similarity
-      const tokens = normalized
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter(Boolean);
-      const shingles: string[] = [];
-      for (let j = 0; j + 4 < tokens.length; j++) shingles.push(tokens.slice(j, j + 5).join(" "));
-      const shingleSet = new Set(shingles);
-      let isNearDup = false;
-      for (const prior of shinglesList) {
-        // Jaccard
-        let inter = 0;
-        for (const s of shingleSet) if (prior.has(s)) inter++;
-        const union = prior.size + shingleSet.size - inter;
-        const jaccard = union > 0 ? inter / union : 0;
-        if (jaccard >= 0.9) {
-          isNearDup = true;
-          break;
-        }
-      }
-      if (isNearDup) {
-        await writeEvent("dedup", "Skipped near-duplicate page (jaccard >= 0.9)", "info", { url: p.url });
-        continue;
-      }
-      seenHashes.add(hashHex);
-      shinglesList.push(shingleSet);
-      // Insert document with unique (bucket, path) guard. On conflict, ignore and fetch existing id.
-      let documentId: string | null = null;
-      const upsertRes = await supabase
-        .from("documents")
-        .upsert(
-          [
-            {
-              ingestion_id: ingestionId,
-              bucket: "web",
-              path: p.url,
-              mime_type: "text/html",
-              title: p.title,
-              labels: (() => {
-                const derivedLabels = deriveLabelsFromUrl(p.url, topic);
-                return {
-                  topic: topic ?? derivedLabels.topic,
-                  subtopic: subtopic ?? derivedLabels.subtopic,
-                  version: derivedLabels.version ?? version,
-                };
-              })(),
-            },
-          ],
-          { onConflict: "bucket,path", ignoreDuplicates: true }
-        )
-        .select("id");
-      if (upsertRes.error) {
-        throw new Error(upsertRes.error.message);
-      }
-      if (upsertRes.data && upsertRes.data.length > 0) {
-        documentId = upsertRes.data[0].id as string;
-      } else {
-        const { data: existingDoc, error: selErr } = await supabase
-          .from("documents")
-          .select("id")
-          .eq("bucket", "web")
-          .eq("path", p.url)
-          .single();
-        if (selErr || !existingDoc) throw new Error(selErr?.message ?? "Failed to get existing document id");
-        documentId = existingDoc.id as string;
-      }
-
-      const mainHtml = extractMainContent(p.html);
-      const textForChunking = mainHtml
-        ? mainHtml
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-        : p.content;
-      const chunks = await chunkTextLC(textForChunking, { chunkSize: 1800, overlap: 200 });
-      totalChunks += chunks.length;
-      // Persist num_pages as a proxy: number of chunks for this HTML page
-      try {
-        await supabase.from("documents").update({ num_pages: chunks.length }).eq("id", documentId);
-      } catch {}
-
-      // Add to batch for embedding processing
-      embeddingBatch.push({ documentId, chunks, url: p.url });
+      totalChunks += assessed.item.chunks.length;
+      embeddingBatch.push({
+        documentId: assessed.item.documentId,
+        chunks: assessed.item.chunks,
+        url: assessed.item.url,
+      });
 
       // Process batch when it reaches BATCH_SIZE or at the end
       if (embeddingBatch.length >= BATCH_SIZE || i === selectedPages.length - 1) {
         await updateProgress({ step: "embedding" });
-
-        // Collect all chunks for batch embedding
-        const allChunksForEmbedding = embeddingBatch.flatMap((item) => item.chunks.map((c) => c.content));
-        const embeddings = await getEmbeddings(allChunksForEmbedding);
-
-        let embeddingIndex = 0;
-        for (const batchItem of embeddingBatch) {
-          const rows = batchItem.chunks.map((c, idx) => ({
-            document_id: batchItem.documentId,
-            chunk_index: c.index,
-            content: c.content,
-            tokens: c.tokens,
-            embedding: embeddings[embeddingIndex + idx] as unknown as any,
-            labels: (() => {
-              const derivedLabels = deriveLabelsFromUrl(batchItem.url, topic);
-              return {
-                // Prefer explicit labels from the form; fallback to derived when missing.
-                topic: topic ?? derivedLabels.topic,
-                subtopic: subtopic ?? derivedLabels.subtopic,
-                version: derivedLabels.version ?? version,
-              };
-            })(),
-          }));
-
-          const { error: insertErr } = await supabase.from("document_chunks").insert(rows);
-          if (insertErr) throw new Error(insertErr.message);
-          totalVectors += rows.length;
-          embeddingIndex += batchItem.chunks.length;
-          await writeEvent("ingest", `Inserted ${rows.length} chunks`, "info", { url: batchItem.url });
+        const { inserted, perItem } = await insertChunksBatch(
+          supabase,
+          embeddingBatch,
+          { topic, subtopic, version },
+          (inputs) => getEmbeddings(inputs)
+        );
+        totalVectors += inserted;
+        for (let bi = 0; bi < embeddingBatch.length; bi++) {
+          const item = embeddingBatch[bi]!;
+          await writeEvent("ingest", `Inserted ${perItem[bi]} chunks`, "info", { url: item.url });
         }
-
-        // Clear the batch
         embeddingBatch.length = 0;
       }
 

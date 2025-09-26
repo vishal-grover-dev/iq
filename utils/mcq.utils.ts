@@ -82,8 +82,12 @@ export function validateMcq(item: IMcqItemView, requireCode: boolean): { ok: boo
   if (!Array.isArray(item.citations) || item.citations.length === 0) reasons.push("At least one citation required");
 
   if (requireCode) {
-    if (!hasValidCodeBlock(item.question, { minLines: 3, maxLines: 50 })) {
-      reasons.push("Question must include a js/tsx fenced code block with 3–50 lines");
+    const codeText = typeof item.code === "string" ? item.code : "";
+    if (!hasValidCodeBlock(codeText, { minLines: 3, maxLines: 50 })) {
+      reasons.push("Missing required js/tsx fenced code block (3–50 lines) in code field");
+    }
+    if (item.code && questionRepeatsCodeBlock(item.question, item.code)) {
+      reasons.push("Question must not duplicate the fenced code block; reference it in prose");
     }
   }
   return { ok: reasons.length === 0, reasons };

@@ -106,12 +106,12 @@ export function useInterviewIngestion() {
         throw new Error(message);
       }
 
-      // Kick off processing for each created ingestion
+      // Kick off processing for each created ingestion (initial batch)
       for (let i = 0; i < items.length; i++) {
         const row = items[i];
         const id = createdIds[i];
         if (!id) continue;
-        processIngestion(row.ingestType === EInterviewIngestType.REPO ? "repo" : "web", id).catch(() => {});
+        await processIngestion(row.ingestType === EInterviewIngestType.REPO ? "repo" : "web", id);
       }
 
       // Poll until all complete/failed; aggregate coverage
@@ -122,7 +122,7 @@ export function useInterviewIngestion() {
       const pending = new Set(pollIds);
       let recent: Array<{ title: string | null; path: string }> = [];
       while (pending.size > 0 && Date.now() - start < maxWaitMs) {
-        await new Promise((r) => setTimeout(r, 15000));
+        await new Promise((r) => setTimeout(r, 2000));
         for (const id of [...pending]) {
           try {
             const s = await getIngestionStatus(id);
@@ -150,7 +150,14 @@ export function useInterviewIngestion() {
               subtopics,
             });
 
-            if ((s as any).status === "completed" || (s as any).status === "failed") pending.delete(id);
+            // For repo mode with cursor batching, trigger next batch if awaiting_next_batch
+            const isCompleted = (s as any).status === "completed";
+            const isFailed = (s as any).status === "failed";
+            const awaitingNext = ((s as any)?.inflight?.step ?? (s as any)?.progress?.step) === "awaiting_next_batch";
+            if (awaitingNext) {
+              await processIngestion("repo", id);
+            }
+            if (isCompleted || isFailed) pending.delete(id);
           } catch {
             // ignore and continue polling
           }

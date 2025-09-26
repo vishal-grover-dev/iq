@@ -20,10 +20,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = ingestRepoRequestSchema.parse(body);
 
-    // Basic validation for GitHub URL
+    // Basic validation for GitHub URL and auto-derive paths if a GitHub tree subdirectory URL was provided
+    let resolvedRepoUrl = parsed.repoUrl;
+    let resolvedPaths: string[] = Array.isArray(parsed.paths) ? parsed.paths : [];
     try {
       const u = new URL(parsed.repoUrl);
       if (u.hostname !== "github.com") throw new Error("Only GitHub repos are supported in v1");
+      // Example: https://github.com/mdn/content/tree/main/files/en-us/web/javascript
+      const segments = u.pathname.split("/").filter(Boolean);
+      const treeIdx = segments.indexOf("tree");
+      if (treeIdx !== -1 && segments.length > treeIdx + 2) {
+        const owner = segments[0];
+        const repo = segments[1];
+        const subdir = segments.slice(treeIdx + 2).join("/");
+        resolvedRepoUrl = `https://github.com/${owner}/${repo}`;
+        if ((resolvedPaths?.length ?? 0) === 0 && subdir) {
+          resolvedPaths = [subdir];
+        }
+      }
     } catch (e: any) {
       return NextResponse.json({ ok: false, message: e?.message ?? "Invalid repository URL" }, { status: 400 });
     }
@@ -42,8 +56,9 @@ export async function POST(req: NextRequest) {
             subtopic: parsed.subtopic ?? null,
             version: parsed.version ?? null,
             mode: "repo",
-            repoUrl: parsed.repoUrl,
-            paths: parsed.paths ?? [],
+            // Store canonical repo URL and any derived paths from a /tree/<branch>/<subdir> input
+            repoUrl: resolvedRepoUrl,
+            paths: resolvedPaths ?? [],
             maxFiles: parsed.maxFiles ?? 200,
           },
           objects: [],

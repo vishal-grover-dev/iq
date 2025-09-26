@@ -6,6 +6,10 @@ export const ingestResponseSchema = z.object({
   message: z.string(),
   chunks: z.number().int().nonnegative(),
   vectors: z.number().int().nonnegative(),
+  // Batch-per-call optional fields (repo process)
+  completed: z.boolean().optional(),
+  processed: z.number().int().nonnegative().optional(),
+  total: z.number().int().nonnegative().optional(),
 });
 
 export type TIngestResponse = z.infer<typeof ingestResponseSchema>;

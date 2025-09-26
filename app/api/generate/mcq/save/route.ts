@@ -8,6 +8,7 @@ import {
   computeMcqContentKey,
   hasValidCodeBlock,
   questionRepeatsCodeBlock,
+  validateMcq,
 } from "@/utils/mcq.utils";
 import { getEmbeddings } from "@/services/ai.services";
 
@@ -29,27 +30,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "Invalid payload" }, { status: 400 });
     }
 
-    // Enforce code presence only when requested
-    if (requireCode) {
-      const codeOk =
-        (typeof payload.code === "string" && payload.code.includes("```")) ||
-        hasValidCodeBlock(payload.question, { minLines: 3, maxLines: 50 });
-      if (!codeOk) {
-        return NextResponse.json(
-          { ok: false, message: "Question must include a js/tsx fenced code block (3–50 lines) before saving." },
-          { status: 400 }
-        );
-      }
-
-      if (questionRepeatsCodeBlock(payload.question, payload.code)) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: "Remove the duplicate code block from the question; reference the snippet via prose instead.",
-          },
-          { status: 400 }
-        );
-      }
+    // Centralized validation
+    const validation = validateMcq(payload, requireCode);
+    if (!validation.ok) {
+      return NextResponse.json(
+        { ok: false, message: "Validation failed", errors: validation.reasons },
+        { status: 400 }
+      );
     }
 
     const contentKey = computeMcqContentKey(payload);

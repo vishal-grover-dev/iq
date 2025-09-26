@@ -3,7 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { getEmbeddings, generateMcqFromContext, judgeMcqQuality } from "@/services/ai.services";
-import { buildMcqEmbeddingText, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
+import { buildMcqEmbeddingText, hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";
 
@@ -126,8 +126,8 @@ export async function GET(req: NextRequest) {
             codingMode: true,
             negativeExamples,
           });
-          // Retry once if missing valid code block (3–50 lines). If still missing, fail-fast.
-          if (!hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+          // Retry once if missing valid code block (3–50 lines). If still missing, fail-fast with structured reason.
+          if (!hasValidCodeBlock(item.code || "", { minLines: 3, maxLines: 50 })) {
             const attempt = await generateMcqFromContext({
               topic,
               subtopic: subtopic ?? undefined,
@@ -136,13 +136,23 @@ export async function GET(req: NextRequest) {
               codingMode: true,
               negativeExamples,
             });
-            if (hasValidCodeBlock(attempt.code || attempt.question || "", { minLines: 3, maxLines: 50 })) {
+            if (hasValidCodeBlock(attempt.code || "", { minLines: 3, maxLines: 50 })) {
               item = attempt;
             } else {
-              send("error", { message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines)." });
+              send("error", {
+                reason: "missing_code",
+                message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines).",
+              });
               controller.close();
               return;
             }
+          }
+          // Centralized validation including no-dup code-in-question
+          const validation = validateMcq(item as IMcqItemView, true);
+          if (!validation.ok) {
+            send("error", { reason: "validation_failed", errors: validation.reasons });
+            controller.close();
+            return;
           }
           send("generation_complete", { item });
           const neighbors = await retrieveNeighbors({ userId, topic, subtopic, mcq: item, topK: 8 });
@@ -259,7 +269,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Retry if missing valid code block (3–50 lines)
-    if (codingMode && !hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+    if (codingMode && !hasValidCodeBlock(item.code || "", { minLines: 3, maxLines: 50 })) {
       console.log(`[MCQ Generation] First attempt missing valid code, retrying`);
       const attempt = await generateMcqFromContext({
         topic,
@@ -271,20 +281,27 @@ export async function POST(req: NextRequest) {
         codingMode: true,
         negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
       });
-      if (hasValidCodeBlock(attempt.code || attempt.question || "", { minLines: 3, maxLines: 50 })) {
+      if (hasValidCodeBlock(attempt.code || "", { minLines: 3, maxLines: 50 })) {
         item = attempt;
       }
     }
 
     // Fail-fast: if still missing a valid fenced code block after retry, return 400
-    if (codingMode && !hasValidCodeBlock(item.code || item.question || "", { minLines: 3, maxLines: 50 })) {
+    if (codingMode && !hasValidCodeBlock(item.code || "", { minLines: 3, maxLines: 50 })) {
       return NextResponse.json(
         { ok: false, message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines)." },
         { status: 400 }
       );
     }
 
-    // Allow question to repeat code snippet; Judge persona handles duplication concerns
+    // Centralized validation (includes duplicate code-in-question guard when requireCode)
+    const validation = validateMcq(item as IMcqItemView, codingMode);
+    if (!validation.ok) {
+      return NextResponse.json(
+        { ok: false, message: "Validation failed", errors: validation.reasons },
+        { status: 400 }
+      );
+    }
 
     // Fallback: ensure at least one citation
     if (!item.citations || item.citations.length === 0) {

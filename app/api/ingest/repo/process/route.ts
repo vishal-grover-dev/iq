@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     let totalChunks = 0;
     let totalVectors = 0;
 
-    // Label derivation from path (MDN JS specific structure, but safe fallbacks)
+    // Label derivation from MDN repo paths (dynamic across HTML/CSS/JavaScript)
     function toTitleCase(input: string): string {
       return input
         .replace(/[-_]+/g, " ")
@@ -120,22 +120,43 @@ export async function POST(req: NextRequest) {
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
     }
-    function deriveSubtopicFromPath(p: string): string | null {
-      const base = "files/en-us/web/javascript/";
+    function topicToMdnSlug(t: string | null | undefined): string | null {
+      if (!t) return null;
+      const lower = String(t).trim().toLowerCase();
+      if (lower === "javascript") return "javascript";
+      if (lower === "html") return "html";
+      if (lower === "css") return "css";
+      return null;
+    }
+    function deriveSubtopicFromPath(p: string, t: string): string | null {
+      const slug = topicToMdnSlug(t);
+      if (!slug) return null;
+      const base = `files/en-us/web/${slug}/`;
       if (!p.startsWith(base)) return null;
       const rest = p.slice(base.length);
       const segs = rest.split("/").filter(Boolean);
       if (segs.length === 0) return null;
-      if (segs[0] === "guide") {
+
+      const first = segs[0]?.toLowerCase();
+      if (first === "guide" || first === "guides") {
         const leaf = segs[1] ?? "guide";
         return `Guide/${toTitleCase(leaf)}`;
       }
-      if (segs[0] === "reference") {
-        const cat = segs[1] ?? "reference";
+      if (first === "how_to" || first === "howto") {
+        const leaf = segs[1] ?? "how-to";
+        return `How-to/${toTitleCase(leaf)}`;
+      }
+      if (first === "reference") {
+        const cat = (segs[1] ?? "reference").toLowerCase();
+        // JS categories retained; HTML/CSS common categories covered generically
         if (cat === "global_objects") return "Reference/Global Objects";
+        if (cat === "operators") return "Reference/Operators";
+        if (cat === "elements") return "Reference/Elements";
+        if (cat === "global_attributes") return "Reference/Global Attributes";
         return `Reference/${toTitleCase(cat)}`;
       }
-      return toTitleCase(segs[0]);
+      if (first === "index.md") return "Overview";
+      return toTitleCase(segs[0]!);
     }
 
     // If no more files to process, complete
@@ -184,7 +205,7 @@ export async function POST(req: NextRequest) {
       await updateProgress({ step: "chunking", currentPathOrUrl: f.path, processed: start + i });
       await writeEvent("fetch", `Fetched ${f.path}`);
 
-      const derivedSubtopic = overrideSubtopic ? userSubtopic : deriveSubtopicFromPath(f.path) ?? userSubtopic;
+      const derivedSubtopic = overrideSubtopic ? userSubtopic : deriveSubtopicFromPath(f.path, topic) ?? userSubtopic;
       const labels = { topic, subtopic: derivedSubtopic ?? null, version };
 
       // Idempotent document upsert and chunk replace

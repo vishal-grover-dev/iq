@@ -26,6 +26,7 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 ## APIs (active)
 
 - POST `/api/ingest/repo` → enqueue repo-based ingestion.
+- POST `/api/ingest/repo/plan` → plan repo ingestion: counts Markdown files under optional subpaths, proposes batch slices, and summarizes categories (e.g., Guide vs Reference buckets). Input accepts GitHub tree URLs and auto-derives the subfolder.
 - POST `/api/ingest/web` → enqueue crawl-based ingestion (seeds, include/exclude, depth, maxPages).
 - GET `/api/ingest/:id` → status + progress, coverage, recent, and events.
 - POST `/api/retrieval/query` → hybrid retrieval with optional rerank; returns normalized snippets.
@@ -41,6 +42,14 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
   - MDN paths → topic = HTML/CSS/JavaScript; derive area/subtopic from path segments (e.g., Guide/Reference; Async/Promises).
   - React → topic = React; subtopic from section (Learn/Reference/Hooks/Performance); version = 18/19 if available.
   - TS → topic = TypeScript; subtopics from handbook sections (Types, Generics, Narrowing, JSX).
+
+### Dynamic Label Resolution (Pluggable + LLM fallback)
+
+- Pluggable registry: Both repo and web ingestion delegate to a single resolver (`resolveLabels`) that first applies deterministic heuristics, then optional source-specific rules (keyed by domain/repo), and only if uncertain, a bounded LLM fallback. Keeps the system source‑agnostic and extensible (e.g., Node.js, Vue) without touching core pipelines.
+- Config-driven rules: Maintain a small JSON ruleset mapping regex/prefix patterns to `{ topic, subtopic, version }` labels per source. Operators can refine labels or add new sources without code changes; deployments pick up changes automatically.
+- Caller hints: Allow ingestion payloads to include `labelHints` (topic/subtopic overrides, path-prefix → bucket mappings). Hints take precedence over auto-derivation and eliminate ambiguity for bespoke structures.
+- LLM fallback (OpenAI-only): When rules can’t confidently classify, call a compact classifier prompt (e.g., gpt-4o-mini) that returns strict JSON `{ topic, subtopic, version, confidence }`. Enforce a whitelist of allowed topics/subtopics, require a minimum confidence, cache results by normalized path/URL, and never override explicit hints.
+- Observability & safety: Track counters (rule hits, LLM hits, low-confidence rejects), log short-retention samples for QA, and provide an offline backfill job to enrich existing `documents`/`document_chunks` with improved labels. Roll out behind a feature flag.
 
 ## Data Model (reuse)
 
@@ -59,7 +68,7 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 
 1. Plan
 
-- Repo mode: enumerate files under allowed docs paths (filters by extension `.md`, `.mdx` and path allowlists).
+- Repo mode: enumerate files under allowed docs paths (filters by extension `.md`, `.mdx` and path allowlists). A planning endpoint can be called to preview total counts, category breakdown, and proposed batch slices.
 - Web mode: BFS per `seeds[]` within `domain/prefix`, governed by `includePatterns[]`, optional `excludePatterns[]`, `depth`/`depthMap`, `maxPages`, `crawlDelayMs` (polite backoff). Robots.txt is fetched and cached with TTL.
 - Optional AI assist: `suggestCrawlHeuristics(url, htmlPreview, navigationPreview)` proposes include patterns and depth hints (bounded and validated).
 
@@ -84,8 +93,13 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 
 6. Persist & Progress
 
-- Upsert `documents` and `document_chunks`; write `ingestion_events` during each stage.
+- Upsert `documents` (idempotent on `(bucket, path)`), replace `document_chunks` for the document, and write `ingestion_events` during each stage.
 - Maintain `metadata.progress`: { totalPlanned, processed, currentPathOrUrl, step: crawling|chunking|embedding, errorsCount, lastUpdatedAt }.
+
+7. Batching (repo) and Resume
+
+- Repo processing is cursor-based and resumable: `metadata.batch = { totalPlanned, nextStart, batchSize }`. Each call to the process route handles one batch and returns quickly with `{ completed, processed, total }`.
+- UI (Interview Streams) auto-triggers the next batch when `step=awaiting_next_batch`, so runs progress without manual clicks.
 
 7. Deduplication
 
@@ -206,6 +220,11 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - Web → POST `/api/ingest/web` { seeds: [url], domain, includePatterns?, excludePatterns?, depth or depthMap, maxPages (≤50), crawlDelayMs (≥300), topic }.
 - Progress: poll status endpoint; show coverage and recent; display modal on completion.
 
+### Planning & Controls (repo)
+
+- Plan button (UI) calls `/api/ingest/repo/plan` to preview: total files, batch slices (size ≤200), and category breakdown (e.g., Guide/*, Reference/operators, Reference/global_objects).
+- Controls scaffolded: Resume/Retry (calls process endpoint), and Download run report (export from status), with Pause planned as a follow-up.
+
 ## Catalog-driven ingestion (ops)
 
 - Catalog: `data/interview-ingest-catalog.json` with `{ subtopic, ingestType, url, embedded }` per topic.
@@ -255,6 +274,15 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 - Keep the system source‑agnostic; no site-specific hardcoding in planners/processors.
 - Generation will be redesigned separately; this document remains focused on ingestion and retrieval only.
 
+## Implemented Changes (2025-09-25)
+
+- GitHub tree URL normalization: pasting a URL like `.../tree/main/files/en-us/web/javascript` auto-derives the repo base and sets `paths` to the subfolder.
+- Repo plan endpoint: counts files under `paths`, proposes slices (≤200 per batch), and summarizes categories for preview.
+- Cursor-based batching for repo: process route handles one batch per call and updates `metadata.batch`; UI auto-advances batches without manual clicks.
+- Idempotency: `documents` upsert on `(bucket, path)`; `document_chunks` are replaced per document to prevent duplicates and allow re-runs.
+- Path-derived labels: for MDN JS, subtopics are derived from the path (e.g., `Guide/<Leaf>`, `Reference/Operators`, `Reference/Global Objects`). Form subtopic is ignored unless explicitly overridden.
+- JS corpus run: MDN JavaScript folder fully ingested (1322 docs, 4655 chunks, 0 null embeddings) via batches; verified counts and labels.
+
 ## Deprecation Plan
 
 - This document supersedes:
@@ -276,7 +304,18 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - [x] Group work items by hostname/path key; process groups sequentially within a host to avoid races; keep cross-host concurrency
   - [x] Enhance completion verification and add a single retry with increased crawl delay
   - [x] Persist `documents.num_pages = chunks.length` for web ingestions during processing
-  - [ ] Confirm label refinements (explicit subtopic preferred; generic buckets suppressed; `Reference/<leaf>` mapping for react.dev) across a sample run
+  - [x] Repo: cursor-based batching per process call with `metadata.batch` ({ totalPlanned, nextStart, batchSize }).
+  - [x] Repo: idempotent `documents` upsert by `(bucket, path)` and replace `document_chunks` to allow safe re-runs.
+  - [x] Auto-derive subdirectory from GitHub tree URLs and scope enumeration to that folder.
+  - [x] Path-derived subtopics for MDN JS (Guide/<leaf>, Reference/<category>, Global Objects) with override option.
+
+- Dynamic label resolution (design & rollout)
+  - [ ] Add pluggable LabelResolver registry shared by repo/web ingestion
+  - [ ] Add config-driven rules file for per-source regex/prefix → labels mapping
+  - [ ] Implement OpenAI-based fallback classifier with whitelist + confidence threshold
+  - [ ] Add caching + metrics (rule hits, LLM hits, rejects); wire to logs
+  - [ ] Provide an offline backfill job to enrich existing labels safely
+  - [ ] Gate with a feature flag; pilot on one non-MDN source (e.g., Node.js)
 
 - One-time validation run (operator playbook)
   - [ ] Stop any running ingestion jobs
@@ -287,6 +326,6 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - [ ] Execute the catalog CLI with controlled concurrency; ensure baseURL is printed
   - [ ] Fetch per-ingestion document and chunk counts for the run window
   - [ ] Confirm normalized unique paths show non-zero chunks; duplicates are preflight-skipped
-  - [ ] Spot-check labels for correct subtopics (no generic "Learn")
+  - [x] Spot-check labels for correct subtopics (no generic "Learn"); MDN JS derivation verified on full run
   - [ ] Ensure catalog entries are marked `embedded=true` for processed items
   - [ ] Add a brief note here with date and high-level counts

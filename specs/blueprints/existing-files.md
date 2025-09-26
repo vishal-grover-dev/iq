@@ -158,6 +158,7 @@
  - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
  - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
 - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
+ - `api/ingest/repo/plan/route.ts`: Planning endpoint to count repo files and propose batch slices (repo mode).
  - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
  - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
  - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.

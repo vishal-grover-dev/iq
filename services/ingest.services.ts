@@ -43,3 +43,35 @@ export async function processIngestion(mode: "repo" | "web", ingestionId: string
   const res = await apiClient.post(path, { ingestionId });
   return ingestResponseSchema.parse(res.data);
 }
+
+/**
+ * Repo planning endpoint - counts files and proposes batch slices.
+ */
+export async function planRepoIngestion(params: { repoUrl: string; paths?: string[]; batchSize?: number }) {
+  const res = await apiClient.post("/api/ingest/repo/plan", params);
+  return res.data as {
+    ok: boolean;
+    total: number;
+    batchSize: number;
+    slices: Array<{ name: string; start: number; end: number; count: number }>;
+    categories: Record<string, number>;
+  };
+}
+
+/**
+ * Control endpoints (placeholders for future worker controls).
+ */
+export async function pauseIngestion(_id: string) {
+  return { ok: true } as const;
+}
+export async function resumeIngestion(id: string) {
+  // For repo, resuming = call process again
+  return processIngestion("repo", id);
+}
+export async function retryIngestion(id: string) {
+  return processIngestion("repo", id);
+}
+export async function downloadRunReport(_id: string) {
+  // Placeholder: UI can call status endpoint and generate client-side CSV/JSON
+  return { ok: true } as const;
+}

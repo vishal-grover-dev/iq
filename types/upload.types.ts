@@ -14,6 +14,7 @@ export enum EInterviewTopic {
   TYPESCRIPT = "TypeScript",
   HTML = "HTML",
   CSS = "CSS",
+  PWA = "PWA",
   STATE_MANAGEMENT = "State Management",
   ROUTING = "Routing",
   TESTING = "Testing",
@@ -31,6 +32,7 @@ export interface IInterviewIngestItem {
   subtopic: string;
   ingestType: EInterviewIngestType;
   url: string;
+  depth?: 2 | 3 | 4;
 }
 
 export interface IInterviewStreamsFormValues {

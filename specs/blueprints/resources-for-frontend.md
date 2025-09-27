@@ -110,6 +110,14 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
   - web.dev (Google) performance guides (license: check and cite)
 - Ingestion: use repo sources; for web.dev, prefer sitemap-limited fetch.
 
+### PWA
+
+- Subtopics: app manifest, service workers, caching strategies, offline & resilience, installability (A2HS), background sync & push notifications, web app capabilities (storage/files/media), Lighthouse PWA checks.
+- Primary sources:
+  - web.dev PWA guides (`web.dev/learn/pwa/` and related) — authoritative and task-focused
+  - MDN Progressive Web Apps guide (concepts and APIs like `ServiceWorker`, Cache Storage, Notifications)
+- Ingestion: prefer sitemap-limited fetch from web.dev for the PWA section; supplement with MDN API/reference pages for Service Workers, Cache, and related APIs. Respect robots.txt and enforce conservative `maxPages`.
+
 ### Accessibility (a11y)
 
 - Subtopics: ARIA roles, keyboard nav, color contrast, semantic HTML.

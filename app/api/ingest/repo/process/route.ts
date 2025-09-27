@@ -11,6 +11,7 @@ import {
 } from "@/utils/repo.utils";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai.services";
+import { resolveLabels } from "@/utils/label-resolver.utils";
 
 export const runtime = "nodejs";
 
@@ -112,52 +113,7 @@ export async function POST(req: NextRequest) {
     let totalVectors = 0;
 
     // Label derivation from MDN repo paths (dynamic across HTML/CSS/JavaScript)
-    function toTitleCase(input: string): string {
-      return input
-        .replace(/[-_]+/g, " ")
-        .split(" ")
-        .filter(Boolean)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-    }
-    function topicToMdnSlug(t: string | null | undefined): string | null {
-      if (!t) return null;
-      const lower = String(t).trim().toLowerCase();
-      if (lower === "javascript") return "javascript";
-      if (lower === "html") return "html";
-      if (lower === "css") return "css";
-      return null;
-    }
-    function deriveSubtopicFromPath(p: string, t: string): string | null {
-      const slug = topicToMdnSlug(t);
-      if (!slug) return null;
-      const base = `files/en-us/web/${slug}/`;
-      if (!p.startsWith(base)) return null;
-      const rest = p.slice(base.length);
-      const segs = rest.split("/").filter(Boolean);
-      if (segs.length === 0) return null;
-
-      const first = segs[0]?.toLowerCase();
-      if (first === "guide" || first === "guides") {
-        const leaf = segs[1] ?? "guide";
-        return `Guide/${toTitleCase(leaf)}`;
-      }
-      if (first === "how_to" || first === "howto") {
-        const leaf = segs[1] ?? "how-to";
-        return `How-to/${toTitleCase(leaf)}`;
-      }
-      if (first === "reference") {
-        const cat = (segs[1] ?? "reference").toLowerCase();
-        // JS categories retained; HTML/CSS common categories covered generically
-        if (cat === "global_objects") return "Reference/Global Objects";
-        if (cat === "operators") return "Reference/Operators";
-        if (cat === "elements") return "Reference/Elements";
-        if (cat === "global_attributes") return "Reference/Global Attributes";
-        return `Reference/${toTitleCase(cat)}`;
-      }
-      if (first === "index.md") return "Overview";
-      return toTitleCase(segs[0]!);
-    }
+    // dynamic label resolution replaces local MDN-specific helper
 
     // If no more files to process, complete
     if (start >= allMdPaths.length) {
@@ -205,8 +161,17 @@ export async function POST(req: NextRequest) {
       await updateProgress({ step: "chunking", currentPathOrUrl: f.path, processed: start + i });
       await writeEvent("fetch", `Fetched ${f.path}`);
 
-      const derivedSubtopic = overrideSubtopic ? userSubtopic : deriveSubtopicFromPath(f.path, topic) ?? userSubtopic;
-      const labels = { topic, subtopic: derivedSubtopic ?? null, version };
+      const resolved = await resolveLabels({
+        source: "repo",
+        path: f.path,
+        title: f.title,
+        topicHint: topic,
+        subtopicHint: overrideSubtopic ? userSubtopic : undefined,
+        versionHint: version ?? undefined,
+        repoOwner: owner,
+        repoName: repo,
+      });
+      const labels = { topic: resolved.topic, subtopic: resolved.subtopic ?? null, version: resolved.version ?? null };
 
       // Idempotent document upsert and chunk replace
       const { data: docInsert, error: docError } = await supabase

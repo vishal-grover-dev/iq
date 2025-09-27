@@ -76,6 +76,7 @@
 - `logo.svg`: Vector logo asset.
 - `logo.png`: Raster logo asset.
  - `animations/girl-with-book.json`: Lottie animation used by the loader component.
+ - `diagrams/iq-ingestion-architecture.mmd`: Mermaid architecture diagram for Interview Ingestion & Retrieval v1.
 
 ### store/providers
 
@@ -107,6 +108,7 @@
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
  - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
+ - `label-resolver.utils.ts`: Pluggable label resolver applying rules, heuristics, and OpenAI fallback with caching and metrics.
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
  - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
@@ -118,15 +120,18 @@
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
+ - Label classification (fallback) added into `ai.services.ts` as `classifyLabels`.
 
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
 - `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
+ - `app.constants.ts`: Feature flags for label resolver and confidence threshold.
 
 ### data
 
 - `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries (ingestType, url, embedded flag) used to automate seeding and ingestion.
+ - `label-rules.json`: Config-driven rules mapping for per-source regex/prefix → labels used by dynamic label resolver.
 
 ### scripts
 

@@ -60,7 +60,7 @@ export function useInterviewIngestion() {
               seeds: [row.url],
               domain: u.hostname,
               prefix: undefined,
-              depth: 3,
+              depth: (row.depth ?? 3) as number,
               maxPages: 200,
               crawlDelayMs: 300,
               topic: row.topic as any,
@@ -90,7 +90,7 @@ export function useInterviewIngestion() {
             ]);
             if (candidate && docsSections.has(candidate.toLowerCase())) {
               payload.includePatterns = [`^\/${candidate}`];
-              payload.depthMap = { [`/${candidate}`]: 3 };
+              payload.depthMap = { [`/${candidate}`]: (row.depth ?? 3) as number };
             }
 
             const { ingestionId } = await ingestRepoWeb(payload as any);

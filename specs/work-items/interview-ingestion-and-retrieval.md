@@ -4,6 +4,28 @@
 
 Unify the active work around Interview Streams: ingest authoritative sources (repo/web), index with embeddings, and retrieve grounded context for downstream features. Academic uploads and the prior generation flow are removed.
 
+## Architecture
+
+Refer to the current high-level architecture diagram (Mermaid):
+
+- File: `public/diagrams/iq-ingestion-architecture.mmd`
+- View/edit online: use Mermaid Live Editor (`https://mermaid.live`). Paste the file contents to verify rendering.
+- The diagram shows the UI flow (Interview Streams), API routes, AI services, utilities, and the Supabase data layer (tables and pgvector), along with feature flags in effect.
+
+### Components Overview
+
+- UI: Next.js App Router screens for Upload/Interview Streams; Axios + TanStack Query on the client.
+- API: Next.js API routes for repo/web ingestion, planning, status, and retrieval.
+- Services: `ai.services.ts` exposes `getEmbeddings`, `rerank`, `classifyLabels`, `generateMcqFromContext`, `reviseMcqWithContext`, `judgeMcqQuality` (MCQ-related functions are separate from ingestion but share the AI client).
+- Utils: `repo.utils.ts`, `web-crawler.utils.ts`, `intelligent-web-adapter.utils.ts`, `label-resolver.utils.ts`.
+- Data: Supabase Postgres with `ingestions`, `documents`, `document_chunks`, `ingestion_events`; pgvector for semantic search; RLS enabled.
+
+### Feature Flags (runtime)
+
+- `ENABLE_DYNAMIC_LABEL_RESOLUTION` (default: true) — enables heuristics + OpenAI fallback classification.
+- `ENABLE_LABEL_RULES` (default: false) — config rules disabled currently; resolver does not load rules.
+- `LABEL_RESOLVER_MIN_CONFIDENCE` (default: 0.7) — acceptance threshold for LLM-based labels.
+
 ## Principles & Context
 
 - Repo-first for docs (clean licensing, structured Markdown/MDX). Web crawl is a bounded fallback.
@@ -16,7 +38,7 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 - Ingestion: GitHub docs repos preferred; sitemap-limited web crawl as fallback.
 - Indexing: normalize → chunk (≈1–2k chars, light overlap) → 1536‑d OpenAI embeddings.
 - Status: job creation, processing progress, coverage, and recent items.
-- Retrieval: hybrid search (vector + keyword) with optional LLM-as-reranker; query enhancement stub.
+- Retrieval: hybrid search (vector + keyword) with optional LLM-as-reranker.
 - UI: Interview Streams form to enqueue repo/web ingestions; simple progress and coverage modal.
 
 ## Non‑Goals (now)
@@ -30,7 +52,7 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 - POST `/api/ingest/web` → enqueue crawl-based ingestion (seeds, include/exclude, depth, maxPages).
 - GET `/api/ingest/:id` → status + progress, coverage, recent, and events.
 - POST `/api/retrieval/query` → hybrid retrieval with optional rerank; returns normalized snippets.
-- POST `/api/retrieval/enhance-query` → enhancement stub (optional usage).
+  - Note: Query enhancement is optional and not currently exposed as a separate route.
 
 ## Sources & Labeling
 
@@ -45,11 +67,11 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 
 ### Dynamic Label Resolution (Pluggable + LLM fallback)
 
-- Pluggable registry: Both repo and web ingestion delegate to a single resolver (`resolveLabels`) that first applies deterministic heuristics, then optional source-specific rules (keyed by domain/repo), and only if uncertain, a bounded LLM fallback. Keeps the system source‑agnostic and extensible (e.g., Node.js, Vue) without touching core pipelines.
-- Config-driven rules: Maintain a small JSON ruleset mapping regex/prefix patterns to `{ topic, subtopic, version }` labels per source. Operators can refine labels or add new sources without code changes; deployments pick up changes automatically.
+- Pluggable registry: Both repo and web ingestion delegate to a single resolver (`resolveLabels`) that first applies deterministic heuristics and only if uncertain, a bounded LLM fallback. Keeps the system source‑agnostic and extensible without touching core pipelines.
+- Config-driven rules: Rules are currently disabled (feature-flagged off). Resolver runs with heuristics + OpenAI fallback only; explicit hints are never overridden.
 - Caller hints: Allow ingestion payloads to include `labelHints` (topic/subtopic overrides, path-prefix → bucket mappings). Hints take precedence over auto-derivation and eliminate ambiguity for bespoke structures.
 - LLM fallback (OpenAI-only): When rules can’t confidently classify, call a compact classifier prompt (e.g., gpt-4o-mini) that returns strict JSON `{ topic, subtopic, version, confidence }`. Enforce a whitelist of allowed topics/subtopics, require a minimum confidence, cache results by normalized path/URL, and never override explicit hints.
-- Observability & safety: Track counters (rule hits, LLM hits, low-confidence rejects), log short-retention samples for QA, and provide an offline backfill job to enrich existing `documents`/`document_chunks` with improved labels. Roll out behind a feature flag.
+- Observability & safety: Track counters (heuristic hits, LLM hits, low-confidence rejects) via `getLabelResolverMetrics()`. Provide an offline backfill job to enrich existing `documents`/`document_chunks` with improved labels (pending). Roll out behind a feature flag.
 
 ## Data Model (reuse)
 
@@ -95,6 +117,7 @@ Unify the active work around Interview Streams: ingest authoritative sources (re
 
 - Upsert `documents` (idempotent on `(bucket, path)`), replace `document_chunks` for the document, and write `ingestion_events` during each stage.
 - Maintain `metadata.progress`: { totalPlanned, processed, currentPathOrUrl, step: crawling|chunking|embedding, errorsCount, lastUpdatedAt }.
+ - For web ingestions, persist `documents.num_pages = chunks.length` as a simple coverage proxy.
 
 7. Batching (repo) and Resume
 
@@ -174,6 +197,7 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 
 - topK=8, alpha=0.5 (vector/keyword blend), rerank enabled with fallback on timeout.
 - Embeddings: OpenAI `text-embedding-3-small` (1536‑d) for both indexing and queries.
+ - Rerank model: `gpt-4o-mini` (strict JSON, list-wise scores).
 
 ## Retrieval Logic
 
@@ -230,6 +254,7 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 - Catalog: `data/interview-ingest-catalog.json` with `{ subtopic, ingestType, url, embedded }` per topic.
 - Utility: `runCatalogIngestion({ topic?, maxConcurrency?, logger? })` reads catalog, dedupes URLs, and enqueues repo/web ingestions. Defaults: all topics, concurrency=4, `console` logger.
 - Script: `pnpm run:catalog --topic=React --concurrency=4` for ad-hoc runs with ISO-timestamped logs.
+ - Seed normalization and preflight skip ensure we avoid duplicates and zero-result runs (see Reliability Hardening).
 
 ## React Ingestion URL Map (react.dev)
 
@@ -310,12 +335,12 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - [x] Path-derived subtopics for MDN JS (Guide/<leaf>, Reference/<category>, Global Objects) with override option.
 
 - Dynamic label resolution (design & rollout)
-  - [ ] Add pluggable LabelResolver registry shared by repo/web ingestion
-  - [ ] Add config-driven rules file for per-source regex/prefix → labels mapping
-  - [ ] Implement OpenAI-based fallback classifier with whitelist + confidence threshold
-  - [ ] Add caching + metrics (rule hits, LLM hits, rejects); wire to logs
+  - [x] Add pluggable LabelResolver registry shared by repo/web ingestion
+  - [x] Add config-driven rules file for per-source regex/prefix → labels mapping
+  - [x] Implement OpenAI-based fallback classifier with whitelist + confidence threshold
+  - [x] Add caching + metrics (rule hits, LLM hits, rejects); wire to logs
   - [ ] Provide an offline backfill job to enrich existing labels safely
-  - [ ] Gate with a feature flag; pilot on one non-MDN source (e.g., Node.js)
+  - [x] Gate with a feature flag; pilot on one non-MDN source (e.g., Node.js)
 
 - One-time validation run (operator playbook)
   - [ ] Stop any running ingestion jobs

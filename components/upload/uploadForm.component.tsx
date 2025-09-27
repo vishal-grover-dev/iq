@@ -44,6 +44,7 @@ export default function UploadForm() {
         subtopic: "",
         ingestType: InterviewIngestType.REPO,
         url: "",
+        depth: 3,
       },
     ],
   } as const;

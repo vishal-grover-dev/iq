@@ -1,0 +1,13 @@
+flowchart TD
+  %% Minimal 5-node architecture
+  UI["UI"]
+  API["API (Next.js)"]
+  AI["AI Services (OpenAI)"]
+  DB["Supabase (Postgres + pgvector)"]
+  SRC["Sources"]
+
+  UI --> API
+  API --> AI
+  API --> DB
+  API --> SRC
+  AI --> DB

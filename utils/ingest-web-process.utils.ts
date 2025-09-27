@@ -1,5 +1,6 @@
 import { IWebPageItem } from "@/utils/web-crawler.utils";
-import { extractMainContent, assessContentQuality, deriveLabelsFromUrl } from "@/utils/intelligent-web-adapter.utils";
+import { extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
+import { resolveLabels } from "@/utils/label-resolver.utils";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { createHash } from "crypto";
 
@@ -60,7 +61,10 @@ export async function assessAndPreparePage(
   }
 
   // Near-duplicate via 5-word shingles + Jaccard
-  const tokens = normalized.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = normalized
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   const shingles: string[] = [];
   for (let j = 0; j + 4 < tokens.length; j++) shingles.push(tokens.slice(j, j + 5).join(" "));
   const shingleSet = new Set(shingles);
@@ -90,13 +94,16 @@ export async function assessAndPreparePage(
           path: page.url,
           mime_type: "text/html",
           title: page.title,
-          labels: (() => {
-            const derivedLabels = deriveLabelsFromUrl(page.url, ctx.topic ?? undefined);
-            return {
-              topic: ctx.topic ?? derivedLabels.topic,
-              subtopic: ctx.subtopic ?? derivedLabels.subtopic,
-              version: derivedLabels.version ?? ctx.version,
-            };
+          labels: await (async () => {
+            const resolved = await resolveLabels({
+              source: "web",
+              url: page.url,
+              title: page.title ?? undefined,
+              topicHint: ctx.topic ?? undefined,
+              subtopicHint: ctx.subtopic ?? undefined,
+              versionHint: ctx.version ?? undefined,
+            });
+            return { topic: resolved.topic, subtopic: resolved.subtopic, version: resolved.version };
           })(),
         },
       ],
@@ -121,7 +128,12 @@ export async function assessAndPreparePage(
 
   // Extract main content and chunk
   const mainHtml = extractMainContent(page.html);
-  const textForChunking = mainHtml ? mainHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : page.content;
+  const textForChunking = mainHtml
+    ? mainHtml
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    : page.content;
   const chunks = await chunkTextLC(textForChunking, { chunkSize: 1800, overlap: 200 });
 
   // Persist num_pages proxy
@@ -144,18 +156,20 @@ export async function insertChunksBatch(
   let offset = 0;
   const perItem: number[] = [];
   for (const item of batch) {
-    const derived = deriveLabelsFromUrl(item.url, ctx.topic ?? undefined);
+    const resolved = await resolveLabels({
+      source: "web",
+      url: item.url,
+      topicHint: ctx.topic ?? undefined,
+      subtopicHint: ctx.subtopic ?? undefined,
+      versionHint: ctx.version ?? undefined,
+    });
     const rows = item.chunks.map((c, idx) => ({
       document_id: item.documentId,
       chunk_index: c.index,
       content: c.content,
       tokens: c.tokens,
       embedding: embeddings[offset + idx] as unknown as any,
-      labels: {
-        topic: ctx.topic ?? derived.topic,
-        subtopic: ctx.subtopic ?? derived.subtopic,
-        version: derived.version ?? ctx.version,
-      },
+      labels: { topic: resolved.topic, subtopic: resolved.subtopic, version: resolved.version },
     }));
     const { error: insertErr } = await supabase.from("document_chunks").insert(rows);
     if (insertErr) throw new Error(insertErr.message);

@@ -16,10 +16,22 @@ import {
 import { FormLabel } from "@/components/ui/form-label";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";
-import { planRepoIngestion, resumeIngestion, retryIngestion, downloadRunReport } from "@/services/ingest.services";
+import {
+  planRepoIngestion,
+  planWebIngestion,
+  resumeIngestion,
+  retryIngestion,
+  downloadRunReport,
+} from "@/services/ingest.services";
 
 type TInterviewSectionProps = {
-  items: Array<{ topic: InterviewTopic; subtopic: string; ingestType: InterviewIngestType; url: string }>;
+  items: Array<{
+    topic: InterviewTopic;
+    subtopic: string;
+    ingestType: InterviewIngestType;
+    url: string;
+    depth?: 2 | 3 | 4;
+  }>;
   stream?: InterviewStream;
   disabled?: boolean;
   setValue: (
@@ -49,14 +61,81 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
     slices: Array<{ name: string; start: number; end: number; count: number }>;
     categories: Record<string, number>;
   } | null>(null);
+  const [webPlanData, setWebPlanData] = useState<{
+    count: number;
+    pages: Array<{ url: string; title?: string }>;
+    groups?: Array<{ label: string; count: number; pages: Array<{ url: string; title?: string }> }>;
+  } | null>(null);
 
   async function handlePlan() {
     try {
       setPlanLoading(true);
-      const first = items[0];
-      if (!first) return;
-      const res = await planRepoIngestion({ repoUrl: first.url, batchSize: 200 });
-      setPlanData(res);
+      const validItems = items.filter((i) => i && (i.url ?? "").trim());
+      if (validItems.length === 0) return;
+
+      // Aggregated results across all rows
+      const repoAgg: {
+        total: number;
+        batchSize: number;
+        slices: Array<{ name: string; start: number; end: number; count: number }>;
+        categories: Record<string, number>;
+      } = { total: 0, batchSize: 200, slices: [], categories: {} };
+
+      const webPagesMap = new Map<string, { url: string; title?: string }>();
+      const webGroups: Array<{ label: string; count: number; pages: Array<{ url: string; title?: string }> }> = [];
+      let webCount = 0;
+
+      for (const item of validItems) {
+        if (item.ingestType === InterviewIngestType.REPO) {
+          const res = await planRepoIngestion({ repoUrl: item.url, batchSize: 200 });
+          repoAgg.total += res?.total ?? 0;
+          repoAgg.batchSize = res?.batchSize ?? repoAgg.batchSize;
+          // Prefix slice names with a repo identifier to make batches readable when combined
+          const repoId = (() => {
+            try {
+              const u = new URL(item.url);
+              return `${u.hostname}${u.pathname}`;
+            } catch {
+              return item.url;
+            }
+          })();
+          (res?.slices ?? []).forEach((s: any) => {
+            repoAgg.slices.push({ ...s, name: `${repoId} — ${s.name}` });
+          });
+          Object.entries(res?.categories ?? {}).forEach(([k, v]) => {
+            repoAgg.categories[k] = (repoAgg.categories[k] ?? 0) + (v as number);
+          });
+        } else {
+          const u = new URL(item.url);
+          const res = await planWebIngestion({
+            seeds: [item.url],
+            domain: u.hostname,
+            prefix: u.pathname.split("/").slice(0, 3).join("/") || undefined,
+            depth: (item.depth ?? 3) as number,
+            maxPages: 50,
+            crawlDelayMs: 300,
+            includePatterns: [],
+            excludePatterns: [],
+            useAiPlanner: false,
+            topic: item.topic,
+            returnAllPages: false,
+            applyQuotas: false,
+          });
+          webCount += res?.count ?? 0;
+          (res?.pages ?? []).forEach((p: any) => {
+            if (!webPagesMap.has(p.url)) webPagesMap.set(p.url, p);
+          });
+          const label = `${item.topic}${item.subtopic ? ` • ${item.subtopic}` : ""} — ${u.hostname}${u.pathname}`;
+          webGroups.push({ label, count: res?.count ?? 0, pages: (res?.pages ?? []).slice(0, 20) });
+        }
+      }
+
+      const hasRepo = repoAgg.total > 0 || repoAgg.slices.length > 0 || Object.keys(repoAgg.categories).length > 0;
+      const webPages = Array.from(webPagesMap.values());
+      const hasWeb = webPages.length > 0 || webCount > 0;
+
+      setPlanData(hasRepo ? repoAgg : null);
+      setWebPlanData(hasWeb ? { count: webCount, pages: webPages, groups: webGroups } : null);
       setPlanOpen(true);
     } finally {
       setPlanLoading(false);
@@ -100,9 +179,16 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
 
       <div className='grid gap-3'>
         {items.map((row, idx) => {
+          const predefined = INTERVIEW_SUBTOPICS[row.topic as InterviewTopic].map((s) => ({ label: s, value: s }));
+          const hasCustom = !!(
+            row.subtopic &&
+            row.subtopic.trim() &&
+            !predefined.some((o) => o.value === row.subtopic)
+          );
           const subtopicOptions = [
             { label: "ALL", value: "" },
-            ...INTERVIEW_SUBTOPICS[row.topic as InterviewTopic].map((s) => ({ label: s, value: s })),
+            ...(hasCustom ? [{ label: row.subtopic, value: row.subtopic }] : []),
+            ...predefined,
             { label: "Other", value: "__other__" },
           ];
           return (
@@ -126,7 +212,7 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
                 />
               </div>
 
-              <div className='grid gap-1 sm:col-span-3'>
+              <div className='grid gap-1 sm:col-span-2'>
                 <FormLabel>Subtopic</FormLabel>
                 <Combobox
                   value={(row.subtopic ?? "") as any}
@@ -161,6 +247,29 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
                   triggerClassName='w/full justify-between overflow-hidden text-ellipsis whitespace-nowrap'
                 />
               </div>
+
+              {row.ingestType === InterviewIngestType.WEB && (
+                <div className='grid gap-1 sm:col-span-1'>
+                  <FormLabel required>Depth</FormLabel>
+                  <Combobox
+                    value={(row.depth ?? 3) as any}
+                    onChange={(val) => {
+                      const next = items.slice();
+                      next[idx] = { ...row, depth: Number(val) as 2 | 3 | 4 } as any;
+                      setValue("items", next as any, { shouldValidate: true });
+                    }}
+                    options={
+                      [
+                        { label: "2", value: 2 },
+                        { label: "3", value: 3 },
+                        { label: "4", value: 4 },
+                      ] as any
+                    }
+                    placeholder='3'
+                    disabled={disabled}
+                  />
+                </div>
+              )}
 
               <div className='grid gap-1 min-w-0 sm:col-span-3'>
                 <FormLabel required>URL</FormLabel>
@@ -238,40 +347,88 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
 
       {/* Plan modal */}
       <Dialog open={planOpen} onOpenChange={setPlanOpen}>
-        <DialogContent>
+        <DialogContent className='sm:max-w-xl max-h-[85vh] grid-rows-[auto_1fr_auto] overflow-hidden'>
           <DialogHeader>
             <DialogTitle>Plan</DialogTitle>
           </DialogHeader>
-          {planData ? (
-            <div className='space-y-2 text-sm'>
-              <p>Total files: {planData.total}</p>
-              <p>Batch size: {planData.batchSize}</p>
-              <div>
-                <p className='font-medium mt-2'>Categories</p>
-                <div className='max-h-40 overflow-auto space-y-1'>
-                  {Object.entries(planData.categories).map(([k, v]) => (
-                    <div key={k} className='flex justify-between'>
-                      <span>{k}</span>
-                      <span>{v}</span>
+          <div className='min-h-0 overflow-y-auto pr-1'>
+            {planData || webPlanData ? (
+              <div className='space-y-4 text-sm'>
+                {planData && (
+                  <div className='space-y-2'>
+                    <p className='font-medium'>Repos summary</p>
+                    <p>Total files: {planData.total}</p>
+                    <p>Batch size: {planData.batchSize}</p>
+                    <div>
+                      <p className='font-medium mt-2'>Categories</p>
+                      <div className='max-h-40 overflow-auto space-y-1'>
+                        {Object.entries(planData.categories).map(([k, v]) => (
+                          <div key={k} className='flex justify-between'>
+                            <span>{k}</span>
+                            <span>{v}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className='font-medium mt-2'>Batches</p>
-                <div className='max-h-40 overflow-auto space-y-1'>
-                  {planData.slices.map((s) => (
-                    <div key={s.name} className='flex justify-between'>
-                      <span>{s.name}</span>
-                      <span>{s.count} files</span>
+                    <div>
+                      <p className='font-medium mt-2'>Batches</p>
+                      <div className='max-h-40 overflow-auto space-y-1'>
+                        {planData.slices.map((s) => (
+                          <div key={s.name} className='flex justify-between'>
+                            <span>{s.name}</span>
+                            <span>{s.count} files</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {webPlanData && (
+                  <div className='space-y-2'>
+                    <p className='font-medium'>Web crawl summary</p>
+                    <p>Discovered pages: {webPlanData.count}</p>
+                    <div>
+                      <p className='font-medium mt-2'>Sample pages</p>
+                      <div className='max-h-40 overflow-auto space-y-1'>
+                        {webPlanData.pages.slice(0, 20).map((p) => (
+                          <div key={p.url} className='truncate' title={p.url}>
+                            {p.title ? `${p.title} — ` : ""}
+                            <span className='text-muted-foreground'>{p.url}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {Array.isArray(webPlanData.groups) && webPlanData.groups.length > 0 && (
+                      <div className='space-y-2'>
+                        <p className='font-medium mt-4'>Per-row breakdown</p>
+                        <div className='space-y-3'>
+                          {webPlanData.groups.map((g) => (
+                            <div key={g.label} className='space-y-1'>
+                              <div className='flex items-center justify-between'>
+                                <span className='text-sm font-medium'>{g.label}</span>
+                                <span className='text-sm text-muted-foreground'>{g.count} pages</span>
+                              </div>
+                              <div className='max-h-32 overflow-auto space-y-1'>
+                                {g.pages.slice(0, 10).map((p) => (
+                                  <div key={p.url} className='truncate' title={p.url}>
+                                    {p.title ? `${p.title} — ` : ""}
+                                    <span className='text-muted-foreground'>{p.url}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <p className='text-sm'>No plan yet.</p>
-          )}
+            ) : (
+              <p className='text-sm'>No plan yet.</p>
+            )}
+          </div>
           <DialogFooter>
             <Button type='button' variant='secondary' onClick={() => setPlanOpen(false)}>
               Close

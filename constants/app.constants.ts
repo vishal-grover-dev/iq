@@ -17,3 +17,18 @@ export const NEXT_PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 export const DEV_DEFAULT_USER_ID = process.env.DEV_DEFAULT_USER_ID ?? "";
 
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
+
+// Feature flags
+export const ENABLE_DYNAMIC_LABEL_RESOLUTION: boolean = String(
+  process.env.ENABLE_DYNAMIC_LABEL_RESOLUTION ?? "true"
+).toLowerCase() === "true";
+
+// Toggle use of config rules; when false, only heuristics + LLM are used
+export const ENABLE_LABEL_RULES: boolean = String(process.env.ENABLE_LABEL_RULES ?? "false").toLowerCase() === "true";
+
+// Strictness for LLM fallback acceptance (0..1)
+export const LABEL_RESOLVER_MIN_CONFIDENCE: number = (() => {
+  const raw = Number(process.env.LABEL_RESOLVER_MIN_CONFIDENCE ?? "0.7");
+  if (Number.isNaN(raw)) return 0.7;
+  return Math.max(0, Math.min(1, raw));
+})();

@@ -59,6 +59,36 @@ export async function planRepoIngestion(params: { repoUrl: string; paths?: strin
 }
 
 /**
+ * Web planning endpoint - crawls seeds with constraints and returns preview.
+ */
+export async function planWebIngestion(params: {
+  seeds: string[];
+  domain: string;
+  prefix?: string | null;
+  depth?: number;
+  maxPages?: number;
+  crawlDelayMs?: number;
+  includePatterns?: string[];
+  excludePatterns?: string[];
+  depthMap?: Record<string, number>;
+  useAiPlanner?: boolean;
+  topic?: string;
+  returnAllPages?: boolean;
+  applyQuotas?: boolean;
+}) {
+  const res = await apiClient.post("/api/ingest/web/plan", params);
+  return res.data as {
+    ok: boolean;
+    count: number;
+    pages: Array<{ url: string; title?: string }>
+  } & {
+    sections?: any;
+    quotas?: { requested: number } | undefined;
+    debug?: any;
+  };
+}
+
+/**
  * Control endpoints (placeholders for future worker controls).
  */
 export async function pauseIngestion(_id: string) {

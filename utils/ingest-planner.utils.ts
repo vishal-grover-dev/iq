@@ -46,7 +46,7 @@ export async function resolvePlannerBootstrap(
   let depthMapFinal = depthMap;
   let aiUsed = false;
 
-  const needsAiBootstrap = Boolean(args.useAiPlanner) || (!incPatterns && !depthMapFinal);
+  const needsAiBootstrap = false; // Exact URL mode: disable AI bootstrap
 
   if (needsAiBootstrap) {
     const firstSeed = seeds && seeds.length ? seeds[0] : undefined;

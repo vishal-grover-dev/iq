@@ -110,12 +110,9 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
           const res = await planWebIngestion({
             seeds: [item.url],
             domain: u.hostname,
-            prefix: u.pathname.split("/").slice(0, 3).join("/") || undefined,
-            depth: (item.depth ?? 3) as number,
+            depth: (item.depth ?? 2) as number,
             maxPages: 50,
             crawlDelayMs: 300,
-            includePatterns: [],
-            excludePatterns: [],
             useAiPlanner: false,
             topic: item.topic,
             returnAllPages: false,

@@ -107,11 +107,13 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
 
     const u = new URL(url);
     if (u.hostname !== domain) continue;
-    if (prefix && !u.pathname.startsWith(prefix)) continue;
-    // Allow fetching the root seed even if it doesn't match include patterns, so we can discover links.
-    const matchesInclude = includeRegexes.length === 0 || includeRegexes.some((re) => re.test(u.pathname));
-    if (!matchesInclude && d > 0) continue;
-    if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(u.pathname))) continue;
+    // Exact URL mode: ignore prefix/include/exclude when depth === 0
+    if (depth > 0) {
+      if (prefix && !u.pathname.startsWith(prefix)) continue;
+      const matchesInclude = includeRegexes.length === 0 || includeRegexes.some((re) => re.test(u.pathname));
+      if (!matchesInclude && d > 0) continue;
+      if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(u.pathname))) continue;
+    }
     if (robots && !robots.isAllowed(url, "*")) continue;
 
     const html = await externalGetWithRetry(canonical);
@@ -128,27 +130,28 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
 
       // Apply content quality filters using centralized heuristic
       const quality = assessContentQuality(content, html);
-      // Always include depth 0 (seed) if it's acceptable quality, even if includePatterns
-      // do not match. This prevents zero-coverage runs when planner patterns are narrow.
-      if (content.length > 0 && quality.isAcceptable && (matchesInclude || d === 0)) {
+      // In exact-URL mode (depth===0), only seed (d===0) is eligible. Otherwise, honor include patterns.
+      const allowThisPage =
+        depth === 0
+          ? d === 0
+          : includeRegexes.length === 0 || includeRegexes.some((re) => re.test(u.pathname)) || d === 0;
+      if (content.length > 0 && quality.isAcceptable && allowThisPage) {
         out.push({ url: canonical, title, content, html, depth: d });
       }
 
       const currentDepthLimit = (() => {
         if (!depthMap) return depth;
-        // Find the longest matching prefix in depthMap
-        let best: number | null = null;
-        let bestLen = -1;
-        for (const key of Object.keys(depthMap)) {
-          if (u.pathname.startsWith(key) && key.length > bestLen) {
-            best = depthMap[key]!;
-            bestLen = key.length;
-          }
+        try {
+          const best = Object.keys(depthMap)
+            .filter((k) => u.pathname.startsWith(k))
+            .sort((a, b) => b.length - a.length)[0];
+          return typeof best === "string" ? (depthMap as any)[best] ?? depth : depth;
+        } catch {
+          return depth;
         }
-        return best ?? depth;
       })();
 
-      if (d < currentDepthLimit) {
+      if (d < currentDepthLimit && depth > 0) {
         // Discover links from the entire document instead of only the main/article root.
         // Many documentation sites place navigational links (sidebars/menus) outside of main,
         // which are essential for breadth-first traversal. Using the whole document here
@@ -171,7 +174,6 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
             const lnUrl = new URL(ln);
             if (lnUrl.hostname !== domain) continue;
             if (prefix && !lnUrl.pathname.startsWith(prefix)) continue;
-            // Loosen include filtering at shallow depth to avoid empty crawls when patterns are too narrow
             if (includeRegexes.length > 0 && d >= 1 && !includeRegexes.some((re) => re.test(lnUrl.pathname))) continue;
             if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(lnUrl.pathname)))
               continue;

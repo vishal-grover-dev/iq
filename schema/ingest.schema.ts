@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { EInterviewTopic } from "@/types/upload.types";
+
+// Use z.enum over the enum's values (avoids deprecated z.nativeEnum)
+const interviewTopicValues = Object.values(EInterviewTopic) as [EInterviewTopic, ...EInterviewTopic[]];
+export const InterviewTopicSchema = z.enum(interviewTopicValues);
 
 export const ingestResponseSchema = z.object({
   ok: z.boolean(),
@@ -19,7 +24,7 @@ export const ingestRepoRequestSchema = z.object({
   mode: z.literal("repo"),
   repoUrl: z.string().url(),
   paths: z.array(z.string()).default([]),
-  topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  topic: InterviewTopicSchema,
   subtopic: z.string().optional(),
   version: z.string().optional(),
   maxFiles: z.number().int().positive().max(200).default(200),
@@ -29,15 +34,11 @@ export const ingestWebRequestSchema = z.object({
   mode: z.literal("web"),
   seeds: z.array(z.string().url()).min(1),
   domain: z.string().min(1),
-  prefix: z.string().optional(),
+  // Downward-only crawl from the seed path; depth controls how far to descend
   depth: z.number().int().min(0).max(4).default(2),
-  maxPages: z.number().int().positive().max(200).default(200),
-  crawlDelayMs: z.number().int().min(0).max(5000).default(500),
-  includePatterns: z.array(z.string()).default([]).optional(),
-  excludePatterns: z.array(z.string()).default([]).optional(),
-  depthMap: z.record(z.string(), z.number().int().min(0).max(4)).default({}).optional(),
-  autoPlan: z.boolean().default(true),
-  topic: z.enum(["React", "JavaScript", "TypeScript", "HTML", "CSS"]),
+  maxPages: z.number().int().positive().max(200).default(50),
+  crawlDelayMs: z.number().int().min(0).max(5000).default(300),
+  topic: InterviewTopicSchema,
   subtopic: z.string().optional(),
   version: z.string().optional(),
 });

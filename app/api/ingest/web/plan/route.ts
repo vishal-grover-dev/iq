@@ -37,29 +37,30 @@ export async function POST(req: NextRequest) {
     }
     if (!domain) return NextResponse.json({ ok: false, message: "domain is required" }, { status: 400 });
 
-    const planner = await resolvePlannerBootstrap({
-      domain,
-      seeds,
-      includePatterns,
-      excludePatterns,
-      depthMap,
-      useAiPlanner,
-    });
+    // Downward-only plan from the exact seed path
+    const planner = { seeds } as any;
 
     const pages = await crawlWebsite({
       seeds: planner.seeds,
       domain,
-      prefix: prefix ?? undefined,
+      prefix: (() => {
+        try {
+          const u = new URL(seeds[0]);
+          return u.pathname || "/";
+        } catch {
+          return undefined;
+        }
+      })(),
       depth,
       maxPages,
       crawlDelayMs,
-      includePatterns: planner.includePatterns,
-      excludePatterns: planner.excludePatterns,
-      depthMap: planner.depthMap,
+      includePatterns: undefined,
+      excludePatterns: undefined,
+      depthMap: undefined,
     });
 
     // Optional preflight dry-run labeling on a small sample to expose distribution and low-confidence
-    const sampleSize = Math.min(20, pages.length);
+    const sampleSize = Math.min(1, pages.length);
     const sample = pages.slice(0, sampleSize);
     const distribution: Record<string, number> = {};
     let lowConfidence = 0;
@@ -78,11 +79,7 @@ export async function POST(req: NextRequest) {
     // MDN-specific section counts removed; planner is source-agnostic
 
     // Quota-applied preview (optional, source-agnostic)
-    const quotaPreview = (() => {
-      if (!applyQuotas) return undefined;
-      const max = Math.max(1, Math.min(maxPages, pages.length));
-      return { requested: max };
-    })();
+    const quotaPreview = undefined;
 
     return NextResponse.json({
       ok: true,
@@ -90,7 +87,7 @@ export async function POST(req: NextRequest) {
       pages: (returnAllPages ? pages : pages.slice(0, 200)).map((p) => ({ url: p.url, title: p.title })),
       sections: undefined,
       quotas: quotaPreview,
-      debug: { useAiPlanner, aiUsed: planner.aiUsed, topic: topic ?? null, returnAllPages, applyQuotas },
+      debug: { useAiPlanner: false, aiUsed: false, topic: topic ?? null, returnAllPages, applyQuotas },
       preflight: {
         sampled: sampleSize,
         lowConfidenceRate: sampleSize > 0 ? lowConfidence / sampleSize : 0,

@@ -61,25 +61,24 @@ export async function POST(req: NextRequest) {
     await updateProgress({ step: "crawling", errorsCount: 0 });
     await writeEvent("start", "Web ingestion started", "info", { meta });
 
-    const planner = await resolvePlannerBootstrap({
-      domain: meta.domain,
+    // Downward-only crawl: planner is bypassed; use exact seeds and strict prefix
+    const planner = {
       seeds: meta.seeds,
-      includePatterns: meta.includePatterns,
-      excludePatterns: meta.excludePatterns,
-      depthMap: meta.depthMap,
-      useAiPlanner: meta.useAiPlanner,
-    });
+      includePatterns: undefined,
+      excludePatterns: undefined,
+      depthMap: undefined,
+    } as any;
 
     const pages = await crawlWebsite({
       seeds: planner.seeds,
       domain: meta.domain,
-      prefix: meta.prefix ?? undefined,
-      depth: meta.depth ?? 2,
+      prefix: (meta.prefix ?? undefined) as string | undefined,
+      depth: meta.depth ?? 0,
       maxPages: meta.maxPages ?? 50,
       crawlDelayMs: meta.crawlDelayMs ?? 300,
-      includePatterns: planner.includePatterns,
-      excludePatterns: planner.excludePatterns,
-      depthMap: planner.depthMap,
+      includePatterns: undefined,
+      excludePatterns: undefined,
+      depthMap: undefined,
     });
     const { selectedPages, existingCount } = await prefilterExistingWebPages(supabase, pages, meta.maxPages);
     await updateProgress({ totalPlanned: selectedPages.length, processed: 0 });

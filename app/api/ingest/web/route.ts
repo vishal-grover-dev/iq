@@ -31,14 +31,23 @@ export async function POST(req: NextRequest) {
             mode: "web",
             seeds: parsed.seeds,
             domain: parsed.domain,
-            prefix: parsed.prefix ?? null,
+            // Downward-only mode: derive prefix strictly from the first seed path
+            prefix: (() => {
+              try {
+                const first = (parsed.seeds ?? [])[0] as string;
+                const u = new URL(first);
+                return u.pathname || "/";
+              } catch {
+                return null;
+              }
+            })(),
             depth: parsed.depth,
             maxPages: parsed.maxPages,
             crawlDelayMs: parsed.crawlDelayMs,
-            includePatterns: parsed.includePatterns ?? [],
-            excludePatterns: parsed.excludePatterns ?? [],
-            depthMap: parsed.depthMap ?? {},
-            autoPlan: parsed.autoPlan ?? true,
+            includePatterns: [],
+            excludePatterns: [],
+            depthMap: {},
+            autoPlan: true,
             useAiPlanner: (body?.useAiPlanner ?? false) as boolean,
           },
           objects: [],

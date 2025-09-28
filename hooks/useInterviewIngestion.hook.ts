@@ -59,39 +59,12 @@ export function useInterviewIngestion() {
               mode: "web",
               seeds: [row.url],
               domain: u.hostname,
-              prefix: undefined,
-              depth: (row.depth ?? 3) as number,
-              maxPages: 200,
+              depth: (row.depth ?? 2) as number,
+              maxPages: 50,
               crawlDelayMs: 300,
               topic: row.topic as any,
               subtopic: row.subtopic,
             };
-
-            // Heuristic: if the seed path starts with a well-known docs section
-            // (e.g., /reference, /docs, /learn, /guide), bias crawling to that section
-            // and allow an extra level of depth for that section.
-            const pathSegments = u.pathname.split("/").filter(Boolean);
-            const localeOrVersion = /^(?:[a-z]{2}-[A-Z]{2}|v?\d+(?:\.\d+)*)$/; // e.g., en-US, v19, 19.1
-            const candidate = (() => {
-              if (pathSegments.length === 0) return null;
-              const first = pathSegments[0];
-              if (localeOrVersion.test(first) && pathSegments.length > 1) return pathSegments[1];
-              return first;
-            })();
-            const docsSections = new Set([
-              "reference",
-              "docs",
-              "documentation",
-              "learn",
-              "guide",
-              "guides",
-              "handbook",
-              "api",
-            ]);
-            if (candidate && docsSections.has(candidate.toLowerCase())) {
-              payload.includePatterns = [`^\/${candidate}`];
-              payload.depthMap = { [`/${candidate}`]: (row.depth ?? 3) as number };
-            }
 
             const { ingestionId } = await ingestRepoWeb(payload as any);
             createdIds.push(ingestionId);

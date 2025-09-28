@@ -64,13 +64,9 @@ export async function planRepoIngestion(params: { repoUrl: string; paths?: strin
 export async function planWebIngestion(params: {
   seeds: string[];
   domain: string;
-  prefix?: string | null;
   depth?: number;
   maxPages?: number;
   crawlDelayMs?: number;
-  includePatterns?: string[];
-  excludePatterns?: string[];
-  depthMap?: Record<string, number>;
   useAiPlanner?: boolean;
   topic?: string;
   returnAllPages?: boolean;
@@ -80,7 +76,7 @@ export async function planWebIngestion(params: {
   return res.data as {
     ok: boolean;
     count: number;
-    pages: Array<{ url: string; title?: string }>
+    pages: Array<{ url: string; title?: string }>;
   } & {
     sections?: any;
     quotas?: { requested: number } | undefined;

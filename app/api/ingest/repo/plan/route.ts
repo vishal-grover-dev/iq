@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { parseRepoUrl, getDefaultBranch, listMarkdownPaths } from "@/utils/repo.utils";
+import { resolveLabels } from "@/utils/label-resolver.utils";
 
 export const runtime = "nodejs";
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     const mdPaths = await listMarkdownPaths(owner, repo, branch, Array.isArray(paths) ? paths : []);
 
     // Group by category (mdn js typical): guide/*, reference/<cat>/*, otherwise first segment
-    const basePrefix = (Array.isArray(paths) && paths[0]) ? paths[0] + "/" : "";
+    const basePrefix = Array.isArray(paths) && paths[0] ? paths[0] + "/" : "";
     const toTitle = (s: string) => s.replace(/[-_]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
     const categories: Record<string, number> = {};
     for (const p of mdPaths) {
@@ -65,12 +66,36 @@ export async function POST(req: NextRequest) {
       slices.push({ name: `Batch ${Math.floor(i / batchSize) + 1}`, start: i, end, count: end - i });
     }
 
+    // Preflight dry-run: sample first N paths and classify
+    const sampleSize = Math.min(30, mdPaths.length);
+    const sample = mdPaths.slice(0, sampleSize);
+    const distribution: Record<string, number> = {};
+    let lowConfidence = 0;
+    for (const p of sample) {
+      const labeled = await resolveLabels({
+        source: "repo",
+        path: p,
+        topicHint: undefined,
+        title: undefined,
+        repoOwner: owner,
+        repoName: repo,
+      });
+      const key = `${labeled.topic}|${labeled.subtopic ?? "(null)"}`;
+      distribution[key] = (distribution[key] ?? 0) + 1;
+      if ((labeled.subtopic ?? null) === null) lowConfidence += 1;
+    }
+
     return NextResponse.json({
       ok: true,
       total: mdPaths.length,
       batchSize,
       slices,
       categories: Object.fromEntries(Object.entries(categories).map(([k, v]) => [toTitle(k.replace("/", "/")), v])),
+      preflight: {
+        sampled: sampleSize,
+        lowConfidenceRate: sampleSize > 0 ? lowConfidence / sampleSize : 0,
+        distribution,
+      },
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });

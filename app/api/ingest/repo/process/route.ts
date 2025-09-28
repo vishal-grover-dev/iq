@@ -11,7 +11,7 @@ import {
 } from "@/utils/repo.utils";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai.services";
-import { resolveLabels } from "@/utils/label-resolver.utils";
+import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
 
 export const runtime = "nodejs";
 
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     await supabase.from("ingestions").update({ status: "processing" }).eq("id", ingestionId);
     await updateProgress({ step: "validating", errorsCount: 0 });
     await writeEvent("start", "Repo ingestion started", "info", { repoUrl });
+    resetLabelResolverMetrics();
 
     // Basic validation
     try {
@@ -219,6 +220,8 @@ export async function POST(req: NextRequest) {
           offset += rows.length;
           await writeEvent("ingest", `Inserted ${rows.length} chunks`, "info", { path: item.path });
         }
+        const m = getLabelResolverMetrics();
+        await writeEvent("labels", "Classifier metrics snapshot", "info", m as any);
         batchRows.length = 0;
       }
     }
@@ -241,8 +244,11 @@ export async function POST(req: NextRequest) {
       .from("ingestions")
       .update({ metadata: nextMeta, status: completed ? "completed" : "processing" })
       .eq("id", ingestionId);
-    if (completed) await writeEvent("complete", "Repo ingestion completed");
-    else await writeEvent("awaiting_next_batch", `Next start ${newNextStart} of ${totalPlanned}`);
+    if (completed) {
+      const finalMetrics = getLabelResolverMetrics();
+      await writeEvent("labels", "Classifier metrics final", "info", finalMetrics as any);
+      await writeEvent("complete", "Repo ingestion completed");
+    } else await writeEvent("awaiting_next_batch", `Next start ${newNextStart} of ${totalPlanned}`);
 
     return NextResponse.json({
       ok: true,

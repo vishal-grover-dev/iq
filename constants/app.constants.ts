@@ -27,8 +27,4 @@ export const ENABLE_DYNAMIC_LABEL_RESOLUTION: boolean = String(
 export const ENABLE_LABEL_RULES: boolean = String(process.env.ENABLE_LABEL_RULES ?? "false").toLowerCase() === "true";
 
 // Strictness for LLM fallback acceptance (0..1)
-export const LABEL_RESOLVER_MIN_CONFIDENCE: number = (() => {
-  const raw = Number(process.env.LABEL_RESOLVER_MIN_CONFIDENCE ?? "0.7");
-  if (Number.isNaN(raw)) return 0.7;
-  return Math.max(0, Math.min(1, raw));
-})();
+export const LABEL_RESOLVER_MIN_CONFIDENCE = 0.8;

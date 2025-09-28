@@ -66,6 +66,7 @@
 - **LangSmith** - Observability and monitoring platform for AI agents
 - **OpenAI Embeddings** - `text-embedding-3-small` (1536‑d) for indexing and queries
 - **Reranker** – LLM-as-reranker using `gpt-4o-mini` returning list-wise JSON
+- **Label Classifier (strict)** – Classifier‑only labeling of `{ topic, subtopic, version }` with whitelist ontology and confidence gating (default 0.8); never overrides explicit hints; caches by URL/path.
 
 ### File Processing
 
@@ -87,6 +88,7 @@
 ### Monitoring & Analytics
 
 - **LangSmith** - AI agent observability and monitoring
+- **Ingestion Events Metrics** - Classifier metrics snapshots (hits, low‑confidence/nulls) emitted during ingestion; preflight sampler in plan endpoints surfaces label distribution and low‑confidence rate.
 
 ## Development Workflow
 

@@ -1,5 +1,4 @@
 import { ENABLE_DYNAMIC_LABEL_RESOLUTION, LABEL_RESOLVER_MIN_CONFIDENCE } from "@/constants/app.constants";
-import { deriveLabelsFromUrl } from "@/utils/intelligent-web-adapter.utils";
 import { INTERVIEW_SUBTOPICS, INTERVIEW_TOPIC_OPTIONS } from "@/constants/interview-streams.constants";
 import { classifyLabels } from "@/services/ai.services";
 
@@ -25,12 +24,8 @@ export interface IResolveLabelsArgs {
   repoName?: string;
 }
 
-// No rules file: resolver relies on heuristics + LLM fallback only
-
 const inMemoryCache = new Map<string, IResolvedLabels>();
 const metrics = {
-  ruleHits: 0,
-  heuristicHits: 0,
   llmHits: 0,
   rejects: 0,
 };
@@ -58,62 +53,11 @@ function getAllowedTopicsAndSubtopics(): { topics: string[]; subsByTopic: Record
   return { topics, subsByTopic };
 }
 
-// (rules removed)
-
-function deriveMdnSubtopicFromPath(p: string, topic: string | null | undefined): string | null {
-  function toTitleCase(input: string): string {
-    return input
-      .replace(/[-_]+/g, " ")
-      .split(" ")
-      .filter(Boolean)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  }
-  function topicToMdnSlug(t: string | null | undefined): string | null {
-    if (!t) return null;
-    const lower = String(t).trim().toLowerCase();
-    if (lower === "javascript") return "javascript";
-    if (lower === "html") return "html";
-    if (lower === "css") return "css";
-    return null;
-  }
-  const slug = topicToMdnSlug(topic);
-  if (!slug) return null;
-  const base = `files/en-us/web/${slug}/`;
-  if (!p.startsWith(base)) return null;
-  const rest = p.slice(base.length);
-  const segs = rest.split("/").filter(Boolean);
-  if (segs.length === 0) return null;
-  const first = segs[0]?.toLowerCase();
-  if (first === "guide" || first === "guides") {
-    const leaf = segs[1] ?? "guide";
-    return `Guide/${toTitleCase(leaf)}`;
-  }
-  if (first === "how_to" || first === "howto") {
-    const leaf = segs[1] ?? "how-to";
-    return `How-to/${toTitleCase(leaf)}`;
-  }
-  if (first === "reference") {
-    const cat = (segs[1] ?? "reference").toLowerCase();
-    if (cat === "global_objects") return "Reference/Global Objects";
-    if (cat === "operators") return "Reference/Operators";
-    if (cat === "elements") return "Reference/Elements";
-    if (cat === "global_attributes") return "Reference/Global Attributes";
-    return `Reference/${toTitleCase(cat)}`;
-  }
-  if (first === "index.md") return "Overview";
-  return toTitleCase(segs[0]!);
-}
-
-// (rules removed)
-
 export function getLabelResolverMetrics() {
   return { ...metrics };
 }
 
 export function resetLabelResolverMetrics() {
-  metrics.ruleHits = 0;
-  metrics.heuristicHits = 0;
   metrics.llmHits = 0;
   metrics.rejects = 0;
 }
@@ -125,97 +69,61 @@ export async function resolveLabels(args: IResolveLabelsArgs): Promise<IResolved
 
   const minConfidence = Math.max(0, Math.min(1, LABEL_RESOLVER_MIN_CONFIDENCE));
 
-  const fillAndCache = (base: IResolvedLabels): IResolvedLabels => {
-    // Never override explicit hints
+  const finalize = (base: IResolvedLabels): IResolvedLabels => {
     const topic = args.topicHint ?? base.topic;
     const subtopic = args.subtopicHint ?? base.subtopic;
-    const version = base.version ?? args.versionHint ?? null;
+    const version = args.versionHint ?? base.version ?? null;
     const out = { ...base, topic, subtopic, version };
     inMemoryCache.set(key, out);
     return out;
   };
 
-  // 1) Rules disabled: skip directly to heuristics
-
-  // 2) Heuristics
-  if (args.source === "web" && args.url) {
-    const h = deriveLabelsFromUrl(args.url, args.topicHint ?? undefined);
-    metrics.heuristicHits += 1;
+  // If dynamic disabled, honor hints only and avoid guessing
+  if (!ENABLE_DYNAMIC_LABEL_RESOLUTION) {
     const base: IResolvedLabels = {
-      topic: h.topic,
-      subtopic: h.subtopic,
-      version: h.version,
-      confidence: 0.6,
-      source: "heuristic",
+      topic: args.topicHint || "Unknown",
+      subtopic: args.subtopicHint ?? null,
+      version: args.versionHint ?? null,
+      confidence: 0,
+      source: args.topicHint || args.subtopicHint ? "hint" : "llm",
     };
-    const out = fillAndCache(base);
-    // If confidence low and dynamic enabled, try LLM fallback
-    if (ENABLE_DYNAMIC_LABEL_RESOLUTION && (!out.subtopic || out.topic === "Unknown")) {
-      const { topics, subsByTopic } = getAllowedTopicsAndSubtopics();
-      try {
-        const llm = await classifyLabels({
-          urlOrPath: args.url,
-          siteOrRepo: new URL(args.url).hostname,
-          title: args.title ?? undefined,
-          allowedTopics: topics,
-          allowedSubtopicsByTopic: subsByTopic,
-          topicHint: args.topicHint ?? undefined,
-        });
-        if (llm.confidence >= minConfidence) {
-          metrics.llmHits += 1;
-          return fillAndCache({
-            topic: llm.topic,
-            subtopic: llm.subtopic,
-            version: llm.version,
-            confidence: llm.confidence,
-            source: "llm",
-          });
-        }
-        metrics.rejects += 1;
-      } catch {
-        // ignore LLM errors; keep heuristic
-      }
-    }
-    return out;
+    return finalize(base);
   }
 
-  // repo heuristics
-  const topic = args.topicHint || "Unknown";
-  const sub = args.path ? deriveMdnSubtopicFromPath(args.path, topic) : null;
-  metrics.heuristicHits += 1;
-  const baseRepo: IResolvedLabels = {
-    topic,
-    subtopic: sub,
-    version: args.versionHint ?? null,
-    confidence: 0.6,
-    source: "heuristic",
-  };
-  const outRepo = fillAndCache(baseRepo);
-  if (ENABLE_DYNAMIC_LABEL_RESOLUTION && (!outRepo.subtopic || outRepo.topic === "Unknown")) {
-    try {
-      const { topics, subsByTopic } = getAllowedTopicsAndSubtopics();
-      const llm = await classifyLabels({
-        urlOrPath: args.path || "",
-        siteOrRepo: `${args.repoOwner || ""}/${args.repoName || ""}`,
-        title: args.title ?? undefined,
-        allowedTopics: topics,
-        allowedSubtopicsByTopic: subsByTopic,
-        topicHint: args.topicHint ?? undefined,
-      });
-      if (llm.confidence >= minConfidence) {
-        metrics.llmHits += 1;
-        return fillAndCache({
-          topic: llm.topic,
-          subtopic: llm.subtopic,
-          version: llm.version,
-          confidence: llm.confidence,
-          source: "llm",
-        });
-      }
-      metrics.rejects += 1;
-    } catch {
-      // ignore LLM errors
-    }
+  try {
+    const { topics, subsByTopic } = getAllowedTopicsAndSubtopics();
+    const siteOrRepo =
+      args.source === "web" && args.url ? new URL(args.url).hostname : `${args.repoOwner || ""}/${args.repoName || ""}`;
+    const urlOrPath = args.source === "web" ? args.url || "" : args.path || "";
+
+    const llm = await classifyLabels({
+      urlOrPath,
+      siteOrRepo,
+      title: args.title ?? undefined,
+      allowedTopics: topics,
+      allowedSubtopicsByTopic: subsByTopic,
+      topicHint: args.topicHint ?? undefined,
+    });
+
+    const acceptedSubtopic = llm.confidence >= minConfidence ? llm.subtopic : null;
+    const base: IResolvedLabels = {
+      topic: llm.topic,
+      subtopic: acceptedSubtopic,
+      version: llm.version,
+      confidence: llm.confidence,
+      source: "llm",
+    };
+    metrics.llmHits += 1;
+    if (acceptedSubtopic === null) metrics.rejects += 1;
+    return finalize(base);
+  } catch {
+    const base: IResolvedLabels = {
+      topic: args.topicHint || "Unknown",
+      subtopic: args.subtopicHint ?? null,
+      version: args.versionHint ?? null,
+      confidence: 0,
+      source: args.topicHint || args.subtopicHint ? "hint" : "llm",
+    };
+    return finalize(base);
   }
-  return outRepo;
 }

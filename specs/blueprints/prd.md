@@ -23,7 +23,7 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 - **Seeded crawl:** Admin provides seed URL(s) and domain/prefix rules (e.g., MDN JavaScript Guide). System crawls within constraints, respecting robots.txt and rate limits.
 - **Extraction & normalization:** Parse main content (titles, headings, prose, code blocks). Normalize, de‑duplicate, and chunk (1–2k chars, 10–15% overlap).
 - **Embeddings:** Create 1536‑d embeddings (OpenAI `text-embedding-3-small`) and store in `document_chunks` for retrieval.
-- **Categorization:** Assign labels per document/chunk: `{ topic, area, subtopic, version }` (e.g., topic: JavaScript, area: Async, subtopic: Promises, version: ES6+). Derive from URL structure and breadcrumbs; maintain synonym rules.
+- **Categorization:** Classifier‑only labeling assigns `{ topic, subtopic, version }` from an explicit ontology (no heuristics/rules). Labels come only from a strict LLM classifier with confidence gating (default 0.8) and URL/path caching; explicit operator hints are never overridden. On low confidence, `subtopic` is left null (no guessing). A small preflight sample validates distribution and low‑confidence rate before full runs; metrics are emitted during ingestion for observability.
 
 ### 2) AI‑Generated MCQs with Labels and Citations
 

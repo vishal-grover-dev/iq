@@ -107,8 +107,10 @@
  - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
  - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
  - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
+ - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for content extraction and quality checks (URL heuristics for labels removed; classifier-only).
  - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
  - `label-resolver.utils.ts`: Pluggable label resolver applying rules, heuristics, and OpenAI fallback with caching and metrics.
+ - `label-resolver.utils.ts`: Classifier-only resolver using OpenAI with whitelist ontology, URL/path caching, hints precedence, and metrics.
  
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
  - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
@@ -152,6 +154,7 @@
  - `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
  - `007-MCQ-Embeddings-And-Dedupe.sql`: Adds MCQ embeddings + content_key, ANN index, and `retrieval_mcq_neighbors` RPC for near-duplicate detection.
  - `008-MCQ-Code-Column.sql`: Adds nullable `code` column to `mcq_items` for dedicated code snippets.
+ - `009-WebDev-Topics-Fix.sql`: Backfill to correct `documents` and `document_chunks` topics for web.dev/learn to HTML/CSS/PWA.
 
 ### app/api
 

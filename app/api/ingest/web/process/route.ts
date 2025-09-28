@@ -5,6 +5,7 @@ import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
 import { getEmbeddings } from "@/services/ai.services";
 import { prefilterExistingWebPages, assessAndPreparePage, insertChunksBatch } from "@/utils/ingest-web-process.utils";
+import { getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
 import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
 
 export const runtime = "nodejs";
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
     };
 
     await supabase.from("ingestions").update({ status: "processing" }).eq("id", ingestionId);
+    resetLabelResolverMetrics();
     await updateProgress({ step: "crawling", errorsCount: 0 });
     await writeEvent("start", "Web ingestion started", "info", { meta });
 
@@ -146,6 +148,9 @@ export async function POST(req: NextRequest) {
           const item = embeddingBatch[bi]!;
           await writeEvent("ingest", `Inserted ${perItem[bi]} chunks`, "info", { url: item.url });
         }
+        // Emit classifier metrics snapshot periodically
+        const m = getLabelResolverMetrics();
+        await writeEvent("labels", "Classifier metrics snapshot", "info", m as any);
         embeddingBatch.length = 0;
       }
 
@@ -154,6 +159,9 @@ export async function POST(req: NextRequest) {
 
     await supabase.from("ingestions").update({ status: "completed" }).eq("id", ingestionId);
     await updateProgress({ step: "completed" });
+    // Final classifier metrics
+    const finalMetrics = getLabelResolverMetrics();
+    await writeEvent("labels", "Classifier metrics final", "info", finalMetrics as any);
     await writeEvent("complete", "Web ingestion completed");
 
     return NextResponse.json({

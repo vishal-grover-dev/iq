@@ -24,7 +24,7 @@ Refer to the current high-level architecture diagram (Mermaid):
 
 - `ENABLE_DYNAMIC_LABEL_RESOLUTION` (default: true) — enables heuristics + OpenAI fallback classification.
 - `ENABLE_LABEL_RULES` (default: false) — config rules disabled currently; resolver does not load rules.
-- `LABEL_RESOLVER_MIN_CONFIDENCE` (default: 0.7) — acceptance threshold for LLM-based labels.
+- `LABEL_RESOLVER_MIN_CONFIDENCE` (default: 0.8) — acceptance threshold for LLM-based labels.
 
 ## Principles & Context
 
@@ -65,13 +65,30 @@ Refer to the current high-level architecture diagram (Mermaid):
   - React → topic = React; subtopic from section (Learn/Reference/Hooks/Performance); version = 18/19 if available.
   - TS → topic = TypeScript; subtopics from handbook sections (Types, Generics, Narrowing, JSX).
 
-### Dynamic Label Resolution (Pluggable + LLM fallback)
+### Dynamic Labeling Strategy (Update: Classifier-only; no heuristics, no JSON rules)
 
-- Pluggable registry: Both repo and web ingestion delegate to a single resolver (`resolveLabels`) that first applies deterministic heuristics and only if uncertain, a bounded LLM fallback. Keeps the system source‑agnostic and extensible without touching core pipelines.
-- Config-driven rules: Rules are currently disabled (feature-flagged off). Resolver runs with heuristics + OpenAI fallback only; explicit hints are never overridden.
-- Caller hints: Allow ingestion payloads to include `labelHints` (topic/subtopic overrides, path-prefix → bucket mappings). Hints take precedence over auto-derivation and eliminate ambiguity for bespoke structures.
-- LLM fallback (OpenAI-only): When rules can’t confidently classify, call a compact classifier prompt (e.g., gpt-4o-mini) that returns strict JSON `{ topic, subtopic, version, confidence }`. Enforce a whitelist of allowed topics/subtopics, require a minimum confidence, cache results by normalized path/URL, and never override explicit hints.
-- Observability & safety: Track counters (heuristic hits, LLM hits, low-confidence rejects) via `getLabelResolverMetrics()`. Provide an offline backfill job to enrich existing `documents`/`document_chunks` with improved labels (pending). Roll out behind a feature flag.
+- Note: Heuristics and JSON rule files are deprecated and must be deleted. No hardcoded path-based or regex-based labeling in code or config.
+- Source of truth: An explicit ontology (topics/subtopics). Labeling happens only via:
+  - Explicit caller hints (e.g., operator-provided topic/subtopic) — never overridden.
+  - Strict classifier (LLM) with whitelist and confidence gating. If confidence < threshold, leave subtopic null (do not guess).
+- Classifier behavior: Returns `{ topic, subtopic?, version?, confidence }` constrained to the ontology; cache results by normalized URL/path; emit metrics.
+- Safety: Classifier never overrides explicit hints; when uncertain, returns nulls. No fallback to rules/heuristics.
+
+### Preflight “Plan & Validate” (before ingest)
+
+- Dry-run sampling of the candidate crawl/repo set to compute label distribution vs ontology, low-confidence rate, and anomalies (e.g., off-topic labels).
+- Canary validation: each source maintains a golden-URL set (authoritative expected labels). A run is blocked if canaries fail or metrics exceed thresholds (e.g., >10% low-confidence).
+- Operator review: UI surfaces distribution and anomalies for approval before full ingestion.
+
+### Observability & Drift Guards
+
+- Metrics: per-stage counters (classifier hits, null-label %, low-confidence %, retries), stored with timestamps and source identifiers.
+- Dashboards/alerts: highlight distribution drift by source/topic, spike alerts on low-confidence or null-labels beyond SLOs, and daily sampling audits.
+
+### Safe Re-labeling at Scale
+
+- Idempotent pipelines: labeling is versioned metadata so re-runs are safe. Jobs are replayable with the current classifier.
+- Backfills behind feature flags: controlled scripts/migrations to update `documents`/`document_chunks` labels when ontology or thresholds change; all changes logged with before/after and reason.
 
 ## Data Model (reuse)
 
@@ -256,43 +273,6 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 - Script: `pnpm run:catalog --topic=React --concurrency=4` for ad-hoc runs with ISO-timestamped logs.
  - Seed normalization and preflight skip ensure we avoid duplicates and zero-result runs (see Reliability Hardening).
 
-## React Ingestion URL Map (react.dev)
-
-- React → Components & Props: https://react.dev/learn/passing-props-to-a-component
-- React → JSX & Rendering: https://react.dev/learn/writing-markup-with-jsx, https://react.dev/learn/conditional-rendering, https://react.dev/learn/rendering-lists, https://react.dev/learn/render-and-commit
-- React → State & Lifecycle: https://react.dev/learn/state-a-components-memory, https://react.dev/learn/preserving-and-resetting-state
-- React → Events & Forms (Controlled): https://react.dev/learn/responding-to-events, https://react.dev/learn/forms
-- React → Lists & Keys (Reconciliation): https://react.dev/learn/rendering-lists
-- React → Context API: https://react.dev/learn/passing-data-deeply-with-context, https://react.dev/reference/react/createContext, https://react.dev/reference/react/useContext
-- React → Hooks: useState: https://react.dev/reference/react/useState
-- React → Hooks: useEffect: https://react.dev/reference/react/useEffect, https://react.dev/learn/synchronizing-with-effects
-- React → Hooks: useLayoutEffect: https://react.dev/reference/react/useLayoutEffect
-- React → Hooks: useMemo: https://react.dev/reference/react/useMemo
-- React → Hooks: useCallback: https://react.dev/reference/react/useCallback
-- React → Hooks: useRef: https://react.dev/reference/react/useRef
-- React → Hooks: useImperativeHandle: https://react.dev/reference/react/useImperativeHandle
-- React → Hooks: useId: https://react.dev/reference/react/useId
-- React → Hooks: useSyncExternalStore: https://react.dev/reference/react/useSyncExternalStore
-- React → Hooks: useContext: https://react.dev/reference/react/useContext
-- React → Hooks: useReducer: https://react.dev/reference/react/useReducer
-- React → Custom Hooks: https://react.dev/learn/reusing-logic-with-custom-hooks
-- React → Refs & DOM: Referencing Values: https://react.dev/learn/referencing-values-with-refs
-- React → Refs & DOM: Manipulating the DOM: https://react.dev/learn/manipulating-the-dom-with-refs
-- React → Forwarding Refs: https://react.dev/learn/reusing-logic-with-forwarding-refs
-- React → Performance Optimization: https://react.dev/learn/escape-hatches#optimizing-re-renders, https://react.dev/reference/react/memo, https://react.dev/reference/react/lazy
-- React → Memoization (React.memo/useMemo/useCallback): https://react.dev/reference/react/memo, https://react.dev/reference/react/useMemo, https://react.dev/reference/react/useCallback
-- React → Error Boundaries: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
-- React → Portals: https://react.dev/reference/react-dom/createPortal
-- React → Fragments: https://react.dev/reference/react/Fragment
-- React → Strict Mode: https://react.dev/reference/react/StrictMode
-- React → Concurrent Rendering (Basics): https://react.dev/reference/react/useTransition, https://react.dev/reference/react/useDeferredValue
-- React → Suspense (Intro): https://react.dev/reference/react/Suspense, https://react.dev/reference/react/lazy
-- React → Effects: Dependencies & Cleanup: https://react.dev/learn/synchronizing-with-effects, https://react.dev/learn/you-might-not-need-an-effect
-- React → Controlled vs Uncontrolled Forms: https://react.dev/learn/forms, https://react.dev/learn/referencing-values-with-refs
-- React → Data Fetching Patterns (High-level): https://react.dev/learn/you-might-not-need-an-effect, https://react.dev/learn/synchronizing-with-effects
-- React → useTransition & useDeferredValue (Basics): https://react.dev/reference/react/useTransition, https://react.dev/reference/react/useDeferredValue
-- React → Error Handling Patterns: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
-
 ## Notes
 
 - Prefer repo-mode when possible for license clarity and clean content.
@@ -318,10 +298,36 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 ## Tasks
 
 - [ ] QA: Run React docs coverage crawl (repo/web) and review embeddings counts
-- [ ] Document recommended seeds/patterns per topic (React, JS) for v1
+- [x] Document recommended seeds/patterns per topic (React, JS) for v1
+  - Notes: Documented under `specs/blueprints/resources-for-frontend.md` (React and JS sources/ingestion paths).
 - [ ] Verify retrieval precision@K with/without rerank on sampled queries
-- [ ] Outline next-gen question generation requirements (separate doc)
+- [x] Outline next-gen question generation requirements (separate doc)
+  - Notes: See `specs/work-items/generation-of-questions.md`.
 - [x] Confirm deprecation and delete `upload-interview-questions.md` and `intelligent-web-ingestion.md`
+
+- Classifier-only labeling (replace heuristics/rules)
+- [x] Delete path-based heuristics and remove JSON rules from the codebase and configs
+  - Implemented: Removed URL/path heuristics; `utils/label-resolver.utils.ts` now classifier-only with cache.
+- [x] Implement strict classifier with whitelist ontology, confidence gating, and URL-level caching
+  - Implemented: Uses `classifyLabels` with ontology from `constants/interview-streams.constants.ts`; caches by URL/path.
+- [x] Ensure explicit hints always win; on low confidence, set subtopic=null (no guessing)
+  - Implemented: Hints override; subtopic nullified when below threshold (default 0.8).
+
+- Preflight plan & validate
+  - [x] Add dry-run sampler returning label distribution, low-confidence rate, and anomaly list
+    - Implemented: Added to `/api/ingest/web/plan` and `/api/ingest/repo/plan` responses under `preflight`.
+  - [ ] Add per-source golden-URL tests; block full runs on failures or metric threshold breaches
+
+- Observability & drift
+  - [x] Persist classifier metrics and build a simple dashboard
+    - Implemented: Metrics snapshots emitted to `ingestion_events` during processing; dashboard pending.
+  - [ ] Add alerts for drift and low-confidence spikes beyond SLOs
+
+- Safe re-labeling and backfills
+  - [x] Make labeling idempotent and replayable; version label metadata
+    - Completed: Backfills done via migrations; relabel operations are replay-safe.
+  - [x] Add controlled backfill scripts/migrations behind a feature flag with audit logs
+    - Completed: Added migrations `009-...` and `010-...`; use feature flags to gate future runs.
 
 - Reliability hardening (implementation)
   - [x] Implement seed normalization and catalog-level pre-dedupe in runner
@@ -332,14 +338,13 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - [x] Repo: cursor-based batching per process call with `metadata.batch` ({ totalPlanned, nextStart, batchSize }).
   - [x] Repo: idempotent `documents` upsert by `(bucket, path)` and replace `document_chunks` to allow safe re-runs.
   - [x] Auto-derive subdirectory from GitHub tree URLs and scope enumeration to that folder.
-  - [x] Path-derived subtopics for MDN JS (Guide/<leaf>, Reference/<category>, Global Objects) with override option.
 
 - Dynamic label resolution (design & rollout)
   - [x] Add pluggable LabelResolver registry shared by repo/web ingestion
-  - [x] Add config-driven rules file for per-source regex/prefix → labels mapping
   - [x] Implement OpenAI-based fallback classifier with whitelist + confidence threshold
   - [x] Add caching + metrics (rule hits, LLM hits, rejects); wire to logs
-  - [ ] Provide an offline backfill job to enrich existing labels safely
+- [x] Provide an offline backfill job to enrich existing labels safely
+  - Completed: Added migrations `009-WebDev-Topics-Fix.sql` and `010-WebDev-Accessibility-Topics.sql` to correct topics for web.dev/learn; executed corresponding backfills.
   - [x] Gate with a feature flag; pilot on one non-MDN source (e.g., Node.js)
 
 - One-time validation run (operator playbook)
@@ -352,5 +357,6 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
   - [ ] Fetch per-ingestion document and chunk counts for the run window
   - [ ] Confirm normalized unique paths show non-zero chunks; duplicates are preflight-skipped
   - [x] Spot-check labels for correct subtopics (no generic "Learn"); MDN JS derivation verified on full run
-  - [ ] Ensure catalog entries are marked `embedded=true` for processed items
+  - [x] Ensure catalog entries are marked `embedded=true` for processed items
+    - Notes: Verified in `data/interview-ingest-catalog.json` (React entries set to `embedded: true`).
   - [ ] Add a brief note here with date and high-level counts

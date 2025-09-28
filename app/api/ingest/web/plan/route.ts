@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { externalGetWithRetry } from "@/services/http.services";
-import { suggestCrawlHeuristics } from "@/services/ai.services";
-import * as cheerio from "cheerio";
 import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
+import { resolveLabels } from "@/utils/label-resolver.utils";
 
 export const runtime = "nodejs";
 
@@ -60,6 +58,23 @@ export async function POST(req: NextRequest) {
       depthMap: planner.depthMap,
     });
 
+    // Optional preflight dry-run labeling on a small sample to expose distribution and low-confidence
+    const sampleSize = Math.min(20, pages.length);
+    const sample = pages.slice(0, sampleSize);
+    const distribution: Record<string, number> = {};
+    let lowConfidence = 0;
+    for (const p of sample) {
+      const labeled = await resolveLabels({
+        source: "web",
+        url: p.url,
+        title: p.title ?? undefined,
+        topicHint: topic ?? undefined,
+      });
+      const key = `${labeled.topic}|${labeled.subtopic ?? "(null)"}`;
+      distribution[key] = (distribution[key] ?? 0) + 1;
+      if ((labeled.subtopic ?? null) === null) lowConfidence += 1;
+    }
+
     // MDN-specific section counts removed; planner is source-agnostic
 
     // Quota-applied preview (optional, source-agnostic)
@@ -76,6 +91,11 @@ export async function POST(req: NextRequest) {
       sections: undefined,
       quotas: quotaPreview,
       debug: { useAiPlanner, aiUsed: planner.aiUsed, topic: topic ?? null, returnAllPages, applyQuotas },
+      preflight: {
+        sampled: sampleSize,
+        lowConfidenceRate: sampleSize > 0 ? lowConfidence / sampleSize : 0,
+        distribution,
+      },
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });

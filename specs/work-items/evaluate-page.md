@@ -786,6 +786,73 @@ Props: questions (array), filter controls
 
 Renders: scrollable list of all questions with user's answer, correct answer, explanation
 
+## Charting & Visualization
+
+### Rationale for Visual Charts
+
+Visual charts enhance the evaluation results experience by:
+
+- **Pattern Recognition**: Users instantly see performance landscape (React hooks: 85% vs. State Management: 40%) without mental computation from tables
+- **Progress Tracking Motivation**: Visual "before/after" story across attempts (Redux: 40% → 72%) drives continued engagement for "Evaluate → Learn → Evaluate again" cycle
+- **Weak Area Salience**: Color-coded breakdowns make weak areas impossible to ignore while keeping experience non-punitive
+- **Cognitive Level Patterns**: Bloom taxonomy gradients (Remember: 90%, Apply: 65%, Analyze: 45%) reveal memorization vs. application gaps—key interview readiness signals
+
+### Library Choice: Recharts
+
+**Decision**: Use Recharts as the primary charting library for results visualization.
+
+**Why Recharts:**
+
+- **Composable React components**: Matches shadcn/ui philosophy of building from primitives (`<BarChart><Bar /><XAxis /></BarChart>`)
+- **TypeScript native**: Strong type definitions out of the box; aligns with project's strict typing guidelines
+- **Mobile-responsive**: SVG-based with `<ResponsiveContainer>` utilities; works across desktop/mobile profiles without custom media queries
+- **Reasonable bundle size**: ~50KB gzipped for 2-3 chart types (acceptable trade-off for UX value)
+- **Accessibility baseline**: Supports ARIA labels and keyboard navigation for chart elements (WCAG AA target)
+- **Popular & maintained**: 23k+ GitHub stars, active development, large community support
+
+**Installation:**
+```bash
+pnpm add recharts
+```
+
+### Chart Implementation Plan
+
+**1. Score Gauge (Overall Performance)**
+- **Component**: `<RadialBarChart>` with custom styling
+- **Purpose**: Immediate emotional impact showing overall score (0-100%)
+- **Location**: Top of results summary card
+- **Design**: Match shadcn/ui theme colors; use green/amber/red tiers for performance levels
+
+**2. Topic/Bloom Accuracy Bars**
+- **Component**: Horizontal `<BarChart>`
+- **Purpose**: Show relative strengths across topics and cognitive levels
+- **Data**: Topic breakdown (React: 8/12, JavaScript: 10/15) and Bloom breakdown (Remember: 12/15, Apply: 18/25)
+- **Design**: Sortable by accuracy; color-coded bars; mobile-friendly stacking
+
+**3. Subtopic Breakdown (Hybrid Approach)**
+- **Component**: Simple table with CSS-based inline progress bars (no Recharts needed)
+- **Purpose**: Detailed subtopic metrics without heavy library overhead
+- **Rationale**: Lighter, more accessible, and sufficient for tabular data with visual indicators
+
+**4. Weak Areas Panel (Text-Based)**
+- **Component**: Current text-based panel (no chart)
+- **Purpose**: Actionable recommendations with citations
+- **Rationale**: Charts not needed here; focus on clarity and study resources
+
+### Design Constraints
+
+- **Keep it simple**: 2-3 chart types max; avoid pie charts, 3D effects, or animated dashboards that distract from "what do I study next?"
+- **Mobile-first**: Charts must work on phones; use responsive containers and test across mobile profiles
+- **Performance**: Lazy-load Recharts on results page only (not needed during evaluation)
+- **Accessibility**: Ensure charts have text alternatives, ARIA labels, and keyboard navigation
+- **Consistency**: Override Recharts default colors to match shadcn/ui theme tokens (use CSS variables)
+
+### Bundle Impact
+
+- **Recharts addition**: +50KB gzipped
+- **Justification**: Users load results page once per attempt; UX value (motivation, pattern recognition) outweighs bundle cost
+- **Mitigation**: Lazy-load charts using dynamic imports; code-split from evaluation flow
+
 ## Reusable Components from Generation Phase
 
 **Key Insight**: We've already built several high-quality components during the MCQ generation work-item that can significantly accelerate evaluate page development. While these components don't have animations yet, their core functionality and structure are solid foundations.
@@ -1358,7 +1425,14 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Info box explaining no mid-attempt feedback
   - Session timeout warning after 30 minutes on same question
   - Redirects to results page on completion (60/60)
-- [ ] **UI**: Build results page (`app/evaluate/[attemptId]/results/page.tsx`) with summary, charts, and review list
+- [x] **UI**: Build results page (`app/evaluate/[attemptId]/results/page.tsx`) with summary, charts, and review list
+  - Summary card with score, gauge, and celebration message based on performance tier
+  - Performance breakdowns by topic, cognitive level (Bloom), and difficulty
+  - Weak areas panel highlighting subtopics < 50% accuracy with recommendations and citations
+  - Expandable subtopic breakdown for detailed analysis
+  - Question review section with filtering (show only incorrect, filter by topic)
+  - All 60 questions displayed with correctness indicators, explanations, and citations
+  - First time users see any feedback about their answers (evaluation integrity maintained)
 - [x] **Components**: Create `questionCard.component.tsx` with syntax highlighting and option selection
   - Two modes: evaluation (interactive) and review (read-only with feedback)
   - Syntax highlighting with Prism (reuses patterns from mcqCard)
@@ -1367,10 +1441,36 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Accessibility: ARIA labels, keyboard nav, focus management
   - Shows user answer and correctness in review mode
   - Optional explanation and citations display
-- [ ] **Components**: Create `feedbackPanel.component.tsx` with correctness indicator and explanation
-- [ ] **Components**: Create `resultsChart.component.tsx` for topic/Bloom accuracy visualization
-- [ ] **Components**: Create `weakAreasPanel.component.tsx` with recommendations
-- [ ] **Components**: Create `questionReviewList.component.tsx` with filtering
+- [x] **Components**: Create `resultsChart.component.tsx` for topic/Bloom accuracy visualization
+  - Simple table/list format showing category, correct/total, and accuracy percentage
+  - Reusable for topic, subtopic, and Bloom level breakdowns
+  - ~30 lines (compact, focused component)
+- [x] **Components**: Create `weakAreasPanel.component.tsx` with recommendations
+  - Displays subtopics with < 50% accuracy (≥3 questions minimum)
+  - Shows topic, subtopic, accuracy, recommendation text, and citation links
+  - Amber-themed warning panel for visual emphasis
+  - ~40 lines
+- [x] **Components**: Create `questionReviewList.component.tsx` with filtering
+  - Displays all 60 questions with user answers, correct answers, explanations, citations
+  - Filter controls: show only incorrect, filter by topic
+  - Shows question count and filtered count
+  - Correctness indicators (green checkmark / red X)
+  - Uses QuestionCard in review mode for each question
+  - ~110 lines
+- [x] **Note**: feedbackPanel.component.tsx not created as separate component
+  - Feedback functionality is integrated into QuestionCard component's review mode
+  - This follows DRY principles and avoids duplication
+  - QuestionCard handles both evaluation (no feedback) and review (with feedback) modes
+- [ ] **Charts & Visualization**: Enhance results page with visual performance breakdowns using Recharts
+  - Install Recharts library (`pnpm add recharts`)
+  - Implement score gauge component using `<RadialBarChart>` (0-100% with color tiers)
+  - Implement topic/Bloom accuracy bars using horizontal `<BarChart>` (sortable, color-coded)
+  - Keep subtopic breakdown as CSS-based progress bars (no chart library)
+  - Ensure mobile responsiveness with `<ResponsiveContainer>`
+  - Match shadcn/ui theme colors using CSS variables
+  - Add ARIA labels and keyboard navigation for accessibility
+  - Lazy-load Recharts on results page (code-split from evaluation flow)
+  - Test across desktop/mobile profiles for visual regression
 - [ ] **CRITICAL: Pre-seed Question Bank**: Generate and validate 250–500 questions before launch
   - Use existing MCQ generation automation from `generation-of-questions.md` work-item
   - Target distribution: 125–250 Easy, 85–170 Medium, 40–80 Hard

@@ -866,6 +866,8 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 
 **Core Philosophy**: Maximize reuse of existing codebase knowledge and patterns to accelerate development while maintaining code quality through SOLID, DRY, and KISS principles.
 
+**Component Size Guideline**: Keep React components around 200 lines with a small leeway (~10% buffer, ≈220 lines). When larger, decompose into smaller subcomponents and/or extract logic into hooks/utilities. This follows the project-wide convention from `specs/blueprints/directory-structure.md`.
+
 ### Leverage Existing Codebase Knowledge
 
 #### Services & API Patterns
@@ -1330,7 +1332,12 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Increments attempt counters (questions_answered, correct_count)
   - Marks attempt as completed when reaching 60 questions
   - Returns ONLY progress info (no score, no correctness feedback)
-- [ ] **API**: Implement `/api/evaluate/attempts/:id/results` (GET)
+- [x] **API**: Implement `/api/evaluate/attempts/:id/results` (GET)
+  - Verifies attempt completion before showing feedback (evaluation integrity)
+  - Computes summary (score, time), topic/subtopic/Bloom breakdowns
+  - Identifies weak areas (< 50% accuracy, ≥3 questions) with recommendations
+  - Returns all 60 questions with user answer, correct answer, explanation, citations
+  - This is the FIRST time users see any feedback about their answers
 - [x] **Selection Algorithm**: Implement question selection orchestration in API route
   - Implemented in GET `/api/evaluate/attempts/:id` route
   - Gathers attempt context: asked questions, difficulty/topic/bloom distributions, recent subtopics
@@ -1338,10 +1345,28 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Queries MCQ bank with LLM criteria, scores candidates based on preferences
   - Fallback to relaxed criteria if no candidates found
   - Handles edge cases: excludes asked questions, enforces coding mode filter, avoids subtopic clustering
-- [ ] **UI**: Build evaluate landing page (`app/evaluate/page.tsx`) with start/resume flow
-- [ ] **UI**: Build in-progress evaluation page (`app/evaluate/[attemptId]/page.tsx`) with question card and navigation
+- [x] **UI**: Build evaluate landing page (`app/evaluate/page.tsx`) with start/resume flow
+  - Shows resume prompt with progress bar for in-progress attempts
+  - Shows start new evaluation button with 4-point explainer for new users
+  - Displays past attempts summary with scores and quick access to results
+  - Empty state for first-time users
+- [x] **UI**: Build in-progress evaluation page (`app/evaluate/[attemptId]/page.tsx`) with question card and navigation
+  - Progress bar showing questions answered (e.g., "22/60") with percentage
+  - QuestionCard component in evaluation mode (no feedback)
+  - Submit answer records silently and loads next question
+  - Pause & Save button to exit and resume later
+  - Info box explaining no mid-attempt feedback
+  - Session timeout warning after 30 minutes on same question
+  - Redirects to results page on completion (60/60)
 - [ ] **UI**: Build results page (`app/evaluate/[attemptId]/results/page.tsx`) with summary, charts, and review list
-- [ ] **Components**: Create `questionCard.component.tsx` with syntax highlighting and option selection
+- [x] **Components**: Create `questionCard.component.tsx` with syntax highlighting and option selection
+  - Two modes: evaluation (interactive) and review (read-only with feedback)
+  - Syntax highlighting with Prism (reuses patterns from mcqCard)
+  - Keyboard shortcuts: 1-4 for options, Enter to submit
+  - Mobile-first responsive design
+  - Accessibility: ARIA labels, keyboard nav, focus management
+  - Shows user answer and correctness in review mode
+  - Optional explanation and citations display
 - [ ] **Components**: Create `feedbackPanel.component.tsx` with correctness indicator and explanation
 - [ ] **Components**: Create `resultsChart.component.tsx` for topic/Bloom accuracy visualization
 - [ ] **Components**: Create `weakAreasPanel.component.tsx` with recommendations

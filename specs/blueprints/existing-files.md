@@ -33,6 +33,8 @@
 - `page.tsx`: Home page route rendering a simple placeholder.
 - `not-found.tsx`: 404 error page with return home link.
  - `upload/page.tsx`: Upload page route rendering the upload form flow.
+ - `evaluate/page.tsx`: Evaluate landing page with start/resume flow, progress display, and past attempts summary.
+ - `evaluate/[attemptId]/page.tsx`: In-progress evaluation page with question display, answer submission, and pause/resume.
 
 ### components/common
 
@@ -66,6 +68,12 @@
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
 - `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls.
   - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary (no generation action).
+
+### components/evaluate
+
+- `questionCard.component.tsx`: MCQ question card with syntax highlighting, option selection, and keyboard shortcuts. Supports evaluation mode (interactive) and review mode (read-only with feedback). ~190 lines.
+- `codeBlock.component.tsx`: Reusable code block component with syntax highlighting via Prism. Handles markdown rendering with fenced code blocks. ~75 lines.
+- `optionButton.component.tsx`: Single MCQ option button with evaluation/review mode styling, correctness indicators, and keyboard accessibility. ~95 lines.
 
 ### hooks
 
@@ -182,6 +190,7 @@
  - `api/evaluate/attempts/route.ts`: Evaluation attempts routes (GET lists attempts, POST creates new attempt).
  - `api/evaluate/attempts/[id]/route.ts`: Single attempt routes (GET fetches details with LLM-selected next question, PATCH pauses attempt).
  - `api/evaluate/attempts/[id]/answer/route.ts`: Answer submission route (POST) records answer silently without revealing correctness.
+ - `api/evaluate/attempts/[id]/results/route.ts`: Results route (GET) provides post-attempt analytics, breakdowns, weak areas, and complete question review with feedback.
  - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
  - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
  - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.

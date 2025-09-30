@@ -39,7 +39,7 @@
 
 ### components/common
 
-- `header.component.tsx`: Application header with brand link and theme toggle.
+- `header.component.tsx`: Application header with brand link, navigation menu (Upload, Generate, Evaluate), and theme toggle. Includes active state detection using `usePathname` hook.
 - `logo.component.tsx`: Logo component using `next/image` for `/logo.svg`.
 - `themeToggle.component.tsx`: Theme toggle with sun/moon icons using Switch component.
  - `loader.component.tsx`: Full-page Lottie loader used for async/processing states.

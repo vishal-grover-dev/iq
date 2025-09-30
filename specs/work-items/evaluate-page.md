@@ -1412,11 +1412,12 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Queries MCQ bank with LLM criteria, scores candidates based on preferences
   - Fallback to relaxed criteria if no candidates found
   - Handles edge cases: excludes asked questions, enforces coding mode filter, avoids subtopic clustering
-- [ ] **UI**: Add evaluate header/navigation to main application header
-  - Add "Evaluate" navigation item to main header component
-  - Link to `/evaluate` page for accessing evaluation feature
-  - Show active state when on evaluate pages (`/evaluate`, `/evaluate/[id]`, `/evaluate/[id]/results`)
-  - Follow existing header patterns from other features
+- [x] **UI**: Add evaluate header/navigation to main application header
+  - Added "Evaluate" navigation item to main header component
+  - Links to `/evaluate` page for accessing evaluation feature
+  - Shows active state when on evaluate pages (`/evaluate`, `/evaluate/[id]`, `/evaluate/[id]/results`) using `usePathname` hook
+  - Follows existing header patterns from other features
+  - Updated header component with proper active state styling and `usePathname` import
 - [x] **UI**: Build evaluate landing page (`app/evaluate/page.tsx`) with start/resume flow
   - Shows resume prompt with progress bar for in-progress attempts
   - Shows start new evaluation button with 4-point explainer for new users

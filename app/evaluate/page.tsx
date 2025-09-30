@@ -29,7 +29,7 @@ export default function EvaluatePage() {
 
   const handleStartNewAttempt = async () => {
     try {
-      const newAttempt = await createAttemptMutation.mutateAsync({});
+      const newAttempt = await createAttemptMutation.mutateAsync();
       router.push(`/evaluate/${newAttempt.attempt_id}`);
     } catch (error) {
       console.error("Failed to create attempt:", error);
@@ -106,8 +106,8 @@ export default function EvaluatePage() {
           <div className='mb-6'>
             <h2 className='text-xl font-semibold'>Start New Evaluation</h2>
             <p className='text-muted-foreground mt-2 text-sm'>
-              Answer 60 questions across React, JavaScript, TypeScript, HTML, CSS, State Management, Routing, Testing,
-              Accessibility, and PWA
+              Test your React.js frontend development skills with a comprehensive evaluation covering core concepts,
+              modern patterns, and real-world scenarios
             </p>
           </div>
 
@@ -117,9 +117,9 @@ export default function EvaluatePage() {
                 1
               </div>
               <div>
-                <p className='font-medium'>60 questions per evaluation</p>
+                <p className='font-medium'>Comprehensive skill assessment</p>
                 <p className='text-muted-foreground text-xs'>
-                  30 Easy, 20 Medium, 10 Hard with minimum 35% coding questions
+                  Thorough evaluation covering all aspects of React.js development
                 </p>
               </div>
             </div>
@@ -135,17 +135,6 @@ export default function EvaluatePage() {
             <div className='flex items-start gap-3'>
               <div className='bg-primary text-primary-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold'>
                 3
-              </div>
-              <div>
-                <p className='font-medium'>No feedback during evaluation</p>
-                <p className='text-muted-foreground text-xs'>
-                  Complete all 60 questions to see your results and learn from explanations
-                </p>
-              </div>
-            </div>
-            <div className='flex items-start gap-3'>
-              <div className='bg-primary text-primary-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold'>
-                4
               </div>
               <div>
                 <p className='font-medium'>Unlimited attempts</p>

@@ -17,6 +17,23 @@ type THeaderProps = {
 };
 
 export function Header({ className }: THeaderProps) {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+    return pathname.startsWith(href);
+  };
+
+  const getNavLinkClassName = (href: string) => {
+    const baseClasses = "text-sm font-medium transition-colors";
+    const activeClasses = "text-blue-600 dark:text-blue-400";
+    const inactiveClasses = "text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300";
+
+    return cn(baseClasses, isActive(href) ? activeClasses : inactiveClasses);
+  };
+
   return (
     <header
       className={cn(
@@ -33,19 +50,24 @@ export function Header({ className }: THeaderProps) {
           <NavigationMenu viewport={false}>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className='text-sm font-medium text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300'
-                >
-                  <Link href='/upload'>Upload</Link>
+                <NavigationMenuLink asChild>
+                  <Link href='/upload' className={getNavLinkClassName("/upload")}>
+                    Upload
+                  </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className='text-sm font-medium text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300'
-                >
-                  <Link href='/generate/mcq'>Generate</Link>
+                <NavigationMenuLink asChild>
+                  <Link href='/generate/mcq' className={getNavLinkClassName("/generate/mcq")}>
+                    Generate
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link href='/evaluate' className={getNavLinkClassName("/evaluate")}>
+                    Evaluate
+                  </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>

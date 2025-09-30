@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { selectNextQuestion } from "@/services/ai.services";
+import { selectNextQuestion, getEmbeddings } from "@/services/ai.services";
 import { EAttemptStatus } from "@/types/evaluate.types";
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
+import { computeMcqContentKey } from "@/utils/mcq.utils";
 
 export const runtime = "nodejs";
 
@@ -172,7 +173,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Failed to query questions" }, { status: 500 });
     }
 
-    // If no candidates found, try with relaxed criteria
+    // If no candidates found, try with relaxed criteria first
     if (!candidates || candidates.length === 0) {
       console.warn("No candidates found with preferred criteria, trying relaxed query");
 
@@ -193,47 +194,188 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
       const { data: relaxedCandidates } = await relaxedQuery;
 
-      if (!relaxedCandidates || relaxedCandidates.length === 0) {
-        return NextResponse.json(
-          { error: "Insufficient questions in bank. Please seed more questions." },
-          { status: 503 }
-        );
+      if (relaxedCandidates && relaxedCandidates.length > 0) {
+        // Select random question from relaxed candidates
+        const selected = relaxedCandidates[Math.floor(Math.random() * relaxedCandidates.length)];
+
+        // Assign to attempt
+        const nextOrder = attempt.questions_answered + 1;
+        await supabase.from("attempt_questions").insert({
+          attempt_id: attemptId,
+          question_id: selected.id,
+          question_order: nextOrder,
+        });
+
+        return NextResponse.json({
+          attempt: {
+            id: attempt.id,
+            status: attempt.status,
+            questions_answered: attempt.questions_answered,
+            correct_count: attempt.correct_count,
+            total_questions: attempt.total_questions,
+          },
+          next_question: {
+            id: selected.id,
+            question: selected.question,
+            options: selected.options,
+            code: selected.code || null,
+            metadata: {
+              topic: selected.topic,
+              subtopic: selected.subtopic,
+              difficulty: selected.difficulty,
+              bloom_level: selected.bloom_level,
+              question_order: nextOrder,
+              coding_mode: !!selected.code,
+            },
+          },
+        });
       }
 
-      // Select random question from relaxed candidates
-      const selected = relaxedCandidates[Math.floor(Math.random() * relaxedCandidates.length)];
+      // If still no candidates, fall back to on-demand generation
+      console.warn("No candidates found even with relaxed criteria, generating on-demand MCQ");
 
-      // Assign to attempt
-      const nextOrder = attempt.questions_answered + 1;
-      await supabase.from("attempt_questions").insert({
-        attempt_id: attemptId,
-        question_id: selected.id,
-        question_order: nextOrder,
-      });
+      try {
+        // Retrieve relevant context from interview content
+        const contextQuery = criteria.preferred_topics.length > 0 ? criteria.preferred_topics[0] : "React";
+        const contextSubtopic = criteria.preferred_subtopics.length > 0 ? criteria.preferred_subtopics[0] : null;
 
-      return NextResponse.json({
-        attempt: {
-          id: attempt.id,
-          status: attempt.status,
-          questions_answered: attempt.questions_answered,
-          correct_count: attempt.correct_count,
-          total_questions: attempt.total_questions,
-        },
-        next_question: {
-          id: selected.id,
-          question: selected.question,
-          options: selected.options,
-          code: selected.code || null,
-          metadata: {
-            topic: selected.topic,
-            subtopic: selected.subtopic,
-            difficulty: selected.difficulty,
-            bloom_level: selected.bloom_level,
-            question_order: nextOrder,
-            coding_mode: !!selected.code,
+        // Compute embedding for the context query
+        const queryText = `${contextQuery} ${contextSubtopic || ""} ${
+          criteria.difficulty
+        } ${criteria.preferred_bloom_levels.join(" ")}`.trim();
+        const [queryEmbedding] = await getEmbeddings([queryText]);
+
+        const { data: contextItems, error: contextError } = await supabase.rpc("retrieval_hybrid_by_labels", {
+          p_user_id: userId,
+          p_topic: contextQuery,
+          p_query_embedding: queryEmbedding as unknown as any,
+          p_query_text: queryText,
+          p_subtopic: contextSubtopic,
+          p_version: null,
+          p_topk: 8,
+          p_alpha: 0.5,
+        });
+
+        if (contextError) {
+          console.error("Error retrieving context:", contextError);
+          return NextResponse.json({ error: "Failed to retrieve context for question generation." }, { status: 500 });
+        }
+
+        if (!contextItems || contextItems.length === 0) {
+          return NextResponse.json({ error: "No relevant content found for question generation." }, { status: 503 });
+        }
+
+        // Convert context items to format expected by generateMcqFromContext
+        const contextForGeneration = contextItems.map((item: any) => ({
+          title: item.title,
+          url: `${item.bucket}/${item.path}`,
+          content: item.content,
+        }));
+
+        // Generate MCQ using retrieved context
+        const { generateMcqFromContext } = await import("@/services/ai.services");
+        const generatedMcq = await generateMcqFromContext({
+          topic: contextQuery,
+          subtopic: contextSubtopic,
+          difficulty: criteria.difficulty as EDifficulty,
+          bloomLevel:
+            criteria.preferred_bloom_levels.length > 0
+              ? (criteria.preferred_bloom_levels[0] as EBloomLevel)
+              : EBloomLevel.UNDERSTAND,
+          contextItems: contextForGeneration,
+          codingMode: criteria.coding_mode,
+          negativeExamples: [], // Could be populated from recent questions if needed
+        });
+
+        // Compute content key for deduplication
+        const contentKey = computeMcqContentKey(generatedMcq);
+
+        // Persist generated MCQ to database for future reuse
+        const { data: savedMcq, error: saveError } = await supabase
+          .from("mcq_items")
+          .insert({
+            topic: generatedMcq.topic,
+            subtopic: generatedMcq.subtopic,
+            version: generatedMcq.version || null,
+            difficulty: generatedMcq.difficulty,
+            bloom_level: generatedMcq.bloomLevel,
+            question: generatedMcq.question,
+            options: generatedMcq.options,
+            correct_index: generatedMcq.correctIndex,
+            explanation: generatedMcq.explanation || null,
+            citations: generatedMcq.citations,
+            code: generatedMcq.code || null,
+            content_key: contentKey,
+            embedding: null, // Can be computed later if needed
+            user_id: userId,
+          })
+          .select("id")
+          .single();
+
+        // Handle duplicate content key by finding existing MCQ
+        let questionId = savedMcq?.id;
+        if (saveError && saveError.code === "23505") {
+          // unique_violation
+          console.log("Generated MCQ already exists in database, finding existing version");
+          // Find the existing MCQ by content key
+          const { data: existingMcq } = await supabase
+            .from("mcq_items")
+            .select("id")
+            .eq("content_key", contentKey)
+            .eq("user_id", userId)
+            .single();
+
+          if (existingMcq) {
+            questionId = existingMcq.id;
+          }
+        } else if (saveError) {
+          console.warn("Could not save generated MCQ but continuing with attempt:", saveError.message);
+        }
+
+        // Assign generated question to attempt
+        const nextOrder = attempt.questions_answered + 1;
+        const finalQuestionId = questionId || `generated-${Date.now()}`;
+
+        await supabase.from("attempt_questions").insert({
+          attempt_id: attemptId,
+          question_id: finalQuestionId,
+          question_order: nextOrder,
+        });
+
+        return NextResponse.json({
+          attempt: {
+            id: attempt.id,
+            status: attempt.status,
+            questions_answered: attempt.questions_answered,
+            correct_count: attempt.correct_count,
+            total_questions: attempt.total_questions,
           },
-        },
-      });
+          next_question: {
+            id: finalQuestionId,
+            question: generatedMcq.question,
+            options: generatedMcq.options,
+            code: generatedMcq.code || null,
+            metadata: {
+              topic: generatedMcq.topic,
+              subtopic: generatedMcq.subtopic,
+              difficulty: generatedMcq.difficulty,
+              bloom_level: generatedMcq.bloomLevel,
+              question_order: nextOrder,
+              coding_mode: !!generatedMcq.code,
+              generated_on_demand: true,
+            },
+          },
+        });
+      } catch (generationError: any) {
+        console.error("Error generating on-demand MCQ:", generationError);
+        return NextResponse.json(
+          {
+            error: "Failed to generate question. Please try again or contact support if the issue persists.",
+            details: generationError?.message,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Score candidates based on preferences

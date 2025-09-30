@@ -90,9 +90,11 @@ export default function EvaluateAttemptPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-4 py-16">
-        <div className="flex items-center justify-center">
-          <div className="text-muted-foreground">Loading question...</div>
+      <div className='mx-auto w-full max-w-4xl px-4 py-16'>
+        <div className='flex items-center justify-center'>
+          <div className='text-muted-foreground'>
+            {data?.next_question?.metadata?.generated_on_demand ? "Generating question..." : "Loading question..."}
+          </div>
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/utils/tailwind.utils";
 import Logo from "@/components/common/logo.component";
 import ThemeToggle from "@/components/common/themeToggle.component";

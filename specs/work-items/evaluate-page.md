@@ -1412,6 +1412,11 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Queries MCQ bank with LLM criteria, scores candidates based on preferences
   - Fallback to relaxed criteria if no candidates found
   - Handles edge cases: excludes asked questions, enforces coding mode filter, avoids subtopic clustering
+- [ ] **UI**: Add evaluate header/navigation to main application header
+  - Add "Evaluate" navigation item to main header component
+  - Link to `/evaluate` page for accessing evaluation feature
+  - Show active state when on evaluate pages (`/evaluate`, `/evaluate/[id]`, `/evaluate/[id]/results`)
+  - Follow existing header patterns from other features
 - [x] **UI**: Build evaluate landing page (`app/evaluate/page.tsx`) with start/resume flow
   - Shows resume prompt with progress bar for in-progress attempts
   - Shows start new evaluation button with 4-point explainer for new users
@@ -1470,16 +1475,19 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Charts include Recharts built-in tooltips and ARIA support
   - Subtopic breakdown kept as simple CSS-based list (as planned)
   - Updated results page to use new chart components with improved layout
-- [ ] **CRITICAL: Implement On-Demand Generation**: Add Step 3 (generate new question) to selection algorithm
+- [x] **CRITICAL: Implement On-Demand Generation**: Add Step 3 (generate new question) to selection algorithm
   - **MISSING**: Current implementation only has database-first selection with relaxed criteria fallback
   - **BLOCKER**: Without on-demand generation, system fails when bank is insufficient (no fallback)
-  - **Implementation needed**:
-    - Add fallback to `generateMcqFromContext` service when no candidates found in bank
-    - Persist generated questions immediately to `mcq_items` table for future reuse
-    - Handle generation failures with retry logic and relaxed criteria
-    - Add "Preparing question..." loading state for generation delays (5-10s)
-  - **Reuse existing**: Leverage `services/ai.services.ts` and MCQ generation patterns from `generation-of-questions.md`
-  - **Location**: Add to GET `/api/evaluate/attempts/:id` route after relaxed criteria fallback
+  - **Implementation completed**:
+    - Added fallback to `generateMcqFromContext` service when no candidates found in bank (after relaxed criteria search)
+    - Retrieves relevant context using `retrieval_hybrid_by_labels` RPC with query embedding
+    - Persists generated questions immediately to `mcq_items` table with content key deduplication
+    - Handles generation failures gracefully (continues with generated question even if save fails)
+    - Handles duplicate content keys by finding existing MCQ in database
+    - Added "Generating question..." loading state for on-demand generation delays (5-10s)
+    - Uses proper Bloom level enum values (EBloomLevel.UNDERSTAND, etc.)
+  - **Reuse existing**: Leverages `services/ai.services.ts` (generateMcqFromContext) and `utils/mcq.utils.ts` (computeMcqContentKey)
+  - **Location**: Added to GET `/api/evaluate/attempts/:id` route after relaxed criteria fallback in on-demand generation section
 - [ ] **CRITICAL: Pre-seed Question Bank**: Generate and validate 250–500 questions before launch
   - Use existing MCQ generation automation from `generation-of-questions.md` work-item
   - Target distribution: 125–250 Easy, 85–170 Medium, 40–80 Hard

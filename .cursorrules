@@ -10,6 +10,18 @@
 - If anything is unclear during a task or question, ask for clarification immediately; efficiency and correctness are priorities.
 - Be honest, transparent, and direct; candid questions and blunt feedback are welcome.
 
+## Discussion mode and learning-friendly explanations
+
+- When the user asks "how", "why", "what", "explain", or "help me understand" questions, treat it as a discussion/learning query:
+  - Provide explanations in 2-5 bullet points without making code changes.
+  - Ask for confirmation before any file modifications.
+  - Offer examples and analogies when helpful.
+- The user is learning Generative AI concepts. When explaining AI/ML topics:
+  - Avoid technical jargon unless necessary.
+  - When jargon is needed, explain it simply first with concrete examples.
+  - Use real-world analogies to illustrate complex concepts.
+  - Break explanations into digestible steps.
+
 ## Visual verification for UI changes
 
 - When making any UI change, run visual and accessibility checks locally before concluding the task:

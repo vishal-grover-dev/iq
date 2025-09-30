@@ -30,7 +30,7 @@ type TInterviewSectionProps = {
     subtopic: string;
     ingestType: InterviewIngestType;
     url: string;
-    depth?: 2 | 3 | 4;
+    depth?: 0 | 1 | 2 | 3 | 4;
   }>;
   stream?: InterviewStream;
   disabled?: boolean;
@@ -249,20 +249,22 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
                 <div className='grid gap-1 sm:col-span-1'>
                   <FormLabel required>Depth</FormLabel>
                   <Combobox
-                    value={(row.depth ?? 3) as any}
+                    value={(row.depth ?? 2) as any}
                     onChange={(val) => {
                       const next = items.slice();
-                      next[idx] = { ...row, depth: Number(val) as 2 | 3 | 4 } as any;
+                      next[idx] = { ...row, depth: Number(val) as 0 | 1 | 2 | 3 | 4 } as any;
                       setValue("items", next as any, { shouldValidate: true });
                     }}
                     options={
                       [
+                        { label: "0", value: 0 },
+                        { label: "1", value: 1 },
                         { label: "2", value: 2 },
                         { label: "3", value: 3 },
                         { label: "4", value: 4 },
                       ] as any
                     }
-                    placeholder='3'
+                    placeholder='2'
                     disabled={disabled}
                   />
                 </div>

@@ -32,7 +32,7 @@ export interface IInterviewIngestItem {
   subtopic: string;
   ingestType: EInterviewIngestType;
   url: string;
-  depth?: 2 | 3 | 4;
+  depth?: 0 | 1 | 2 | 3 | 4;
 }
 
 export interface IInterviewStreamsFormValues {

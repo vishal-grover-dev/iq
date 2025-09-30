@@ -64,7 +64,7 @@
 ### components/upload
 
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
- - `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal.
+- `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls.
   - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary (no generation action).
 
 ### hooks
@@ -87,10 +87,10 @@
 ### types
 
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
-- `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed.
+- `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed. `IInterviewIngestItem.depth` supports 0-4.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
- - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
+- `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
 
 ### schema
 
@@ -143,7 +143,8 @@
 ### specs/work-items
 
 - `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Generation is removed and will be redesigned separately.
- - `generation-of-questions.md`: Work-item for the MCQ Generation page, personas, streaming, revision chat, and save flow to `mcq_items`.
+- `generation-of-questions.md`: Work-item for the MCQ Generation page, personas, streaming, revision chat, and save flow to `mcq_items`.
+- `react-interview-topics-expansion.md`: Expansion plan for additional React interview topics (Redux, Routing, Next.js, Bundling, Deployment) with resources, ingestion strategy, and verification tasks.
 
 ### migrations
 

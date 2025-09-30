@@ -75,7 +75,9 @@
 - `questionCard.component.tsx`: MCQ question card with syntax highlighting, option selection, and keyboard shortcuts. Supports evaluation mode (interactive) and review mode (read-only with feedback). ~190 lines.
 - `codeBlock.component.tsx`: Reusable code block component with syntax highlighting via Prism. Handles markdown rendering with fenced code blocks. ~75 lines.
 - `optionButton.component.tsx`: Single MCQ option button with evaluation/review mode styling, correctness indicators, and keyboard accessibility. ~95 lines.
-- `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines.
+- `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines. (Replaced by PerformanceBarChart for main results display)
+- `scoreGauge.component.tsx`: Radial gauge chart showing overall score (0-100%) with color-coded tiers using Recharts RadialBarChart. Mobile-responsive with centered score display. ~55 lines.
+- `performanceBarChart.component.tsx`: Horizontal bar chart for topic/Bloom/difficulty performance breakdowns using Recharts. Color-coded by accuracy, sortable, with responsive design. ~75 lines.
 - `weakAreasPanel.component.tsx`: Displays weak areas (< 50% accuracy) with recommendations and citations. Amber-themed warning panel. ~40 lines.
 - `questionReviewList.component.tsx`: Complete question review with filtering (incorrect only, by topic), correctness indicators, and detailed feedback. ~110 lines.
 

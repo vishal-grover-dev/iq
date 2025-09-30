@@ -108,10 +108,10 @@ export default function QuestionCard({
   };
 
   return (
-    <div className='rounded-lg border bg-card p-4 shadow-sm md:p-6'>
+    <div className='rounded-lg border bg-card p-4 shadow-sm md:p-6' data-testid='question-card'>
       {/* Metadata chips */}
       {metadata && (
-        <div className='mb-4 flex flex-wrap items-center gap-2'>
+        <div className='mb-4 flex flex-wrap items-center gap-2' data-testid='question-metadata'>
           {metadata.subtopic && <MetadataChip label={metadata.subtopic} />}
           {metadata.bloom_level && <MetadataChip label={metadata.bloom_level} />}
           {metadata.difficulty && <MetadataChip label={metadata.difficulty} />}
@@ -119,7 +119,7 @@ export default function QuestionCard({
       )}
 
       {/* Question text */}
-      <div className='prose prose-sm max-w-none break-words dark:prose-invert'>
+      <div className='prose prose-sm max-w-none break-words dark:prose-invert' data-testid='question-text'>
         <CodeBlock content={normalizedQuestion} defaultLanguage='javascript' />
       </div>
 
@@ -159,7 +159,7 @@ export default function QuestionCard({
 
       {/* Explanation (review mode only, if enabled) */}
       {mode === "review" && showExplanation && explanation && (
-        <div className='bg-muted/50 mt-4 rounded-md p-3 text-sm'>
+        <div className='bg-muted/50 mt-4 rounded-md p-3 text-sm' data-testid='question-explanation'>
           <div className='mb-1 font-semibold'>Explanation</div>
           <p className='text-muted-foreground'>{explanation}</p>
         </div>
@@ -167,7 +167,7 @@ export default function QuestionCard({
 
       {/* Citations (review mode only) */}
       {mode === "review" && citations && citations.length > 0 && (
-        <div className='mt-4'>
+        <div className='mt-4' data-testid='question-citations'>
           <div className='text-muted-foreground mb-1 text-xs font-semibold'>Learn More</div>
           <ul className='text-muted-foreground list-disc space-y-1 pl-5 text-xs'>
             {citations.map((url, i) => (

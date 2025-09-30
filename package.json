@@ -48,6 +48,7 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.62.0",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.2.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "robots-parser": "^3.0.1",

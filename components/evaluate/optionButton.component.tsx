@@ -59,6 +59,9 @@ export default function OptionButton({
         getOptionStyle(),
         mode === "review" && "cursor-default"
       )}
+      data-testid='option-button'
+      data-selected={mode === "evaluation" && isSelected}
+      data-correct={mode === "review" && isCorrect}
       aria-label={`Option ${String.fromCharCode(65 + index)}`}
       aria-pressed={mode === "evaluation" && isSelected}
     >

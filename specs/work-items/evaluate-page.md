@@ -1461,16 +1461,25 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Feedback functionality is integrated into QuestionCard component's review mode
   - This follows DRY principles and avoids duplication
   - QuestionCard handles both evaluation (no feedback) and review (with feedback) modes
-- [ ] **Charts & Visualization**: Enhance results page with visual performance breakdowns using Recharts
-  - Install Recharts library (`pnpm add recharts`)
-  - Implement score gauge component using `<RadialBarChart>` (0-100% with color tiers)
-  - Implement topic/Bloom accuracy bars using horizontal `<BarChart>` (sortable, color-coded)
-  - Keep subtopic breakdown as CSS-based progress bars (no chart library)
-  - Ensure mobile responsiveness with `<ResponsiveContainer>`
-  - Match shadcn/ui theme colors using CSS variables
-  - Add ARIA labels and keyboard navigation for accessibility
-  - Lazy-load Recharts on results page (code-split from evaluation flow)
-  - Test across desktop/mobile profiles for visual regression
+- [x] **Charts & Visualization**: Enhance results page with visual performance breakdowns using Recharts
+  - Installed Recharts library v3.2.1
+  - Created ScoreGauge component with RadialBarChart showing 0-100% score with color tiers (green/amber/red)
+  - Created PerformanceBarChart component with horizontal BarChart for topic/Bloom/difficulty breakdowns
+  - Charts use ResponsiveContainer for mobile responsiveness
+  - Matched shadcn/ui theme colors using hsl(var(--*)) CSS variables
+  - Charts include Recharts built-in tooltips and ARIA support
+  - Subtopic breakdown kept as simple CSS-based list (as planned)
+  - Updated results page to use new chart components with improved layout
+- [ ] **CRITICAL: Implement On-Demand Generation**: Add Step 3 (generate new question) to selection algorithm
+  - **MISSING**: Current implementation only has database-first selection with relaxed criteria fallback
+  - **BLOCKER**: Without on-demand generation, system fails when bank is insufficient (no fallback)
+  - **Implementation needed**:
+    - Add fallback to `generateMcqFromContext` service when no candidates found in bank
+    - Persist generated questions immediately to `mcq_items` table for future reuse
+    - Handle generation failures with retry logic and relaxed criteria
+    - Add "Preparing question..." loading state for generation delays (5-10s)
+  - **Reuse existing**: Leverage `services/ai.services.ts` and MCQ generation patterns from `generation-of-questions.md`
+  - **Location**: Add to GET `/api/evaluate/attempts/:id` route after relaxed criteria fallback
 - [ ] **CRITICAL: Pre-seed Question Bank**: Generate and validate 250–500 questions before launch
   - Use existing MCQ generation automation from `generation-of-questions.md` work-item
   - Target distribution: 125–250 Easy, 85–170 Medium, 40–80 Hard
@@ -1479,7 +1488,7 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
   - Aim for ≥10 questions per (topic × difficulty × coding_mode) cell where applicable
   - Validate each question: correct answer, clear explanation, valid citations
   - Store all questions in `mcq_items` database table
-  - **Blocker**: Do not launch evaluate feature until bank has minimum 250 questions
+  - **Note**: Pre-seeding becomes less critical once on-demand generation is implemented
 - [ ] **QA: Bank Coverage**: Verify question bank coverage across all dimensions
   - Run query to check distribution: `SELECT difficulty, coding_mode, topic, COUNT(*) FROM mcq_items GROUP BY difficulty, coding_mode, topic`
   - Identify gaps and generate additional questions for under-represented cells

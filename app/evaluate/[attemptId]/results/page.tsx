@@ -4,7 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAttemptResultsQuery } from "@/services/evaluate.services";
 import { ArrowLeftIcon, PlayIcon } from "@phosphor-icons/react";
-import ResultsChart from "@/components/evaluate/resultsChart.component";
+import ScoreGauge from "@/components/evaluate/scoreGauge.component";
+import PerformanceBarChart from "@/components/evaluate/performanceBarChart.component";
 import WeakAreasPanel from "@/components/evaluate/weakAreasPanel.component";
 import QuestionReviewList from "@/components/evaluate/questionReviewList.component";
 
@@ -80,35 +81,40 @@ export default function EvaluateResultsPage() {
 
       {/* Summary Card */}
       <div className='bg-card mb-8 rounded-lg border p-6 shadow-sm'>
-        <div className='mb-4 text-center'>
-          <div className='mb-2 text-5xl font-bold'>
-            {summary.correct_count} / {summary.total_questions}
+        <div className='mb-6 grid gap-6 md:grid-cols-2'>
+          {/* Left: Score Gauge */}
+          <div className='flex flex-col items-center justify-center'>
+            <ScoreGauge score={summary.score_percentage} label='Overall Score' />
+            <p className='text-muted-foreground mt-4 text-center text-sm'>{celebrationMessages[scoreTier]}</p>
           </div>
-          <div className='text-muted-foreground text-lg'>{summary.score_percentage}% Correct</div>
-          <p className='text-muted-foreground mt-2'>{celebrationMessages[scoreTier]}</p>
-        </div>
 
-        {/* Visual gauge */}
-        <div className='bg-secondary mx-auto mb-4 h-4 w-full max-w-md overflow-hidden rounded-full'>
-          <div
-            className='bg-primary h-full transition-all duration-500'
-            style={{ width: `${summary.score_percentage}%` }}
-          />
-        </div>
-
-        {/* Time spent */}
-        <div className='text-muted-foreground text-center text-sm'>
-          Time spent: {Math.floor(summary.time_spent_seconds / 60)} minutes
+          {/* Right: Summary Stats */}
+          <div className='flex flex-col justify-center space-y-4'>
+            <div>
+              <div className='text-muted-foreground text-sm'>Questions Answered</div>
+              <div className='text-3xl font-bold'>
+                {summary.correct_count} / {summary.total_questions}
+              </div>
+            </div>
+            <div>
+              <div className='text-muted-foreground text-sm'>Accuracy</div>
+              <div className='text-3xl font-bold'>{summary.score_percentage}%</div>
+            </div>
+            <div>
+              <div className='text-muted-foreground text-sm'>Time Spent</div>
+              <div className='text-xl font-semibold'>{Math.floor(summary.time_spent_seconds / 60)} minutes</div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Breakdowns Grid */}
-      <div className='mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
-        <ResultsChart title='Performance by Topic' data={topic_breakdown} />
-        <ResultsChart title='Performance by Cognitive Level' data={bloom_breakdown} />
+      <div className='mb-8 grid gap-6 md:grid-cols-2'>
+        <PerformanceBarChart title='Performance by Topic' data={topic_breakdown} />
+        <PerformanceBarChart title='Performance by Cognitive Level' data={bloom_breakdown} />
 
         {/* Difficulty Breakdown */}
-        <ResultsChart
+        <PerformanceBarChart
           title='Performance by Difficulty'
           data={["Easy", "Medium", "Hard"].map((difficulty) => {
             const stats = questions.reduce(
@@ -128,7 +134,8 @@ export default function EvaluateResultsPage() {
               accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
             };
           })}
-          className='md:col-span-2 lg:col-span-1'
+          sortByAccuracy={false}
+          className='md:col-span-2'
         />
       </div>
 

@@ -131,42 +131,35 @@ export default function EvaluateAttemptPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-6">
+    <div className='mx-auto w-full max-w-4xl px-4 py-6'>
       {/* Progress bar and controls */}
-      <div className="mb-6">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold">
+      <div className='mb-6'>
+        <div className='mb-3 flex items-center justify-between'>
+          <div className='flex items-center gap-4'>
+            <h1 className='text-lg font-semibold' data-testid='progress-indicator'>
               Question {attempt.questions_answered + 1} / {attempt.total_questions}
             </h1>
-            <div className="text-muted-foreground hidden text-sm md:block">
-              {progressPercent}% complete
-            </div>
+            <div className='text-muted-foreground hidden text-sm md:block'>{progressPercent}% complete</div>
           </div>
           <Button
-            variant="outline"
-            size="sm"
+            variant='outline'
+            size='sm'
             onClick={handlePause}
             disabled={pauseAttemptMutation.isPending}
-            className="gap-2"
+            className='gap-2'
           >
-            <PauseIcon weight="fill" className="h-4 w-4" />
-            <span className="hidden sm:inline">Pause & Save</span>
+            <PauseIcon weight='fill' className='h-4 w-4' />
+            <span className='hidden sm:inline'>Pause & Save</span>
           </Button>
         </div>
 
         {/* Progress bar */}
-        <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
-          <div
-            className="bg-primary h-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+        <div className='bg-secondary h-2 w-full overflow-hidden rounded-full'>
+          <div className='bg-primary h-full transition-all duration-300' style={{ width: `${progressPercent}%` }} />
         </div>
 
         {/* Mobile progress percentage */}
-        <div className="text-muted-foreground mt-2 text-sm md:hidden">
-          {progressPercent}% complete
-        </div>
+        <div className='text-muted-foreground mt-2 text-sm md:hidden'>{progressPercent}% complete</div>
       </div>
 
       {/* Question card */}
@@ -175,27 +168,26 @@ export default function EvaluateAttemptPage() {
         options={next_question.options}
         code={next_question.code}
         metadata={next_question.metadata}
-        mode="evaluation"
+        mode='evaluation'
         onSubmit={handleSubmitAnswer}
         isSubmitting={submitAnswerMutation.isPending}
       />
 
       {/* Info box: no feedback during evaluation */}
-      <div className="bg-muted/30 mt-6 rounded-lg border border-dashed p-4 text-center">
-        <p className="text-muted-foreground text-sm">
-          <span className="font-medium">Note:</span> Your answers are being saved,
-          but you won't see if they're correct or incorrect until you complete all{" "}
-          {attempt.total_questions} questions. This maintains authentic evaluation
+      <div className='bg-muted/30 mt-6 rounded-lg border border-dashed p-4 text-center'>
+        <p className='text-muted-foreground text-sm'>
+          <span className='font-medium'>Note:</span> Your answers are being saved, but you won't see if they're correct
+          or incorrect until you complete all {attempt.total_questions} questions. This maintains authentic evaluation
           conditions.
         </p>
       </div>
 
       {/* Session timeout warning (if needed in future) */}
       {timeSpent > 1800 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 mt-4 rounded-lg border border-amber-200 p-4 text-center dark:border-amber-800">
-          <p className="text-amber-900 dark:text-amber-200 text-sm">
-            You've been on this question for {Math.floor(timeSpent / 60)} minutes.
-            Take your time, or use "Pause & Save" if you need a break.
+        <div className='bg-amber-50 dark:bg-amber-950/20 mt-4 rounded-lg border border-amber-200 p-4 text-center dark:border-amber-800'>
+          <p className='text-amber-900 dark:text-amber-200 text-sm'>
+            You've been on this question for {Math.floor(timeSpent / 60)} minutes. Take your time, or use "Pause & Save"
+            if you need a break.
           </p>
         </div>
       )}

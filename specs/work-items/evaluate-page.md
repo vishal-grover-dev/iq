@@ -1298,21 +1298,46 @@ Centralize common operations in `tests/evaluate/helpers.ts`:
 
 ## Tasks
 
-- [ ] **Data Model**: Design and create migration for `user_attempts`, `attempt_questions` tables with RLS policies
-- [ ] **API**: Implement `/api/evaluate/attempts` (GET, POST)
-- [ ] **API**: Implement `/api/evaluate/attempts/:id` (GET, PATCH pause)
-- [ ] **API**: Implement `/api/evaluate/attempts/:id/answer` (POST)
+> **Note**: After completing any task, immediately update its status here from `[ ]` to `[x]` and add implementation notes as sub-bullets. Keep this checklist synchronized with actual progress.
+
+- [x] **Data Model**: Design and create migration for `user_attempts`, `attempt_questions` tables with RLS policies
+  - Created migration `012-User-Attempts-And-Questions.sql` with both tables, RLS policies, indexes, and update triggers
+  - Applied migration successfully to database
+- [x] **Types**: Create `evaluate.types.ts` with comprehensive interfaces for attempts, questions, results, analytics
+  - Includes all evaluation flows: attempts, questions, answers, results
+  - LLM selector types and attempt context interfaces
+  - Following project conventions (I prefix for interfaces, E prefix for enums)
+- [x] **AI Services**: Implement `selectNextQuestion` in `ai.services.ts` with LLM-driven selection logic
+  - Designed prompt template with distribution rules (30/20/10, 35% coding) and coverage heuristics
+  - Implemented structured JSON output parsing (difficulty, coding_mode, preferred topics/subtopics/Bloom)
+  - Added validation and fallback for invalid LLM responses with rule-based selection
+  - Fixed: All string comparisons use toLowerCase() for robustness
+- [x] **Services**: Create `evaluate.services.ts` with client functions and TanStack Query hooks
+  - Implemented all API client functions: createAttempt, getAttempts, getAttemptDetails, submitAnswer, getAttemptResults, pauseAttempt
+  - Created TanStack Query hooks with proper cache invalidation
+  - Following patterns from `mcq.services.ts`
+- [x] **API**: Implement `/api/evaluate/attempts` (GET, POST)
+  - POST: Creates new 60-question evaluation attempts with default metadata
+  - GET: Lists user's attempts with optional status filter and limit
+  - Both routes support dev mode with DEV_DEFAULT_USER_ID
+- [x] **API**: Implement `/api/evaluate/attempts/:id` (GET, PATCH pause)
+  - GET: Fetches attempt details, builds context from asked questions, calls LLM selector, queries MCQ bank with criteria scoring, assigns next question
+  - PATCH: Handles pause action, updates metadata (pause_count, last_session_at)
+  - Implements database-first strategy with fallback to relaxed criteria if no candidates found
+- [x] **API**: Implement `/api/evaluate/attempts/:id/answer` (POST)
+  - Records user answer and computes correctness silently (not returned to user)
+  - Updates attempt_questions with answer and timestamp
+  - Increments attempt counters (questions_answered, correct_count)
+  - Marks attempt as completed when reaching 60 questions
+  - Returns ONLY progress info (no score, no correctness feedback)
 - [ ] **API**: Implement `/api/evaluate/attempts/:id/results` (GET)
-- [ ] **Services**: Create `evaluate.services.ts` with client functions and TanStack Query hooks
-- [ ] **AI Services**: Implement `selectNextQuestion` in `ai.services.ts` with LLM-driven selection logic
-  - Design prompt template with distribution rules and coverage heuristics
-  - Implement structured JSON output parsing (difficulty, coding_mode, preferred topics/subtopics/Bloom)
-  - Add validation and fallback for invalid LLM responses
-- [ ] **Selection Algorithm**: Implement question selection orchestration in API route
-  - Gather attempt context (questions asked, distributions, coverage)
-  - Call LLM selector to get target criteria
-  - Query bank with LLM criteria, fallback to generation if needed
-  - Handle edge cases (distribution caps, coding threshold enforcement)
+- [x] **Selection Algorithm**: Implement question selection orchestration in API route
+  - Implemented in GET `/api/evaluate/attempts/:id` route
+  - Gathers attempt context: asked questions, difficulty/topic/bloom distributions, recent subtopics
+  - Calls LLM selector with context to get target criteria (difficulty, coding_mode, preferred topics/subtopics/Bloom)
+  - Queries MCQ bank with LLM criteria, scores candidates based on preferences
+  - Fallback to relaxed criteria if no candidates found
+  - Handles edge cases: excludes asked questions, enforces coding mode filter, avoids subtopic clustering
 - [ ] **UI**: Build evaluate landing page (`app/evaluate/page.tsx`) with start/resume flow
 - [ ] **UI**: Build in-progress evaluation page (`app/evaluate/[attemptId]/page.tsx`) with question card and navigation
 - [ ] **UI**: Build results page (`app/evaluate/[attemptId]/results/page.tsx`) with summary, charts, and review list

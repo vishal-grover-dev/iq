@@ -1,8 +1,8 @@
 import OpenAI from "openai";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { parseJsonObject } from "@/utils/json.utils";
-import type { IMcqItemView, EBloomLevel, EDifficulty } from "@/types/mcq.types";
-import { EPromptMode } from "@/types/mcq.types";
+import type { IMcqItemView } from "@/types/mcq.types";
+import { EPromptMode, EBloomLevel, EDifficulty } from "@/types/mcq.types";
 import { buildGeneratorMessages, buildJudgeMessages, buildReviserMessages } from "@/utils/mcq-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { LABEL_RESOLVER_MIN_CONFIDENCE } from "@/constants/app.constants";
@@ -644,4 +644,193 @@ export async function judgeMcqQuality(args: {
     ? parsed.suggestions.map((r: any) => String(r))
     : undefined;
   return { verdict, reasons, suggestions };
+}
+
+/**
+ * selectNextQuestion
+ * Server-only: LLM-driven selector that analyzes attempt context and determines optimal criteria
+ * for the next question to ensure balanced, comprehensive evaluation coverage.
+ *
+ * Uses gpt-4o-mini with structured output to analyze:
+ * - Distribution progress (Easy/Medium/Hard, coding threshold)
+ * - Coverage gaps (topics, subtopics, Bloom levels)
+ * - Recent patterns (avoid subtopic clustering)
+ *
+ * Returns target criteria for database query or generation.
+ */
+export async function selectNextQuestion(context: {
+  attempt_id: string;
+  questions_answered: number;
+  easy_count: number;
+  medium_count: number;
+  hard_count: number;
+  coding_count: number;
+  topic_distribution: Record<string, number>;
+  subtopic_distribution: Record<string, number>;
+  bloom_distribution: Record<string, number>;
+  recent_subtopics: string[]; // last 5
+}): Promise<{
+  difficulty: EDifficulty;
+  coding_mode: boolean;
+  preferred_topics: string[];
+  preferred_subtopics: string[];
+  preferred_bloom_levels: EBloomLevel[];
+  reasoning: string;
+}> {
+  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+  const {
+    questions_answered,
+    easy_count,
+    medium_count,
+    hard_count,
+    coding_count,
+    topic_distribution,
+    subtopic_distribution,
+    bloom_distribution,
+    recent_subtopics,
+  } = context;
+
+  const total_target = 60;
+  const remaining = total_target - questions_answered;
+  const easy_target = 30;
+  const medium_target = 20;
+  const hard_target = 10;
+  const coding_target = Math.ceil(total_target * 0.35); // 21 minimum
+
+  // Distribution status
+  const easy_remaining = Math.max(0, easy_target - easy_count);
+  const medium_remaining = Math.max(0, medium_target - medium_count);
+  const hard_remaining = Math.max(0, hard_target - hard_count);
+  const coding_needed = Math.max(0, coding_target - coding_count);
+
+  // Coverage info
+  const topic_list = Object.entries(topic_distribution)
+    .map(([topic, count]) => `${topic}: ${count}`)
+    .join(", ");
+  const bloom_list = Object.entries(bloom_distribution)
+    .map(([level, count]) => `${level}: ${count}`)
+    .join(", ");
+  const recent_pattern = recent_subtopics.slice(-3).join(" → ");
+
+  const system = `You are an intelligent question selector for a React.js frontend skills evaluation. Your role is to analyze attempt context and determine optimal criteria for the next question to ensure:
+1. Balanced difficulty distribution (30 Easy, 20 Medium, 10 Hard)
+2. Coding threshold (≥35% coding questions, minimum 21 of 60)
+3. Topic balance (no single topic >40%)
+4. Bloom diversity (≥3 levels per difficulty tier)
+5. Avoid subtopic clustering (no >5 consecutive from same subtopic)
+
+Return strict JSON with:
+- difficulty: "Easy" | "Medium" | "Hard"
+- coding_mode: boolean
+- preferred_topics: string[] (1-3 topics)
+- preferred_subtopics: string[] (1-5 subtopics)
+- preferred_bloom_levels: string[] (1-3 Bloom levels)
+- reasoning: string (1-2 sentences explaining your choice)`;
+
+  const user = `Current attempt state:
+- Questions answered: ${questions_answered}/${total_target}
+- Remaining: ${remaining}
+
+Distribution:
+- Easy: ${easy_count}/${easy_target} (${easy_remaining} remaining)
+- Medium: ${medium_count}/${medium_target} (${medium_remaining} remaining)
+- Hard: ${hard_count}/${hard_target} (${hard_remaining} remaining)
+- Coding: ${coding_count}/${total_target} (need ≥${coding_target}, ${coding_needed} more needed)
+
+Coverage:
+- Topics: ${topic_list || "none yet"}
+- Bloom levels: ${bloom_list || "none yet"}
+- Recent subtopics pattern: ${recent_pattern || "none yet"}
+
+Available topics: React, JavaScript, TypeScript, HTML, CSS, State Management, Routing, Testing, Accessibility, PWA
+Available Bloom levels: Remember, Understand, Apply, Analyze, Evaluate, Create
+
+Determine optimal criteria for question #${questions_answered + 1}.`;
+
+  try {
+    const res = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+    });
+
+    const content = res.choices[0]?.message?.content ?? "{}";
+    const parsed = parseJsonObject<any>(content, {
+      difficulty: "Easy",
+      coding_mode: false,
+      preferred_topics: ["React"],
+      preferred_subtopics: [],
+      preferred_bloom_levels: ["Understand"],
+      reasoning: "Default selection",
+    });
+
+    // Validate and normalize
+    const difficulty = ((): EDifficulty => {
+      const d = String(parsed.difficulty || "").toLowerCase();
+      if (d === "easy") return EDifficulty.EASY;
+      if (d === "medium") return EDifficulty.MEDIUM;
+      if (d === "hard") return EDifficulty.HARD;
+      return EDifficulty.EASY;
+    })();
+    const coding_mode = Boolean(parsed.coding_mode);
+    const preferred_topics = Array.isArray(parsed.preferred_topics)
+      ? parsed.preferred_topics.slice(0, 3).map(String)
+      : ["React"];
+    const preferred_subtopics = Array.isArray(parsed.preferred_subtopics)
+      ? parsed.preferred_subtopics.slice(0, 5).map(String)
+      : [];
+    const preferred_bloom_levels = ((): EBloomLevel[] => {
+      if (!Array.isArray(parsed.preferred_bloom_levels)) return [EBloomLevel.UNDERSTAND];
+      return parsed.preferred_bloom_levels.slice(0, 3).map((level: string) => {
+        const l = String(level || "").toLowerCase();
+        if (l === "remember") return EBloomLevel.REMEMBER;
+        if (l === "understand") return EBloomLevel.UNDERSTAND;
+        if (l === "apply") return EBloomLevel.APPLY;
+        if (l === "analyze") return EBloomLevel.ANALYZE;
+        if (l === "evaluate") return EBloomLevel.EVALUATE;
+        if (l === "create") return EBloomLevel.CREATE;
+        return EBloomLevel.UNDERSTAND;
+      });
+    })();
+    const reasoning = String(parsed.reasoning || "Selected based on attempt context");
+
+    return {
+      difficulty,
+      coding_mode,
+      preferred_topics,
+      preferred_subtopics,
+      preferred_bloom_levels,
+      reasoning,
+    };
+  } catch (err: any) {
+    // Fallback to rule-based selection on LLM failure
+    console.error("LLM selector failed, using fallback:", err.message);
+
+    // Enforce hard constraints
+    let difficulty: EDifficulty = EDifficulty.EASY;
+    if (easy_count >= easy_target) {
+      difficulty = medium_count < medium_target ? EDifficulty.MEDIUM : EDifficulty.HARD;
+    } else if (medium_count >= medium_target && hard_count < hard_target) {
+      difficulty = EDifficulty.HARD;
+    }
+
+    // Force coding if behind pace
+    const coding_mode = coding_needed > 0 && questions_answered >= 40;
+
+    return {
+      difficulty,
+      coding_mode,
+      preferred_topics: ["React", "JavaScript"],
+      preferred_subtopics: [],
+      preferred_bloom_levels: [EBloomLevel.APPLY, EBloomLevel.UNDERSTAND],
+      reasoning: "Fallback selection after LLM error",
+    };
+  }
 }

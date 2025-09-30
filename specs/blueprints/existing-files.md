@@ -91,6 +91,7 @@
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
 - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
+- `evaluate.types.ts`: Types for evaluation feature including attempt status, questions, results, analytics, and LLM selector interfaces.
 
 ### schema
 
@@ -119,11 +120,11 @@
 
 ### services
 
-- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings`, `rerank`, `generateMcqFromContext`, `reviseMcqWithContext`, and `judgeMcqQuality`.
+- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings`, `rerank`, `generateMcqFromContext`, `reviseMcqWithContext`, `judgeMcqQuality`, `classifyLabels`, and `selectNextQuestion` (LLM-driven question selector for evaluations).
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
- - Label classification (fallback) added into `ai.services.ts` as `classifyLabels`.
+- `evaluate.services.ts`: Evaluation API client functions and TanStack Query hooks for attempts, questions, answers, and results.
 
 ### constants
 
@@ -159,6 +160,7 @@
 - `009-WebDev-Topics-Fix.sql`: Backfill to correct `documents` and `document_chunks` topics for web.dev/learn to HTML/CSS/PWA.
 - `010-WebDev-Accessibility-Topics.sql`: Backfill to correct web.dev/learn accessibility topics.
 - `011-Fix-React-Hook-Labels.sql`: Corrects useMemo and useCallback docs mislabeled as "Hooks: useState" (2 docs, 33 chunks).
+- `012-User-Attempts-And-Questions.sql`: Creates `user_attempts` and `attempt_questions` tables with RLS for evaluation feature.
 
 ### app/api
 
@@ -177,6 +179,9 @@
  - `api/generate/mcq/route.ts`: Placeholder route for MCQ generation (SSE scaffold).
   - `api/generate/mcq/revise/route.ts`: MCQ revision API route (POST) that applies user instructions to revise existing MCQs with AI-powered context-aware revisions.
   - `api/generate/mcq/save/route.ts`: Placeholder route for saving finalized MCQs.
+ - `api/evaluate/attempts/route.ts`: Evaluation attempts routes (GET lists attempts, POST creates new attempt).
+ - `api/evaluate/attempts/[id]/route.ts`: Single attempt routes (GET fetches details with LLM-selected next question, PATCH pauses attempt).
+ - `api/evaluate/attempts/[id]/answer/route.ts`: Answer submission route (POST) records answer silently without revealing correctness.
  - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
  - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
  - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.

@@ -14,25 +14,39 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
 
 - Subtopics: semantics, forms, media, accessibility basics, SEO‑relevant tags.
 - Primary sources:
+  - **web.dev/learn/html** (23 docs ingested; comprehensive HTML fundamentals)
   - MDN HTML Guide/Reference (mdn/content repo; CC‑BY‑SA)
   - WHATWG HTML Living Standard (for definitions; cite sparingly)
-- Ingestion approach: pull Markdown from `mdn/content` (filter `/files/en-us/web/html/`).
+- Ingestion approach: 
+  - Primary: web crawl `web.dev/learn/html` (already ingested)
+  - Supplementary: pull Markdown from `mdn/content` (filter `/files/en-us/web/html/`).
 
 ### CSS
 
-- Subtopics: selectors, box model, layout (Flexbox/Grid), positioning, cascade/specificity, responsive, animations.
+- Subtopics: selectors, box model, layout (Flexbox/Grid), positioning, cascade/specificity, responsive, animations, design principles.
 - Primary sources:
+  - **web.dev/learn/css** (40 docs ingested; modern CSS with practical examples)
+  - **web.dev/learn/design** (18 docs ingested; design fundamentals and UX)
   - MDN CSS Guide/Reference (mdn/content)
   - CSSWG drafts (reference only for precise definitions)
-- Ingestion: `mdn/content` (filter `/files/en-us/web/css/`).
+- Ingestion approach:
+  - Primary: web crawl `web.dev/learn/css` and `web.dev/learn/design` (already ingested)
+  - Supplementary: `mdn/content` (filter `/files/en-us/web/css/`).
 
 ### JavaScript (ES6+)
 
-- Subtopics: types/coercion, scope/closures, prototype/prototypal inheritance, this/bind/call/apply, modules, promises/async, iterators/generators, collections, error handling.
+- Subtopics: types/coercion, scope/closures, prototype/prototypal inheritance, this/bind/call/apply, modules, promises/async, iterators/generators, collections, error handling, forms, images, performance, privacy.
 - Primary sources:
-  - MDN JavaScript Guide/Reference (mdn/content)
+  - **web.dev/learn/javascript** (27 docs ingested; modern JS patterns)
+  - **web.dev/learn/forms** (25 docs ingested; form validation and UX)
+  - **web.dev/learn/images** (18 docs ingested; image optimization and lazy loading)
+  - **web.dev/learn/performance** (15 docs ingested; performance optimization techniques)
+  - **web.dev/learn/privacy** (7 docs ingested; privacy-first development)
+  - MDN JavaScript Guide/Reference (93 docs from mdn/content)
   - JavaScript.info (secondary for examples; attribution per site policy)
-- Ingestion: `mdn/content` (filter `/files/en-us/web/javascript/`).
+- Ingestion approach:
+  - Primary: MDN `mdn/content` (filter `/files/en-us/web/javascript/`) — 93 docs already ingested
+  - Supplementary: web.dev sections above (already ingested for practical patterns and performance)
 
 ### TypeScript
 
@@ -96,11 +110,14 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
 
 ### Testing
 
-- Subtopics: RTL queries, act, user-event, Jest matchers, mocking, async tests.
+- Subtopics: RTL queries, act, user-event, Jest matchers, mocking, async tests, web testing fundamentals.
 - Primary sources:
+  - **web.dev/learn/testing** (10 docs ingested; web testing fundamentals and best practices)
   - Testing Library docs (testing-library website repo)
   - Jest docs (jestjs/jest website repo)
-- Ingestion: pull from respective repos.
+- Ingestion approach:
+  - Primary: web crawl `web.dev/learn/testing` (already ingested — 10 foundational docs)
+  - Supplementary: pull from Testing Library and Jest repos for framework-specific APIs
 
 ### Performance & Web Vitals
 
@@ -114,24 +131,48 @@ Purpose: Define topics, subtopics, and preferred authoritative sources for inges
 
 - Subtopics: app manifest, service workers, caching strategies, offline & resilience, installability (A2HS), background sync & push notifications, web app capabilities (storage/files/media), Lighthouse PWA checks.
 - Primary sources:
-  - web.dev PWA guides (`web.dev/learn/pwa/` and related) — authoritative and task-focused
+  - **web.dev/learn/pwa** (4 docs ingested; authoritative and task-focused)
   - MDN Progressive Web Apps guide (concepts and APIs like `ServiceWorker`, Cache Storage, Notifications)
-- Ingestion: prefer sitemap-limited fetch from web.dev for the PWA section; supplement with MDN API/reference pages for Service Workers, Cache, and related APIs. Respect robots.txt and enforce conservative `maxPages`.
+- Ingestion approach:
+  - Primary: web crawl `web.dev/learn/pwa` (already ingested — 4 foundational docs)
+  - Supplementary: MDN API/reference pages for Service Workers, Cache, and related APIs
+  - Note: Respect robots.txt and enforce conservative `maxPages` for future expansions
 
 ### Accessibility (a11y)
 
-- Subtopics: ARIA roles, keyboard nav, color contrast, semantic HTML.
+- Subtopics: ARIA roles, keyboard nav, color contrast, semantic HTML, focus management, forms accessibility, images accessibility, video/audio accessibility, testing (manual/automated/assistive tech).
 - Primary sources:
-  - MDN Accessibility
+  - **web.dev/learn/accessibility** (22 docs ingested; comprehensive practical guide)
+  - MDN Accessibility (concepts and APIs)
   - WAI/WCAG (reference; summarize, cite)
-- Ingestion: `mdn/content` accessibility paths.
+- Ingestion approach:
+  - Primary: web crawl `web.dev/learn/accessibility` (already ingested — 22 comprehensive docs)
+  - Supplementary: `mdn/content` accessibility paths for API references
 
 ## Ingestion Notes
 
-- MDN: GitHub `mdn/content` (CC‑BY‑SA). Derive topics from path segments; map to {topic, area, subtopic}.
-- React: `reactjs/react.dev` MDX; preserve headings and code blocks; include version tag (18/19).
-- TypeScript: `microsoft/TypeScript-Website` handbook Markdown; tag `TS 5.x`.
-- Redux/React Router/Next.js/Testing: prefer official docs repos; if not clean, use sitemap with path whitelist.
+- **web.dev/learn**: Comprehensive coverage across 12 sections (210 docs total):
+  - **Accessibility** (22 docs): Complete practical guide to web accessibility
+  - **CSS** (40 docs): Modern CSS patterns, layouts, and best practices
+  - **Design** (18 docs): Design fundamentals and UX principles
+  - **Forms** (25 docs): Form validation, UX, and accessibility
+  - **HTML** (23 docs): HTML fundamentals and semantic markup
+  - **Images** (18 docs): Image optimization, lazy loading, and performance
+  - **JavaScript** (27 docs): Modern JS patterns and best practices
+  - **Performance** (15 docs): Performance optimization techniques
+  - **Privacy** (7 docs): Privacy-first development patterns
+  - **PWA** (4 docs): Progressive Web App fundamentals
+  - **Testing** (10 docs): Web testing best practices
+  - Ingestion: web crawl with sitemap-limited fetch; already ingested
+- **MDN**: GitHub `mdn/content` (CC‑BY‑SA). Derive topics from path segments; map to {topic, area, subtopic}.
+  - JavaScript: 93 docs from `/files/en-us/web/javascript/`
+  - CSS: 58 docs from `/files/en-us/web/css/`
+  - HTML: 23 docs from `/files/en-us/web/html/`
+- **React**: `reactjs/react.dev` MDX (49 docs); preserve headings and code blocks; include version tag (18/19).
+- **TypeScript**: `microsoft/TypeScript-Website` handbook Markdown (5 docs); tag `TS 5.x`.
+- **Redux**: `reduxjs/redux-toolkit` (87 docs); RTK Query, patterns, selectors/memoization.
+- **React Router**: `remix-run/react-router` (200 docs); declarative routes, data loading, hooks.
+- **Testing Library/Jest**: prefer official docs repos; if not clean, use sitemap with path whitelist (10 docs).
 
 ## Supplementary Resources (non-ingestion)
 

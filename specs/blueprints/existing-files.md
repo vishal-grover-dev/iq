@@ -142,9 +142,9 @@
 
 ### specs/work-items
 
-- `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Generation is removed and will be redesigned separately.
+- `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Includes complete coverage expansion history: initial ingestion (264 docs, 8 topics) → React expansion (551 docs, 10 topics). Documents State Management (Redux Toolkit: 87 docs, 676 chunks) and Routing (React Router: 200 docs, 744 chunks) additions from 2025-09-30. Generation is removed and will be redesigned separately.
 - `generation-of-questions.md`: Work-item for the MCQ Generation page, personas, streaming, revision chat, and save flow to `mcq_items`.
-- `react-interview-topics-expansion.md`: Expansion plan for additional React interview topics (Redux, Routing, Next.js, Bundling, Deployment) with resources, ingestion strategy, and verification tasks.
+- `evaluate-page.md`: Requirements for the Frontend Skills Assessment page featuring 60-question structured evaluations with adaptive selection, multi-session attempts, real-time feedback, and comprehensive post-attempt analytics with weak-area identification.
 
 ### migrations
 
@@ -155,8 +155,10 @@
  - `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
  - `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
  - `007-MCQ-Embeddings-And-Dedupe.sql`: Adds MCQ embeddings + content_key, ANN index, and `retrieval_mcq_neighbors` RPC for near-duplicate detection.
- - `008-MCQ-Code-Column.sql`: Adds nullable `code` column to `mcq_items` for dedicated code snippets.
- - `009-WebDev-Topics-Fix.sql`: Backfill to correct `documents` and `document_chunks` topics for web.dev/learn to HTML/CSS/PWA.
+- `008-MCQ-Code-Column.sql`: Adds nullable `code` column to `mcq_items` for dedicated code snippets.
+- `009-WebDev-Topics-Fix.sql`: Backfill to correct `documents` and `document_chunks` topics for web.dev/learn to HTML/CSS/PWA.
+- `010-WebDev-Accessibility-Topics.sql`: Backfill to correct web.dev/learn accessibility topics.
+- `011-Fix-React-Hook-Labels.sql`: Corrects useMemo and useCallback docs mislabeled as "Hooks: useState" (2 docs, 33 chunks).
 
 ### app/api
 

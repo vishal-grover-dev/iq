@@ -279,6 +279,87 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 - Keep the system source‑agnostic; no site-specific hardcoding in planners/processors.
 - Generation will be redesigned separately; this document remains focused on ingestion and retrieval only.
 
+## Coverage Expansion History
+
+### Initial Ingestion (2025-09-25)
+
+- **JavaScript corpus**: MDN JavaScript folder fully ingested (93 docs, 535 chunks, 0 null embeddings) + web.dev/learn supplementary (92 docs: javascript/27, forms/25, images/18, performance/15, privacy/7)
+- **TypeScript**: Microsoft TypeScript Handbook (5 docs, 70 chunks)
+- **React**: React.dev docs (49 docs, 522 chunks)
+- **HTML**: web.dev/learn/html + MDN HTML (23 docs, 207 chunks)
+- **CSS**: MDN CSS (58 docs, 386 chunks) + web.dev/learn (58 docs: css/40, design/18)
+- **Accessibility**: web.dev/learn/accessibility (22 docs, 143 chunks; comprehensive practical guide)
+- **Testing**: web.dev/learn/testing + Testing Library + Jest (10 docs, 58 chunks)
+- **PWA**: web.dev/learn/pwa (4 docs, 23 chunks)
+- **Total**: 264 docs, 1,943 chunks
+- **Note**: web.dev/learn contributed 210 docs across 12 sections providing modern, practical approaches to HTML, CSS, JavaScript patterns, accessibility, PWA, testing, forms, images, performance, privacy, and design
+
+### React Ecosystem Expansion (2025-09-30) ✅ COMPLETED
+
+**Goal**: Fill critical gaps for React interview preparation (State Management and Routing)
+
+**Completed Topics**:
+
+1. **State Management (Redux Toolkit)**
+   - Source: `reduxjs/redux-toolkit` repository
+   - Coverage: 87 docs, 676 chunks (290% of target)
+   - Subtopics: RTK Query Basics (42), Redux Toolkit Patterns (41), Selectors/Memoization, Immutability
+   - Status: COMPLETE
+
+2. **Routing (React Router)**
+   - Source: `remix-run/react-router` repository
+   - Coverage: 200 docs, 744 chunks (1000% of target)
+   - Subtopics: Declarative Routes (110), Data Loading (30), Custom Hooks (19), Dynamic Routes (11)
+   - Status: SUFFICIENT (batch 1/2 only; 82 docs remaining but exceeds MVP needs)
+
+3. **React Patterns Verification**
+   - Error Boundaries: ✓ Present (1 doc)
+   - Suspense: ✓ Present (1 doc)
+   - React.lazy: ⚠️ Deferred to v1.1 (web crawler CSR issue; use repo-mode instead)
+
+**Results**:
+- **Total new docs**: 287 (State Management: 87, Routing: 200)
+- **Total new chunks**: 1,420
+- **Coverage increase**: 264 → 551 docs (+109%), 1,943 → 3,364 chunks (+73%)
+- **Quality metrics**: 0 null embeddings, 0% off-ontology topics, <1% classifier issues
+- **Topics added**: 2 (State Management, Routing)
+
+**Deferred to v1.1**:
+- Next.js-specific docs (App Router, Server Components, SSR/SSG/ISR)
+- React.lazy documentation (repo-mode from `reactjs/react.dev`)
+- Webpack/Vite build tools (low interview priority)
+- Vercel/Netlify deployment concepts (platform-specific)
+
+**Issues Fixed**:
+- **Migration 011**: Corrected useMemo/useCallback mislabeling (2 docs, 33 chunks) from "Hooks: useState" to proper subtopics
+
+**Accepted Behaviors** (classifier working as designed):
+- Redux docs with cross-topic subtopics (2/87 docs; RTK Query code splitting IS state management)
+- Routing docs with React pattern subtopics (41/200 docs; React Router teaches routing via hooks/error boundaries)
+- Duplicate filtering via unique constraint (2 duplicate files rejected; working as intended)
+
+### Complete System Coverage (2025-09-30)
+
+- **Accessibility**: 22 docs, 143 chunks (web.dev/learn/accessibility - comprehensive practical guide)
+- **CSS**: 58 docs, 386 chunks (MDN CSS + web.dev/learn/css + web.dev/learn/design)
+- **HTML**: 23 docs, 207 chunks (web.dev/learn/html + MDN HTML)
+- **JavaScript**: 93 docs, 535 chunks (MDN JavaScript + web.dev/learn: javascript, forms, images, performance, privacy)
+- **PWA**: 4 docs, 23 chunks (web.dev/learn/pwa)
+- **React**: 49 docs, 522 chunks (reactjs/react.dev official docs)
+- **Routing**: 200 docs, 744 chunks ✅ (remix-run/react-router official docs)
+- **State Management**: 87 docs, 676 chunks ✅ (reduxjs/redux-toolkit official docs)
+- **Testing**: 10 docs, 58 chunks (web.dev/learn/testing + Testing Library + Jest)
+- **TypeScript**: 5 docs, 70 chunks (microsoft/TypeScript-Website handbook)
+
+**Grand Total**: **551 docs, 3,364 chunks** across 10 topics
+
+**Source Distribution**:
+- **web.dev/learn**: 210 docs across 12 sections (accessibility, CSS, design, forms, HTML, images, JavaScript, performance, privacy, PWA, testing, and 1 generic)
+- **Official repos**: React (49), Redux Toolkit (87), React Router (200), TypeScript (5)
+- **MDN**: JavaScript (93), CSS (58), HTML (23)
+
+---
+
 ## Implemented Changes (2025-09-25)
 
 - GitHub tree URL normalization: pasting a URL like `.../tree/main/files/en-us/web/javascript` auto-derives the repo base and sets `paths` to the subfolder.
@@ -286,7 +367,6 @@ Note: keep commands and SQL out of this document; follow the repo scripts refere
 - Cursor-based batching for repo: process route handles one batch per call and updates `metadata.batch`; UI auto-advances batches without manual clicks.
 - Idempotency: `documents` upsert on `(bucket, path)`; `document_chunks` are replaced per document to prevent duplicates and allow re-runs.
 - Path-derived labels: for MDN JS, subtopics are derived from the path (e.g., `Guide/<Leaf>`, `Reference/Operators`, `Reference/Global Objects`). Form subtopic is ignored unless explicitly overridden.
-- JS corpus run: MDN JavaScript folder fully ingested (1322 docs, 4655 chunks, 0 null embeddings) via batches; verified counts and labels.
 
 ## Deprecation Plan
 

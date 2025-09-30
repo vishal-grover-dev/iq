@@ -175,6 +175,12 @@
       "embedded": true
     },
     {
+      "subtopic": "Code Splitting",
+      "ingestType": "web",
+      "url": "https://react.dev/reference/react/lazy",
+      "embedded": false
+    },
+    {
       "subtopic": "Effects: Dependencies & Cleanup",
       "ingestType": "web",
       "url": "https://react.dev/learn/synchronizing-with-effects",
@@ -202,6 +208,24 @@
       "subtopic": "Error Handling Patterns",
       "ingestType": "web",
       "url": "https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary",
+      "embedded": true
+    }
+  ],
+  "State Management": [
+    {
+      "subtopic": "General",
+      "ingestType": "repo",
+      "url": "https://github.com/reduxjs/redux-toolkit",
+      "paths": ["docs"],
+      "embedded": true
+    }
+  ],
+  "Routing": [
+    {
+      "subtopic": "General",
+      "ingestType": "repo",
+      "url": "https://github.com/remix-run/react-router",
+      "paths": ["docs"],
       "embedded": true
     }
   ]

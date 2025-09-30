@@ -21,6 +21,7 @@
 - `directory-structure.md`: Enforced directory and naming conventions.
 - `tech-stack.md`: Tech stack and architecture overview.
 - `prd.md`: Product requirements document.
+- `architecture-decisions.md`: "Why" behind key technical decisions, trade-offs, and constraints.
 - `existing-files.md`: This index of current files.
 - `env-examples.md`: Example environment variables and configuration.
 - `resources-for-frontend.md`: Topics, subtopics, and ingestion sources for React-focused frontend content.

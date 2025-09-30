@@ -22,8 +22,8 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 
 - **Seeded crawl:** Admin provides seed URL(s) and domain/prefix rules (e.g., MDN JavaScript Guide). System crawls within constraints, respecting robots.txt and rate limits.
 - **Extraction & normalization:** Parse main content (titles, headings, prose, code blocks). Normalize, de‑duplicate, and chunk (1–2k chars, 10–15% overlap).
-- **Embeddings:** Create 1536‑d embeddings (OpenAI `text-embedding-3-small`) and store in `document_chunks` for retrieval.
-- **Categorization:** Classifier‑only labeling assigns `{ topic, subtopic, version }` from an explicit ontology (no heuristics/rules). Labels come only from a strict LLM classifier with confidence gating (default 0.8) and URL/path caching; explicit operator hints are never overridden. On low confidence, `subtopic` is left null (no guessing). A small preflight sample validates distribution and low‑confidence rate before full runs; metrics are emitted during ingestion for observability.
+- **Embeddings:** Create 1536‑d embeddings (OpenAI `text-embedding-3-small`) and store in `document_chunks` for retrieval. *Why:* Single embedding space ensures consistency; cost-performance balanced. See [architecture-decisions.md](../blueprints/architecture-decisions.md#openai-text-embedding-3-small-1536-d).
+- **Categorization:** Classifier‑only labeling assigns `{ topic, subtopic, version }` from an explicit ontology (no heuristics/rules). Labels come only from a strict LLM classifier with confidence gating (default 0.8) and URL/path caching; explicit operator hints are never overridden. On low confidence, `subtopic` is left null (no guessing). A small preflight sample validates distribution and low‑confidence rate before full runs; metrics are emitted during ingestion for observability. *Why:* Replaced brittle heuristics after reliability failures. See [architecture-decisions.md](../blueprints/architecture-decisions.md#classifier-only-labeling-no-heuristicsrules).
 
 ### 2) AI‑Generated MCQs with Labels and Citations
 
@@ -52,6 +52,8 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 - **Attribution & compliance:** Cite sources (e.g., MDN CC‑BY‑SA) and respect robots.txt/rate limits.
 
 ## Technical Architecture
+
+> **Note:** For detailed rationale behind these choices, see [`specs/blueprints/architecture-decisions.md`](../blueprints/architecture-decisions.md).
 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, TanStack Query.
 - **Backend:** Next.js API routes for ingestion, retrieval, MCQ generation, and attempts. Background job/worker for crawling to avoid serverless timeouts (v1: limit to ≤200 pages/job if needed).

@@ -1,10 +1,13 @@
 # Tech Stack & Architecture - Intelliqent Questions (IQ)
 
+> **Note:** For the "why" behind these technology choices, see [`architecture-decisions.md`](./architecture-decisions.md).
+
 ## Frontend Technology Stack
 
 ### Core Framework
 
 - **Next.js 15+** - React framework with App Router for server-side rendering and static generation
+  - *Why:* Unified frontend/backend codebase with serverless API routes, RSC support, and file-based routing for rapid iteration. See [architecture-decisions.md](./architecture-decisions.md#nextjs-app-router).
 - **TypeScript** - Type-safe JavaScript for better development experience and code quality
 - **React 19** - UI library with concurrent features and hooks
 
@@ -12,6 +15,7 @@
 
 - **Tailwind CSS v4** - Utility-first CSS framework for rapid UI development
 - **shadcn/ui** - High-quality, accessible component library built on Radix UI
+  - *Why:* Source-owned components (not packages) enable full customization; Radix provides WAI-ARIA accessibility out of the box. See [architecture-decisions.md](./architecture-decisions.md#shadcnui-not-material-uichakra).
 - **Radix UI** - Unstyled, accessible UI primitives
 - **Phosphor Icons** - Consistent icon set for React.
   - Note: Import components with the `Icon` suffix (e.g., `SunDimIcon`, `MoonIcon`, `LinkedinLogoIcon`).
@@ -34,6 +38,7 @@
 
 - **Jotai** - Atomic state management for client-side state
 - **React Query/TanStack Query** - Server state management and caching
+  - *Why:* Automatic caching, deduplication, and stale-while-revalidate pattern reduce boilerplate. See [architecture-decisions.md](./architecture-decisions.md#tanstack-query--axios-not-fetch).
 - **React Hook Form** - Performant forms with validation
 
 ### Development Tools
@@ -44,6 +49,7 @@
 ### HTTP Client (Frontend Guideline)
 
 - Prefer Axios for all HTTP requests in the frontend. Centralize configuration and interceptors in `services/http.services.ts` and consume the exported clients in hooks/services. Avoid using `fetch` directly in the UI code so headers, errors, and credentials are consistently handled.
+  - *Why:* Centralized interceptors, built-in retry/backoff, and timeout config. See [architecture-decisions.md](./architecture-decisions.md#tanstack-query--axios-not-fetch).
 
 ## Backend Technology Stack
 
@@ -54,10 +60,12 @@
 ### Database & Storage
 
 - **Supabase** - Primary database, authentication, and file storage platform
+  - *Why:* Unified platform for Postgres, auth, storage, and RLS; reduces operational complexity. See [architecture-decisions.md](./architecture-decisions.md#supabase--postgresql--pgvector).
 - **PostgreSQL** - Relational database (via Supabase)
 - **pgvector** Extension – Vector embeddings storage for semantic search
 - **Postgres Full-Text Search (FTS)** – Keyword search
 - **Hybrid Search** – Combines vector and keyword search for improved accuracy
+  - *Why:* Semantic (vector) + exact (keyword) matching complement each other for better retrieval coverage. See [architecture-decisions.md](./architecture-decisions.md#hybrid-search-vector--keyword).
 
 ### AI/ML Services
 
@@ -65,8 +73,11 @@
 - **OpenAI SDK** - Official OpenAI API client for JavaScript
 - **LangSmith** - Observability and monitoring platform for AI agents
 - **OpenAI Embeddings** - `text-embedding-3-small` (1536‑d) for indexing and queries
+  - *Why:* Single embedding space (same model for indexing/queries) ensures consistency; 1536-d offers cost-performance balance. See [architecture-decisions.md](./architecture-decisions.md#openai-text-embedding-3-small-1536-d).
 - **Reranker** – LLM-as-reranker using `gpt-4o-mini` returning list-wise JSON
+  - *Why:* Cross-encoder quality improves ranking; optional with timeout/fallback. See [architecture-decisions.md](./architecture-decisions.md#llm-as-reranker-optional).
 - **Label Classifier (strict)** – Classifier‑only labeling of `{ topic, subtopic, version }` with whitelist ontology and confidence gating (default 0.8); never overrides explicit hints; caches by URL/path.
+  - *Why:* Replaced brittle heuristics after zero-result ingestion failures; LLM generalizes across documentation sites. See [architecture-decisions.md](./architecture-decisions.md#classifier-only-labeling-no-heuristicsrules).
 
 ### File Processing
 

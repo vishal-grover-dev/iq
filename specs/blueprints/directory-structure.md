@@ -1,5 +1,7 @@
 You are my coding assistant for a Next.js project using shadcn/ui and Tailwind CSS.
 
+> **Note:** For the "why" behind these conventions, see [`architecture-decisions.md`](./architecture-decisions.md#directory-structure--conventions).
+
 ### Directory Structure
 Always maintain the following structure:
 - components/

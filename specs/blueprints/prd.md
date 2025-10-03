@@ -118,6 +118,10 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 - On completion, update items to `- [x]` and include a brief status note inline or as an indented sub-bullet (e.g., links to PRs/files, follow-ups).
 - Keep the checklist in sync during implementation so it reflects current progress and any notes.
 
+## Local Development
+
+- Dev server default port is `3050`. Start with `pnpm dev` and access the app at `http://localhost:3050`.
+
 ## SQL & Migrations Workflow
 
 - Engineers may execute SQL directly from the terminal against Supabase (psql or Supabase CLI) for rapid iteration.

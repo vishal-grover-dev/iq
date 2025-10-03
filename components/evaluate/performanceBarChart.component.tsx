@@ -1,6 +1,7 @@
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { usePrefersReducedMotion } from "@/utils/animation.utils";
 import type { IPerformanceBreakdown } from "@/types/evaluate.types";
 
 /**
@@ -23,6 +24,7 @@ export default function PerformanceBarChart({
   className = "",
   sortByAccuracy = true,
 }: IPerformanceBarChartProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   // Sort data if requested
   const sortedData = sortByAccuracy ? [...data].sort((a, b) => b.accuracy - a.accuracy) : data;
 
@@ -70,7 +72,13 @@ export default function PerformanceBarChart({
             }}
             formatter={(value: number, _name, props) => [`${value}%`, props.payload.label]}
           />
-          <Bar dataKey='accuracy' radius={[0, 4, 4, 0]} animationDuration={600} animationEasing='ease-out'>
+          <Bar
+            dataKey='accuracy'
+            radius={[0, 4, 4, 0]}
+            isAnimationActive={!prefersReducedMotion}
+            animationDuration={prefersReducedMotion ? 100 : 400}
+            animationEasing='ease-out'
+          >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getBarColor(entry.accuracy)} />
             ))}

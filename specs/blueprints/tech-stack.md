@@ -117,6 +117,10 @@
 
 - **No testing framework** - Focus on rapid development and iteration
 
+### Local Development
+
+- Dev server default port: 3050 (`pnpm dev` runs Next.js on `http://localhost:3050`; see `package.json` scripts).
+
 ## Security & Performance
 
 ### Security Measures

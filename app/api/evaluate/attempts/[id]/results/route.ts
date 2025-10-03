@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase.utils";
+import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
-import type {
-  IAttemptResultsSummary,
-  ITopicBreakdown,
-  ISubtopicBreakdown,
-  IBloomBreakdown,
-  IWeakArea,
-  IQuestionReview,
-} from "@/types/evaluate.types";
+import type { IAttemptResults, IWeakArea, IQuestionReview } from "@/types/evaluate.types";
 
 /**
  * GET /api/evaluate/attempts/:id/results
@@ -23,14 +16,14 @@ import type {
  * - Weak areas identification with recommendations
  * - Complete question review (all 60 questions with user answer, correct answer, explanation, citations)
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const attemptId = params.id;
+export async function GET(_request: NextRequest, context: any) {
+  const attemptId = context?.params?.id as string;
 
   if (!attemptId) {
     return NextResponse.json({ error: "Attempt ID is required" }, { status: 400 });
   }
 
-  const supabase = createClient();
+  const supabase = getSupabaseServiceRoleClient();
 
   // Dev mode: use default user if set
   const userId = DEV_DEFAULT_USER_ID || null;
@@ -100,7 +93,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
     const timeSpentSeconds = (attempt.metadata as { time_spent_seconds?: number })?.time_spent_seconds || 0;
 
-    const summary: IAttemptResultsSummary = {
+    const summary: IAttemptResults["summary"] = {
       total_questions: totalQuestions,
       correct_count: correctCount,
       score_percentage: scorePercentage,
@@ -123,8 +116,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       topicMap.set(topic, current);
     });
 
-    const topicBreakdown: ITopicBreakdown[] = Array.from(topicMap.entries()).map(([topic, stats]) => ({
-      topic,
+    const topicBreakdown: IAttemptResults["topic_breakdown"] = Array.from(topicMap.entries()).map(([topic, stats]) => ({
+      category: topic,
       correct: stats.correct,
       total: stats.total,
       accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
@@ -146,12 +139,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       subtopicMap.set(subtopic, current);
     });
 
-    const subtopicBreakdown: ISubtopicBreakdown[] = Array.from(subtopicMap.entries()).map(([subtopic, stats]) => ({
-      subtopic,
-      correct: stats.correct,
-      total: stats.total,
-      accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
-    }));
+    const subtopicBreakdown: IAttemptResults["subtopic_breakdown"] = Array.from(subtopicMap.entries()).map(
+      ([subtopic, stats]) => ({
+        category: subtopic,
+        correct: stats.correct,
+        total: stats.total,
+        accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
+      })
+    );
 
     // 6. Compute Bloom breakdown
     const bloomMap = new Map<string, { correct: number; total: number }>();
@@ -169,8 +164,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       bloomMap.set(bloom, current);
     });
 
-    const bloomBreakdown: IBloomBreakdown[] = Array.from(bloomMap.entries()).map(([bloom_level, stats]) => ({
-      bloom_level,
+    const bloomBreakdown: IAttemptResults["bloom_breakdown"] = Array.from(bloomMap.entries()).map(([bloom, stats]) => ({
+      category: bloom,
       correct: stats.correct,
       total: stats.total,
       accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
@@ -185,20 +180,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         // Find topic for this subtopic
         const exampleQuestion = attemptQuestions.find((aq) => {
           const mcq = aq.mcq_items as any;
-          return mcq?.subtopic?.toLowerCase() === sb.subtopic;
+          return mcq?.subtopic?.toLowerCase() === sb.category;
         });
         const mcq = exampleQuestion?.mcq_items as any;
         const topic = mcq?.topic || "React";
 
         // Generate recommendation
         const accuracyPercent = Math.round(sb.accuracy * 100);
-        const recommendation = `Review ${topic} documentation focusing on ${sb.subtopic}. You scored ${accuracyPercent}% on ${sb.total} questions in this area.`;
+        const recommendation = `Review ${topic} documentation focusing on ${sb.category}. You scored ${accuracyPercent}% on ${sb.total} questions in this area.`;
 
         // Get citation from first question in this subtopic
-        const citation = Array.isArray(mcq?.citations) && mcq.citations.length > 0 ? mcq.citations[0] : null;
+        const citation = Array.isArray(mcq?.citations) && mcq.citations.length > 0 ? mcq.citations[0] : "";
 
         return {
-          subtopic: sb.subtopic,
+          subtopic: sb.category,
           topic,
           accuracy: sb.accuracy,
           recommendation,

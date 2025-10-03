@@ -1,5 +1,7 @@
+import { motion } from "framer-motion";
 import { cn } from "@/utils/tailwind.utils";
 import { CheckIcon, XIcon } from "@phosphor-icons/react";
+import { usePrefersReducedMotion, EAnimationDuration, EAnimationScale } from "@/utils/animation.utils";
 
 interface IOptionButtonProps {
   option: string;
@@ -17,6 +19,7 @@ interface IOptionButtonProps {
  *
  * Renders a single MCQ option button with appropriate styling and icons.
  * Handles both evaluation mode (interactive) and review mode (with feedback).
+ * Includes smooth hover/active/focus animations with reduced-motion support.
  */
 export default function OptionButton({
   option,
@@ -28,6 +31,8 @@ export default function OptionButton({
   isSubmitting = false,
   onClick,
 }: IOptionButtonProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   const getOptionStyle = () => {
     // Review mode: show user answer and correctness
     if (mode === "review") {
@@ -47,18 +52,39 @@ export default function OptionButton({
     if (isSelected) {
       return "border-primary bg-primary/5 ring-2 ring-primary/20";
     }
-    return "border-muted hover:border-primary/40 hover:bg-muted/50 cursor-pointer transition-colors";
+    return "border-muted hover:border-primary/40 hover:bg-muted/50 cursor-pointer";
+  };
+
+  // Animation variants for evaluation mode only
+  const buttonVariants = {
+    hover:
+      mode === "evaluation" && !isSubmitting
+        ? {
+            scale: prefersReducedMotion ? 1 : EAnimationScale.UP,
+            transition: { duration: EAnimationDuration.FAST, ease: [0.4, 0, 0.2, 1] as const },
+          }
+        : {},
+    tap:
+      mode === "evaluation" && !isSubmitting
+        ? {
+            scale: prefersReducedMotion ? 1 : EAnimationScale.DOWN,
+            transition: { duration: 0.1, ease: [0.4, 0, 0.2, 1] as const },
+          }
+        : {},
   };
 
   return (
-    <button
+    <motion.button
       onClick={() => onClick(index)}
       disabled={mode === "review" || isSubmitting}
       className={cn(
-        "flex items-center justify-between rounded-md border p-3 text-left text-sm transition-all",
+        "flex items-center justify-between rounded-md border p-3 text-left text-sm",
         getOptionStyle(),
         mode === "review" && "cursor-default"
       )}
+      variants={buttonVariants}
+      whileHover='hover'
+      whileTap='tap'
       data-testid='option-button'
       data-selected={mode === "evaluation" && isSelected}
       data-correct={mode === "review" && isCorrect}
@@ -86,6 +112,6 @@ export default function OptionButton({
           )}
         </>
       )}
-    </button>
+    </motion.button>
   );
 }

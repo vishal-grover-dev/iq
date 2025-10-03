@@ -11,13 +11,14 @@ export const runtime = "nodejs";
  * Submits user's answer for the current question.
  * Records answer silently without revealing correctness (no feedback until completion).
  */
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const attemptId = params.id;
+    const attemptId = resolvedParams.id;
     if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));

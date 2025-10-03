@@ -100,7 +100,7 @@
 
 ### types
 
-- `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`.
+- `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`, and animation enums (`EAnimationDuration`, `EAnimationTranslate`, `EAnimationScale`) with `ANIMATION_EASING` constant for Framer Motion cubic bezier arrays.
 - `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed. `IInterviewIngestItem.depth` supports 0-4.
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
@@ -131,6 +131,7 @@
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
  - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
  - `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
+- `animation.utils.ts`: Imports and re-exports animation enums from `app.types.ts`, provides `usePrefersReducedMotion` hook, and pre-built Framer Motion variants for question transitions, stagger lists, and results orchestration with reduced-motion fallbacks.
 
 ### services
 

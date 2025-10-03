@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import CodeBlock from "./codeBlock.component";
 import OptionButton from "./optionButton.component";
+import { prefetchAttemptDetails } from "@/services/evaluate.services";
 
 interface IQuestionCardProps {
   question: string;
@@ -11,7 +13,7 @@ interface IQuestionCardProps {
   code?: string | null;
   metadata?: {
     topic?: string;
-    subtopic?: string;
+    subtopic?: string | null;
     difficulty?: string;
     bloom_level?: string;
   };
@@ -19,6 +21,7 @@ interface IQuestionCardProps {
   // Evaluation mode props
   onSubmit?: (selectedIndex: number) => void;
   isSubmitting?: boolean;
+  attemptId?: string; // For prefetching N+2 during evaluation
   // Review mode props
   userAnswerIndex?: number | null;
   correctIndex?: number;
@@ -56,6 +59,7 @@ export default function QuestionCard({
   mode,
   onSubmit,
   isSubmitting = false,
+  attemptId,
   userAnswerIndex,
   correctIndex,
   showExplanation = false,
@@ -63,11 +67,18 @@ export default function QuestionCard({
   citations,
 }: IQuestionCardProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const hasPrefetchedN2 = useRef(false);
 
   // Normalize question text (merge isolated inline-code)
   const normalizedQuestion = useMemo(() => {
     if (!question) return "";
     return question.replace(/\n\s*`([^`]+)`\s*\n/gm, " `$1` ");
+  }, [question]);
+
+  // Reset prefetch flag when question changes
+  useEffect(() => {
+    hasPrefetchedN2.current = false;
   }, [question]);
 
   // Keyboard shortcuts for evaluation mode

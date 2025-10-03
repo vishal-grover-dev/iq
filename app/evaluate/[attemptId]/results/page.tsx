@@ -8,6 +8,8 @@ import ScoreGauge from "@/components/evaluate/scoreGauge.component";
 import PerformanceBarChart from "@/components/evaluate/performanceBarChart.component";
 import WeakAreasPanel from "@/components/evaluate/weakAreasPanel.component";
 import QuestionReviewList from "@/components/evaluate/questionReviewList.component";
+import { motion } from "framer-motion";
+import { usePrefersReducedMotion, resultsOrchestrationVariants } from "@/utils/animation.utils";
 
 /**
  * Results Page - Post-Attempt Analytics and Review
@@ -21,6 +23,7 @@ export default function EvaluateResultsPage() {
   const attemptId = params.attemptId as string;
 
   const { data, isLoading, error } = useAttemptResultsQuery(attemptId, true);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   if (isLoading) {
     return (
@@ -83,13 +86,27 @@ export default function EvaluateResultsPage() {
       <div className='bg-card mb-8 rounded-lg border p-6 shadow-sm'>
         <div className='mb-6 grid gap-6 md:grid-cols-2'>
           {/* Left: Score Gauge */}
-          <div className='flex flex-col items-center justify-center'>
+          <motion.div
+            className='flex flex-col items-center justify-center'
+            initial={resultsOrchestrationVariants.scoreCard(prefersReducedMotion).initial}
+            animate={resultsOrchestrationVariants.scoreCard(prefersReducedMotion).animate}
+          >
             <ScoreGauge score={summary.score_percentage} label='Overall Score' />
-            <p className='text-muted-foreground mt-4 text-center text-sm'>{celebrationMessages[scoreTier]}</p>
-          </div>
+            <motion.p
+              className='text-muted-foreground mt-4 text-center text-sm'
+              initial={resultsOrchestrationVariants.message(prefersReducedMotion).initial}
+              animate={resultsOrchestrationVariants.message(prefersReducedMotion).animate}
+            >
+              {celebrationMessages[scoreTier]}
+            </motion.p>
+          </motion.div>
 
           {/* Right: Summary Stats */}
-          <div className='flex flex-col justify-center space-y-4'>
+          <motion.div
+            className='flex flex-col justify-center space-y-4'
+            initial={resultsOrchestrationVariants.section(0, prefersReducedMotion).initial}
+            animate={resultsOrchestrationVariants.section(0, prefersReducedMotion).animate}
+          >
             <div>
               <div className='text-muted-foreground text-sm'>Questions Answered</div>
               <div className='text-3xl font-bold'>
@@ -104,47 +121,71 @@ export default function EvaluateResultsPage() {
               <div className='text-muted-foreground text-sm'>Time Spent</div>
               <div className='text-xl font-semibold'>{Math.floor(summary.time_spent_seconds / 60)} minutes</div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Breakdowns Grid */}
       <div className='mb-8 grid gap-6 md:grid-cols-2'>
-        <PerformanceBarChart title='Performance by Topic' data={topic_breakdown} />
-        <PerformanceBarChart title='Performance by Cognitive Level' data={bloom_breakdown} />
+        <motion.div
+          initial={resultsOrchestrationVariants.section(1, prefersReducedMotion).initial}
+          animate={resultsOrchestrationVariants.section(1, prefersReducedMotion).animate}
+        >
+          <PerformanceBarChart title='Performance by Topic' data={topic_breakdown} />
+        </motion.div>
+        <motion.div
+          initial={resultsOrchestrationVariants.section(2, prefersReducedMotion).initial}
+          animate={resultsOrchestrationVariants.section(2, prefersReducedMotion).animate}
+        >
+          <PerformanceBarChart title='Performance by Cognitive Level' data={bloom_breakdown} />
+        </motion.div>
 
         {/* Difficulty Breakdown */}
-        <PerformanceBarChart
-          title='Performance by Difficulty'
-          data={["Easy", "Medium", "Hard"].map((difficulty) => {
-            const stats = questions.reduce(
-              (acc, q) => {
-                if (q.metadata.difficulty === difficulty) {
-                  acc.total++;
-                  if (q.is_correct) acc.correct++;
-                }
-                return acc;
-              },
-              { correct: 0, total: 0 }
-            );
-            return {
-              category: difficulty,
-              correct: stats.correct,
-              total: stats.total,
-              accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
-            };
-          })}
-          sortByAccuracy={false}
+        <motion.div
           className='md:col-span-2'
-        />
+          initial={resultsOrchestrationVariants.section(3, prefersReducedMotion).initial}
+          animate={resultsOrchestrationVariants.section(3, prefersReducedMotion).animate}
+        >
+          <PerformanceBarChart
+            title='Performance by Difficulty'
+            data={["Easy", "Medium", "Hard"].map((difficulty) => {
+              const stats = questions.reduce(
+                (acc, q) => {
+                  if (q.metadata.difficulty === difficulty) {
+                    acc.total++;
+                    if (q.is_correct) acc.correct++;
+                  }
+                  return acc;
+                },
+                { correct: 0, total: 0 }
+              );
+              return {
+                category: difficulty,
+                correct: stats.correct,
+                total: stats.total,
+                accuracy: stats.total > 0 ? stats.correct / stats.total : 0,
+              };
+            })}
+            sortByAccuracy={false}
+          />
+        </motion.div>
       </div>
 
       {/* Weak Areas Panel */}
-      <WeakAreasPanel weakAreas={weak_areas} />
+      <motion.div
+        initial={resultsOrchestrationVariants.section(4, prefersReducedMotion).initial}
+        animate={resultsOrchestrationVariants.section(4, prefersReducedMotion).animate}
+      >
+        <WeakAreasPanel weakAreas={weak_areas} />
+      </motion.div>
 
       {/* Subtopic Breakdown (Expandable) */}
       {subtopic_breakdown.length > 0 && (
-        <details className='bg-card mb-8 rounded-lg border p-4 shadow-sm'>
+        <motion.details
+          className='bg-card mb-8 rounded-lg border p-4 shadow-sm'
+          initial={resultsOrchestrationVariants.section(5, prefersReducedMotion).initial}
+          animate={resultsOrchestrationVariants.section(5, prefersReducedMotion).animate}
+        >
           <summary className='cursor-pointer text-sm font-semibold'>
             Detailed Performance by Subtopic ({subtopic_breakdown.length} subtopics)
           </summary>
@@ -158,7 +199,7 @@ export default function EvaluateResultsPage() {
               </div>
             ))}
           </div>
-        </details>
+        </motion.details>
       )}
 
       {/* Review Section */}

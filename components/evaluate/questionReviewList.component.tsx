@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "./questionCard.component";
 import type { IQuestionReview } from "@/types/evaluate.types";
 import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import { staggerChildrenVariants, staggerItemVariants, usePrefersReducedMotion } from "@/utils/animation.utils";
 
 /**
  * Question Review List Component
@@ -16,8 +18,11 @@ interface IQuestionReviewListProps {
 }
 
 export default function QuestionReviewList({ questions }: IQuestionReviewListProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [showOnlyIncorrect, setShowOnlyIncorrect] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string>("all");
+  const [itemsToShow, setItemsToShow] = useState(20); // show first 20 initially
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Filter questions
   const filteredQuestions = questions.filter((q) => {
@@ -28,6 +33,22 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
 
   // Get unique topics for filter
   const uniqueTopics = Array.from(new Set(questions.map((q) => q.metadata.topic)));
+
+  // Lazy-load additional items on scroll (increments of 20)
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setItemsToShow((prev) => Math.min(prev + 20, filteredQuestions.length));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [filteredQuestions.length]);
 
   return (
     <div className='bg-card mb-8 rounded-lg border p-6 shadow-sm'>
@@ -66,9 +87,20 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
       </div>
 
       {/* Questions List */}
-      <div className='space-y-6'>
-        {filteredQuestions.map((question) => (
-          <div key={question.question_order} className='border-t pt-6 first:border-t-0 first:pt-0'>
+      <motion.div
+        className='space-y-6'
+        variants={staggerChildrenVariants}
+        initial='hidden'
+        animate='visible'
+        custom={prefersReducedMotion}
+      >
+        {filteredQuestions.slice(0, itemsToShow).map((question) => (
+          <motion.div
+            key={question.question_order}
+            className='border-t pt-6 first:border-t-0 first:pt-0'
+            variants={staggerItemVariants}
+            custom={prefersReducedMotion}
+          >
             {/* Question number and result */}
             <div className='mb-3 flex items-center gap-2'>
               <span className='text-muted-foreground text-sm font-medium'>Question {question.question_order}</span>
@@ -95,19 +127,18 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
                 subtopic: question.metadata.subtopic,
                 difficulty: question.metadata.difficulty,
                 bloom_level: question.metadata.bloom_level,
-                question_order: question.question_order,
-                coding_mode: !!question.code,
               }}
               mode='review'
               userAnswerIndex={question.user_answer_index}
               correctIndex={question.correct_index}
-              isCorrect={question.is_correct}
               explanation={question.explanation}
               citations={question.citations}
             />
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
+      {/* Sentinel for lazy-load */}
+      {itemsToShow < filteredQuestions.length && <div ref={sentinelRef} className='h-6' aria-hidden='true' />}
     </div>
   );
 }

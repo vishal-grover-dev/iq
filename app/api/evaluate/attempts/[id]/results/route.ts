@@ -192,8 +192,8 @@ export async function GET(_request: NextRequest, context: any) {
         const accuracyPercent = Math.round(sb.accuracy * 100);
         const recommendation = `Review ${topic} documentation focusing on ${sb.category}. You scored ${accuracyPercent}% on ${sb.total} questions in this area.`;
 
-        // Get citation from first question in this subtopic
-        const citation = Array.isArray(mcq?.citations) && mcq.citations.length > 0 ? mcq.citations[0] : "";
+        // Get citation URL from first question in this subtopic
+        const citation = Array.isArray(mcq?.citations) && mcq.citations.length > 0 ? mcq.citations[0]?.url || "" : "";
 
         return {
           subtopic: sb.category,

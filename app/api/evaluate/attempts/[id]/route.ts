@@ -1170,15 +1170,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     for (let i = 0; i < selectionOrder.length; i++) {
       const candidate = selectionOrder[i];
-      const { error: assignError } = await supabase.from("attempt_questions").insert({
-        attempt_id: attemptId,
-        question_id: candidate.id,
-        question_order: nextOrder,
-      });
 
-      if (assignError) {
+      // CRITICAL FIX: Add retry logic for question assignment to prevent gaps
+      let assignSuccess = false;
+      let assignError: any = null;
+      const maxRetries = 3;
+
+      for (let retry = 0; retry < maxRetries; retry++) {
+        const { error: assignErrorAttempt } = await supabase.from("attempt_questions").insert({
+          attempt_id: attemptId,
+          question_id: candidate.id,
+          question_order: nextOrder,
+        });
+
+        if (!assignErrorAttempt) {
+          assignSuccess = true;
+          break;
+        }
+
+        assignError = assignErrorAttempt;
+
+        // If it's a unique constraint violation, check if another question was assigned
         if (assignError.code === "23505") {
-          // A row already exists for this question order (likely from a concurrent request).
           const { data: existingRow } = await supabase
             .from("attempt_questions")
             .select("question_id")
@@ -1195,6 +1208,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
             if (existingMcq) {
               final = existingMcq as any;
+              assignSuccess = true;
               console.log("question_selected", {
                 attempt_id: attempt.id,
                 method: "bank_existing_order",
@@ -1206,42 +1220,109 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
               break;
             }
           }
-
-          // If we couldn't load the existing question, continue to next candidate.
-          continue;
+          // If we couldn't load the existing question, continue to next candidate
+          break;
         }
-        console.error("Error assigning question:", assignError);
-        return NextResponse.json({ error: "Failed to assign question" }, { status: 500 });
+
+        // For other errors, retry with exponential backoff
+        if (retry < maxRetries - 1) {
+          const delay = Math.pow(2, retry) * 100; // 100ms, 200ms, 400ms
+          console.warn("question_assignment_retry", {
+            attempt_id: attemptId,
+            candidate_id: candidate.id,
+            order: nextOrder,
+            retry: retry + 1,
+            max_retries: maxRetries,
+            error: assignError.message,
+            delay_ms: delay,
+          });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       }
 
-      // Success (or race handled below) — read back canonical assignment
-      const { data: assignedRow } = await supabase
-        .from("attempt_questions")
-        .select("question_id")
-        .eq("attempt_id", attemptId)
-        .eq("question_order", nextOrder)
+      if (assignSuccess) {
+        // Success — read back canonical assignment
+        const { data: assignedRow } = await supabase
+          .from("attempt_questions")
+          .select("question_id")
+          .eq("attempt_id", attemptId)
+          .eq("question_order", nextOrder)
+          .single();
+
+        let selectedForResponse = candidate;
+        if (assignedRow && assignedRow.question_id && assignedRow.question_id !== candidate.id) {
+          const { data: assignedMcq } = await supabase
+            .from("mcq_items")
+            .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
+            .eq("id", assignedRow.question_id)
+            .single();
+          if (assignedMcq) selectedForResponse = assignedMcq as any;
+        }
+
+        final = selectedForResponse;
+        console.log("question_selected", {
+          attempt_id: attemptId,
+          method: "bank_topK",
+          question_id: selectedForResponse.id,
+          order: nextOrder,
+          topic: (selectedForResponse as any).topic,
+          subtopic: (selectedForResponse as any).subtopic,
+        });
+        break;
+      }
+
+      // If all retries failed, log the error but continue to next candidate
+      console.error("question_assignment_failed_after_retries", {
+        attempt_id: attemptId,
+        candidate_id: candidate.id,
+        order: nextOrder,
+        max_retries: maxRetries,
+        final_error: assignError?.message || "Unknown error",
+      });
+    }
+
+    // CRITICAL FALLBACK: If no question was assigned after trying all candidates,
+    // assign any available question to prevent gaps
+    if (!final) {
+      console.warn("no_question_assigned_fallback", {
+        attempt_id: attemptId,
+        order: nextOrder,
+        candidates_tried: selectionOrder.length,
+        action: "assigning_fallback_question",
+      });
+
+      // Get any available question as fallback
+      const { data: fallbackMcq } = await supabase
+        .from("mcq_items")
+        .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
+        .limit(1)
         .single();
 
-      let selectedForResponse = candidate;
-      if (assignedRow && assignedRow.question_id && assignedRow.question_id !== candidate.id) {
-        const { data: assignedMcq } = await supabase
-          .from("mcq_items")
-          .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
-          .eq("id", assignedRow.question_id)
-          .single();
-        if (assignedMcq) selectedForResponse = assignedMcq as any;
-      }
+      if (fallbackMcq) {
+        const { error: fallbackError } = await supabase.from("attempt_questions").insert({
+          attempt_id: attemptId,
+          question_id: fallbackMcq.id,
+          question_order: nextOrder,
+        });
 
-      final = selectedForResponse;
-      console.log("question_selected", {
-        attempt_id: attemptId,
-        method: "bank_topK",
-        question_id: selectedForResponse.id,
-        order: nextOrder,
-        topic: (selectedForResponse as any).topic,
-        subtopic: (selectedForResponse as any).subtopic,
-      });
-      break;
+        if (!fallbackError) {
+          final = fallbackMcq as any;
+          console.log("question_selected", {
+            attempt_id: attemptId,
+            method: "fallback_assignment",
+            question_id: fallbackMcq.id,
+            order: nextOrder,
+            topic: (fallbackMcq as any).topic,
+            subtopic: (fallbackMcq as any).subtopic,
+          });
+        } else {
+          console.error("fallback_assignment_failed", {
+            attempt_id: attemptId,
+            order: nextOrder,
+            error: fallbackError.message,
+          });
+        }
+      }
     }
 
     return NextResponse.json({

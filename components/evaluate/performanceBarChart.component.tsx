@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { usePrefersReducedMotion } from "@/utils/animation.utils";
+import { motion } from "framer-motion";
+import { usePrefersReducedMotion, ANIMATION_EASING } from "@/utils/animation.utils";
 import type { IPerformanceBreakdown } from "@/types/evaluate.types";
 
 /**
@@ -18,6 +20,18 @@ interface IPerformanceBarChartProps {
   sortByAccuracy?: boolean;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.35,
+      ease: ANIMATION_EASING.easeOut,
+    },
+  },
+};
+
 export default function PerformanceBarChart({
   title,
   data,
@@ -29,11 +43,15 @@ export default function PerformanceBarChart({
   const sortedData = sortByAccuracy ? [...data].sort((a, b) => b.accuracy - a.accuracy) : data;
 
   // Transform to percentage for display
-  const chartData = sortedData.map((item) => ({
-    category: item.category,
-    accuracy: Math.round(item.accuracy * 100),
-    label: `${item.correct}/${item.total}`,
-  }));
+  const chartData = useMemo(
+    () =>
+      sortedData.map((item) => ({
+        category: item.category,
+        accuracy: Math.round(item.accuracy * 100),
+        label: `${item.correct}/${item.total}`,
+      })),
+    [sortedData]
+  );
 
   // Color based on accuracy
   const getBarColor = (accuracy: number) => {
@@ -44,8 +62,20 @@ export default function PerformanceBarChart({
   };
 
   return (
-    <div className={`bg-card rounded-lg border p-4 shadow-sm ${className}`}>
-      <h3 className='mb-4 text-sm font-semibold'>{title}</h3>
+    <motion.div
+      className={`bg-card rounded-lg border p-4 shadow-sm ${className}`}
+      variants={containerVariants}
+      initial='hidden'
+      animate='visible'
+    >
+      <motion.h3
+        className='mb-4 text-sm font-semibold'
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut }}
+      >
+        {title}
+      </motion.h3>
       <ResponsiveContainer width='100%' height={Math.max(200, chartData.length * 40)}>
         <BarChart
           data={chartData}
@@ -85,6 +115,6 @@ export default function PerformanceBarChart({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }

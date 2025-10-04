@@ -63,6 +63,7 @@
  - `error-message.tsx`: Reusable error message component for forms and UI states.
  - `file-dropzone.tsx`: Reusable dropzone wrapper for file uploads built on react-dropzone.
 - `form-label.tsx`: Reusable label component that displays red asterisk for required form fields.
+- `toggle-group.tsx`: Radix Toggle Group primitives styled as pill segmented controls.
 
 ### components/upload
 
@@ -77,9 +78,10 @@
 - `optionButton.component.tsx`: Single MCQ option button with evaluation/review mode styling, correctness indicators, and keyboard accessibility. ~95 lines.
 - `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines. (Replaced by PerformanceBarChart for main results display)
 - `scoreGauge.component.tsx`: Radial gauge chart showing overall score (0-100%) with color-coded tiers using Recharts RadialBarChart. Mobile-responsive with centered score display. ~55 lines.
-- `performanceBarChart.component.tsx`: Horizontal bar chart for topic/Bloom/difficulty performance breakdowns using Recharts. Color-coded by accuracy, sortable, with responsive design. ~75 lines.
-- `weakAreasPanel.component.tsx`: Displays weak areas (< 50% accuracy) with recommendations and citations. Amber-themed warning panel. ~40 lines.
-- `questionReviewList.component.tsx`: Complete question review with filtering (incorrect only, by topic), correctness indicators, and detailed feedback. ~110 lines.
+- `performanceBarChart.component.tsx`: Animated horizontal bar chart for topic/Bloom/difficulty breakdowns using Recharts with motion-aware container.
+- `resultsHero.component.tsx`: Animated hero section for the results page with score gauge, tier messaging, confetti celebration, and stat cards.
+- `weakAreasPanel.component.tsx`: Animated card grid highlighting prioritized weak areas with tone badges, accuracy metrics, and deep-dive links.
+- `questionReviewList.component.tsx`: Enhanced review list with search, grouping, sorting toggles, and animated question cards.
 
 ### hooks
 

@@ -84,7 +84,49 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Update attempt counters
     const newQuestionsAnswered = attempt.questions_answered + 1;
     const newCorrectCount = attempt.correct_count + (isCorrect ? 1 : 0);
-    const isComplete = newQuestionsAnswered >= attempt.total_questions;
+
+    // CRITICAL FIX: Validate that all questions are actually assigned before marking complete
+    // Check if we have reached the target number of answered questions
+    const hasReachedTarget = newQuestionsAnswered >= attempt.total_questions;
+
+    // If we've reached the target, verify that all questions are actually assigned
+    let isComplete = false;
+    if (hasReachedTarget) {
+      // Count actual assigned questions to verify completion
+      const { data: assignedQuestions, error: countError } = await supabase
+        .from("attempt_questions")
+        .select("id", { count: "exact" })
+        .eq("attempt_id", attemptId);
+
+      if (countError) {
+        console.error("Error counting assigned questions:", countError);
+        return NextResponse.json({ error: "Failed to verify completion" }, { status: 500 });
+      }
+
+      const actualAssignedCount = assignedQuestions?.length || 0;
+      isComplete = actualAssignedCount >= attempt.total_questions;
+
+      // Log completion validation for debugging
+      console.log("completion_validation", {
+        attempt_id: attemptId,
+        questions_answered: newQuestionsAnswered,
+        total_questions: attempt.total_questions,
+        actual_assigned: actualAssignedCount,
+        is_complete: isComplete,
+        has_gaps: actualAssignedCount < attempt.total_questions,
+      });
+
+      // If there are gaps, don't mark as complete and log the issue
+      if (!isComplete) {
+        console.warn("attempt_completion_blocked", {
+          attempt_id: attemptId,
+          reason: "insufficient_assigned_questions",
+          expected: attempt.total_questions,
+          actual: actualAssignedCount,
+          gaps: attempt.total_questions - actualAssignedCount,
+        });
+      }
+    }
 
     const updateData: any = {
       questions_answered: newQuestionsAnswered,
@@ -127,6 +169,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         questions_answered: newQuestionsAnswered,
         total_questions: attempt.total_questions,
         is_complete: isComplete,
+        // Include validation info for debugging
+        validation: hasReachedTarget
+          ? {
+              actual_assigned: newQuestionsAnswered, // This will be the count from the validation above
+              has_gaps: !isComplete && hasReachedTarget,
+            }
+          : null,
       },
     });
   } catch (err: any) {

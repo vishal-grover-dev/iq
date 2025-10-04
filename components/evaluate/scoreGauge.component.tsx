@@ -61,7 +61,7 @@ export default function ScoreGauge({ score, label = "Score" }: IScoreGaugeProps)
   ];
 
   return (
-    <div className='relative'>
+    <div className='relative w-full max-w-[200px] mx-auto'>
       <ResponsiveContainer width='100%' height={180}>
         <RadialBarChart
           cx='50%'
@@ -84,11 +84,11 @@ export default function ScoreGauge({ score, label = "Score" }: IScoreGaugeProps)
           />
         </RadialBarChart>
       </ResponsiveContainer>
-      <div className='absolute inset-0 flex flex-col items-center justify-center'>
-        <div className='text-4xl font-bold' style={{ color }}>
+      <div className='absolute inset-0 flex flex-col items-center justify-center px-2'>
+        <div className='text-3xl font-bold leading-tight' style={{ color }}>
           {displayScore}%
         </div>
-        <div className='text-muted-foreground text-xs'>{label}</div>
+        <div className='text-muted-foreground text-xs mt-1'>{label}</div>
       </div>
     </div>
   );

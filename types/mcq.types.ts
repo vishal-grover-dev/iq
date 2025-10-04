@@ -13,6 +13,14 @@ export enum EDifficulty {
   HARD = "Hard",
 }
 
+export enum EQuestionStyle {
+  THEORY = "theory",
+  CODE_READING = "code-reading",
+  DEBUG = "debug",
+  REFACTOR = "refactor",
+  TRADEOFF = "tradeoff",
+}
+
 export type TCitation = {
   title?: string;
   url: string;
@@ -31,6 +39,7 @@ export interface IMcqItemView {
   explanation?: string;
   explanationBullets?: string[];
   citations: TCitation[];
+  questionStyle?: EQuestionStyle;
 }
 
 export enum EPromptMode {
@@ -53,6 +62,29 @@ export type TGeneratorBuildArgs = {
    * Used to reduce duplicates by providing negative examples to the LLM.
    */
   negativeExamples?: string[];
+  /**
+   * Optional list of available subtopics for the chosen topic from the dynamic ontology.
+   * Helps the generator align subtopic selection with actual embedded content.
+   */
+  availableSubtopics?: string[];
+  /**
+   * Soft avoid list of topics for generation. The model should steer away
+   * from these topics if sufficient candidates exist, and may relax otherwise.
+   */
+  avoidTopics?: string[];
+  /**
+   * Soft avoid list of subtopics (e.g., recent/dominant) to reduce clustering.
+   * The model should avoid these when possible, and may relax on retries.
+   */
+  avoidSubtopics?: string[];
+  /**
+   * Optional question style hint used when question style experiments are enabled.
+   */
+  questionStyle?: EQuestionStyle;
+  /**
+   * Additional builder instructions appended to the prompt when experimenting with new guidance.
+   */
+  extraInstructions?: string | null;
 };
 
 export type TJudgeBuildArgs = {

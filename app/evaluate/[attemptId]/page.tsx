@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/evaluate/questionCard.component";
-import {
-  useAttemptDetailsQuery,
-  useSubmitAnswerMutation,
-  usePauseAttemptMutation,
-  prefetchAttemptDetails,
-} from "@/services/evaluate.services";
+import { useAttemptDetailsQuery, useSubmitAnswerMutation, usePauseAttemptMutation } from "@/services/evaluate.services";
 import { PauseIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
@@ -36,7 +30,6 @@ export default function EvaluateAttemptPage() {
   const router = useRouter();
   const params = useParams();
   const attemptId = params.attemptId as string;
-  const queryClient = useQueryClient();
 
   const [timeSpent, setTimeSpent] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
@@ -50,58 +43,6 @@ export default function EvaluateAttemptPage() {
 
   const submitAnswerMutation = useSubmitAnswerMutation(attemptId);
   const pauseAttemptMutation = usePauseAttemptMutation(attemptId);
-
-  // Prefetch N+1 question ahead of time (Trigger Point 1: high priority)
-  useEffect(() => {
-    if (!data?.next_question?.id || !data?.attempt) return;
-
-    // Only prefetch if there are more questions (avoid prefetching after question 60)
-    const questionsAnswered = data.attempt.questions_answered;
-    if (questionsAnswered >= 59) return;
-
-    // Prefetch next question with high priority (5 min staleTime)
-    prefetchAttemptDetails(queryClient, attemptId, "high");
-  }, [data?.next_question?.id, data?.attempt, attemptId, queryClient]);
-
-  // Memory management: Cleanup old cached data when moving to next question
-  // This prevents memory buildup with code-heavy questions (Task 5)
-  useEffect(() => {
-    if (!data?.next_question?.id) return;
-
-    // After each question change, remove stale queries older than 2 minutes
-    // The gcTime in prefetch (2 min) will handle most cleanup, but this ensures
-    // aggressive memory management during long evaluation sessions
-    const cleanupTimer = setTimeout(() => {
-      // TanStack Query's gcTime will handle removal of unused cached queries
-      // We just need to ensure we're not holding onto refs unnecessarily
-      queryClient.removeQueries({
-        queryKey: ["evaluate", "attempts", attemptId, "details"],
-        exact: false,
-        predicate: (query) => {
-          // Remove queries that are inactive and older than gcTime threshold
-          const isInactive = query.getObserversCount() === 0;
-          const lastUpdated = query.state.dataUpdatedAt;
-          const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
-          return isInactive && lastUpdated < twoMinutesAgo;
-        },
-      });
-    }, 100); // Small delay to avoid interfering with active prefetch
-
-    return () => clearTimeout(cleanupTimer);
-  }, [data?.next_question?.id, attemptId, queryClient]);
-
-  // Component unmount cleanup: Remove attempt details query to free memory
-  useEffect(() => {
-    return () => {
-      // On unmount (user pauses or navigates away), cleanup cached questions
-      // Only remove inactive queries (not currently being observed)
-      queryClient.removeQueries({
-        queryKey: ["evaluate", "attempts", attemptId, "details"],
-        exact: true,
-        predicate: (query) => query.getObserversCount() === 0,
-      });
-    };
-  }, [attemptId, queryClient]);
 
   // Track time spent on current question
   useEffect(() => {
@@ -321,7 +262,6 @@ export default function EvaluateAttemptPage() {
             mode='evaluation'
             onSubmit={handleSubmitAnswer}
             isSubmitting={submitAnswerMutation.isPending}
-            attemptId={attemptId}
           />
         </motion.div>
       </AnimatePresence>

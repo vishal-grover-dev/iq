@@ -357,6 +357,42 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 ---
 
+### Bank Selection with Neighbor Similarity
+
+**Decision:** Apply neighbor similarity checking to bank question selection to prevent similar questions from being selected in the same attempt.
+
+**Why:**
+
+- **Prevents question repetition:** Similar questions (Q46 and Q49) can occur when bank selection doesn't consider similarity to already-asked questions.
+- **Dual similarity checks:** 
+  - **Attempt-level similarity:** Compare candidate embeddings against questions already asked in current attempt using cosine similarity.
+  - **Cross-attempt similarity:** Use `retrieval_mcq_neighbors` RPC to find similar questions from other attempts.
+- **Configurable penalties:** Different penalty levels for high (≥0.92) and medium (≥0.85) similarity thresholds.
+- **Graceful degradation:** Similarity checks are wrapped in try-catch to prevent bank selection failures.
+
+**Implementation:**
+
+- **Similarity thresholds:** `BANK_SIMILARITY_THRESHOLD_HIGH` (0.92), `BANK_SIMILARITY_THRESHOLD_MEDIUM` (0.85)
+- **Penalty system:** High similarity gets 50pt penalty, medium gets 25pt penalty for attempt similarity; neighbor similarity gets 30pt/15pt penalties.
+- **Logging:** Comprehensive metrics for similarity scores, gate hits, and penalty application.
+- **Performance:** Parallel similarity checks using `Promise.all` for all candidates.
+
+**Trade-offs:**
+
+- **Latency increase:** Each candidate requires embedding comparison and neighbor retrieval (~100-200ms per candidate).
+- **Database load:** Additional RPC calls to `retrieval_mcq_neighbors` for each candidate.
+- **Complexity:** More sophisticated scoring logic with multiple similarity dimensions.
+
+---
+
+## Static Ontology Configuration
+
+- The evaluation feature loads topics, subtopics, and topic weighting from `data/static-ontology.json` using `utils/static-ontology.utils.ts`.
+- This replaces LLM-driven generation for ontology, archetype, and weight data to ensure deterministic behavior.
+- Maintenance workflow: update the JSON file when topics or weights change and redeploy.
+
+---
+
 ## When to Update This Document
 
 Add new entries when:

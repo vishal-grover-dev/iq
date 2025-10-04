@@ -1,0 +1,206 @@
+{
+  "topics": {
+    "Accessibility": {
+      "weight": 0.0425,
+      "chunk_count": 143,
+      "subtopics": [
+        { "name": "Accessibility Basics", "chunk_count": 34 },
+        { "name": "Accessibility Testing", "chunk_count": 29 },
+        { "name": "Design and user experience", "chunk_count": 8 },
+        { "name": "Semantic HTML", "chunk_count": 8 },
+        { "name": "ARIA Roles", "chunk_count": 8 },
+        { "name": "Typography", "chunk_count": 7 },
+        { "name": "Focus Management", "chunk_count": 7 },
+        { "name": "Images", "chunk_count": 7 },
+        { "name": "Media", "chunk_count": 6 },
+        { "name": "Forms", "chunk_count": 6 },
+        { "name": "Patterns", "chunk_count": 6 },
+        { "name": "Color Contrast", "chunk_count": 6 },
+        { "name": "Animations & Transitions", "chunk_count": 5 },
+        { "name": "Glossary", "chunk_count": 4 },
+        { "name": "Accessible Names & Labels", "chunk_count": 2 }
+      ]
+    },
+    "CSS": {
+      "weight": 0.1147,
+      "chunk_count": 386,
+      "subtopics": [
+        { "name": "Responsive Design", "chunk_count": 117 },
+        { "name": "Animations & Transitions", "chunk_count": 48 },
+        { "name": "Selectors", "chunk_count": 23 },
+        { "name": "Cascade & Specificity", "chunk_count": 21 },
+        { "name": "Grid", "chunk_count": 18 },
+        { "name": "Box Model", "chunk_count": 15 },
+        { "name": "Positioning", "chunk_count": 15 },
+        { "name": "Flexbox", "chunk_count": 13 },
+        { "name": "Custom Properties (CSS Variables)", "chunk_count": 13 },
+        { "name": "Typography", "chunk_count": 12 },
+        { "name": "Backgrounds", "chunk_count": 11 },
+        { "name": "Functions", "chunk_count": 11 },
+        { "name": "Color Contrast", "chunk_count": 10 },
+        { "name": "Overflow", "chunk_count": 8 },
+        { "name": "Layout", "chunk_count": 8 },
+        { "name": "Borders", "chunk_count": 6 },
+        { "name": "Lists & Keys (Reconciliation)", "chunk_count": 5 },
+        { "name": "Container Queries", "chunk_count": 5 },
+        { "name": "Focus Management", "chunk_count": 4 },
+        { "name": "CSS Layers", "chunk_count": 4 },
+        { "name": "Filters", "chunk_count": 4 },
+        { "name": "Shadows", "chunk_count": 4 },
+        { "name": "Cursors", "chunk_count": 4 }
+      ]
+    },
+    "HTML": {
+      "weight": 0.0615,
+      "chunk_count": 207,
+      "subtopics": [
+        { "name": "Document Structure & Meta", "chunk_count": 63 },
+        { "name": "Media", "chunk_count": 19 },
+        { "name": "Forms", "chunk_count": 18 },
+        { "name": "Attributes", "chunk_count": 15 },
+        { "name": "Semantics", "chunk_count": 15 },
+        { "name": "Accessibility Basics", "chunk_count": 12 },
+        { "name": "Links", "chunk_count": 10 },
+        { "name": "Lists & Keys (Reconciliation)", "chunk_count": 10 },
+        { "name": "Navigation", "chunk_count": 10 },
+        { "name": "Tables", "chunk_count": 10 },
+        { "name": "Functions & Higher-Order Functions", "chunk_count": 9 },
+        { "name": "Focus Management", "chunk_count": 8 },
+        { "name": "Text Basics", "chunk_count": 8 }
+      ]
+    },
+    "JavaScript": {
+      "weight": 0.159,
+      "chunk_count": 535,
+      "subtopics": [
+        { "name": "Network Optimizations", "chunk_count": 85 },
+        { "name": "Objects & Prototypes", "chunk_count": 82 },
+        { "name": "Forms", "chunk_count": 78 },
+        { "name": "Media", "chunk_count": 43 },
+        { "name": "Types & Coercion", "chunk_count": 29 },
+        { "name": "Functions & Higher-Order Functions", "chunk_count": 26 },
+        { "name": "Error Handling (try/catch)", "chunk_count": 26 },
+        { "name": "Control Flow", "chunk_count": 23 },
+        { "name": "Accessibility Basics", "chunk_count": 18 },
+        { "name": "Performance & Web Vitals", "chunk_count": 17 },
+        { "name": "Classes", "chunk_count": 16 },
+        { "name": "Collections (Map/Set/WeakMap/WeakSet)", "chunk_count": 14 },
+        { "name": "Web Workers", "chunk_count": 11 },
+        { "name": "let/const/var & Scope", "chunk_count": 10 },
+        { "name": "Code Splitting", "chunk_count": 9 },
+        { "name": "Prefetching", "chunk_count": 7 },
+        { "name": "this, call/apply/bind", "chunk_count": 7 },
+        { "name": "Modules (ESM/CommonJS)", "chunk_count": 6 },
+        { "name": "Prototypal Inheritance", "chunk_count": 4 },
+        { "name": "Basic & Literal Types", "chunk_count": 4 },
+        { "name": "Responsive Design", "chunk_count": 3 }
+      ]
+    },
+    "PWA": {
+      "weight": 0.0068,
+      "chunk_count": 23,
+      "subtopics": [
+        { "name": "App Manifest", "chunk_count": 18 },
+        { "name": "Performance & Lighthouse PWA", "chunk_count": 5 }
+      ]
+    },
+    "React": {
+      "weight": 0.1552,
+      "chunk_count": 522,
+      "subtopics": [
+        { "name": "Lists & Keys (Reconciliation)", "chunk_count": 83 },
+        { "name": "Hooks: useState", "chunk_count": 37 },
+        { "name": "Components & Props", "chunk_count": 36 },
+        { "name": "Error Boundaries", "chunk_count": 35 },
+        { "name": "Hooks: useEffect", "chunk_count": 30 },
+        { "name": "Effects: Dependencies & Cleanup", "chunk_count": 26 },
+        { "name": "Data Fetching Patterns (High-level)", "chunk_count": 24 },
+        { "name": "Custom Hooks", "chunk_count": 24 },
+        { "name": "Hooks: useMemo", "chunk_count": 19 },
+        { "name": "Concurrent Rendering (Basics)", "chunk_count": 16 },
+        { "name": "Strict Mode", "chunk_count": 14 },
+        { "name": "Hooks: useCallback", "chunk_count": 14 },
+        { "name": "State & Lifecycle", "chunk_count": 13 },
+        { "name": "Suspense (Intro)", "chunk_count": 13 },
+        { "name": "Controlled vs Uncontrolled Forms", "chunk_count": 13 },
+        { "name": "Context API", "chunk_count": 13 },
+        { "name": "Hooks: useReducer", "chunk_count": 12 },
+        { "name": "Performance Optimization", "chunk_count": 12 },
+        { "name": "Refs & DOM: Manipulating the DOM", "chunk_count": 12 },
+        { "name": "Events & Forms (Controlled)", "chunk_count": 11 },
+        { "name": "Memoization (React.memo/useMemo/useCallback)", "chunk_count": 11 },
+        { "name": "Hooks: useSyncExternalStore", "chunk_count": 9 },
+        { "name": "Refs & DOM: Referencing Values", "chunk_count": 8 },
+        { "name": "JSX & Rendering", "chunk_count": 7 },
+        { "name": "Hooks: useLayoutEffect", "chunk_count": 7 },
+        { "name": "Forwarding Refs", "chunk_count": 7 },
+        { "name": "Portals", "chunk_count": 6 },
+        { "name": "Hooks: useRef", "chunk_count": 6 },
+        { "name": "Fragments", "chunk_count": 4 }
+      ]
+    },
+    "Routing": {
+      "weight": 0.2212,
+      "chunk_count": 744,
+      "subtopics": [
+        { "name": "Declarative Routes", "chunk_count": 457 },
+        { "name": "Data Loading Basics", "chunk_count": 74 },
+        { "name": "Custom Hooks", "chunk_count": 48 },
+        { "name": "Dynamic Routes & Layouts", "chunk_count": 42 },
+        { "name": "Data Fetching Patterns (High-level)", "chunk_count": 22 },
+        { "name": "Middleware", "chunk_count": 17 },
+        { "name": "Server vs Client Components (Next.js)", "chunk_count": 14 },
+        { "name": "Sessions & Cookies Management", "chunk_count": 11 },
+        { "name": "Context vs Redux", "chunk_count": 10 },
+        { "name": "Forms", "chunk_count": 6 },
+        { "name": "Network Optimizations", "chunk_count": 5 },
+        { "name": "Type Safety", "chunk_count": 4 },
+        { "name": "Error Boundaries", "chunk_count": 3 },
+        { "name": "Error Handling Patterns", "chunk_count": 3 },
+        { "name": "Nested Routes", "chunk_count": 2 },
+        { "name": "Context API", "chunk_count": 2 },
+        { "name": "Suspense (Intro)", "chunk_count": 2 },
+        { "name": "Code Splitting", "chunk_count": 1 },
+        { "name": "Security", "chunk_count": 1 },
+        { "name": "Prefetching", "chunk_count": 1 }
+      ]
+    },
+    "State Management": {
+      "weight": 0.201,
+      "chunk_count": 676,
+      "subtopics": [
+        { "name": "Redux Toolkit Patterns", "chunk_count": 343 },
+        { "name": "RTK Query Basics", "chunk_count": 321 },
+        { "name": "Selectors & Memoization", "chunk_count": 4 },
+        { "name": "Code Splitting", "chunk_count": 3 },
+        { "name": "Immutability", "chunk_count": 3 },
+        { "name": "Error Handling Patterns", "chunk_count": 2 }
+      ]
+    },
+    "Testing": {
+      "weight": 0.0172,
+      "chunk_count": 58,
+      "subtopics": [
+        { "name": "Tools", "chunk_count": 9 },
+        { "name": "What Testing Is", "chunk_count": 7 },
+        { "name": "RTL Queries", "chunk_count": 7 },
+        { "name": "Testing", "chunk_count": 7 },
+        { "name": "Async Tests", "chunk_count": 6 },
+        { "name": "Static Analysis", "chunk_count": 6 },
+        { "name": "Testing Environment", "chunk_count": 5 },
+        { "name": "Testing Approach", "chunk_count": 5 }
+      ]
+    },
+    "TypeScript": {
+      "weight": 0.0208,
+      "chunk_count": 70,
+      "subtopics": [
+        { "name": "Basic & Literal Types", "chunk_count": 17 },
+        { "name": "Generics", "chunk_count": 17 },
+        { "name": "Type Narrowing", "chunk_count": 16 },
+        { "name": "JSX & React Types", "chunk_count": 11 },
+        { "name": "enum", "chunk_count": 9 }
+      ]
+    }
+  }
+}

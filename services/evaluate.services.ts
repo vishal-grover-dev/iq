@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from "@/services/http.services";
-import { useMutation, useQuery, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   IAttemptsSummary,
   IAttemptDetailsResponse,
@@ -82,40 +82,30 @@ export async function pauseAttempt(attemptId: string): Promise<{ status: string;
   return data as { status: string; message: string };
 }
 
-// ============================================================================
-// Prefetch Utilities
-// ============================================================================
-
 /**
- * prefetchAttemptDetails
- * Prefetches attempt details with next question ahead of time to reduce perceived latency.
- * Configured with aggressive staleTime and gcTime for optimal prefetch performance.
- *
- * @param queryClient - TanStack Query client instance (use useQueryClient() hook in components)
- * @param attemptId - Attempt ID to prefetch
- * @param priority - 'high' for N+1 (5 min stale), 'medium' for N+2 (2 min stale)
- * @returns Promise that resolves when prefetch completes (or fails silently)
+ * fetchInterviewAlignment
+ * Fetches interview alignment data for a specific attempt.
+ * This includes static topic weights and their distribution.
  */
-export async function prefetchAttemptDetails(
-  queryClient: QueryClient,
-  attemptId: string,
-  priority: "high" | "medium" = "high"
-): Promise<void> {
-  const staleTime = priority === "high" ? 5 * 60 * 1000 : 2 * 60 * 1000; // 5 min or 2 min
-  const gcTime = 2 * 60 * 1000; // 2 minutes for aggressive cleanup
+export async function fetchInterviewAlignment(attemptId: string) {
+  const [weightsResponse, resultsResponse] = await Promise.all([
+    apiClient.get("/api/ontology"),
+    apiClient.get(`/api/evaluate/attempts/${attemptId}/results`),
+  ]);
 
-  try {
-    await queryClient.prefetchQuery({
-      // Use a buffer key so prefetching doesn't overwrite the active question
-      queryKey: ["evaluate", "attempts", attemptId, "details", "prefetch"],
-      queryFn: () => getAttemptDetails(attemptId),
-      staleTime,
-      gcTime,
-    });
-  } catch (error) {
-    // Prefetch failures should not break the UI; fail silently
-    console.warn(`Prefetch failed for attempt ${attemptId}:`, error);
-  }
+  const weights = weightsResponse.data?.topics || {};
+  const data = resultsResponse.data;
+  const distribution = data?.topic_breakdown?.reduce((acc: Record<string, number>, item: any) => {
+    acc[item.topic] = item.total ?? 0;
+    return acc;
+  }, {});
+  return {
+    ...data,
+    interview_alignment: {
+      weights,
+      distribution,
+    },
+  };
 }
 
 // ============================================================================
@@ -183,40 +173,25 @@ export function useSubmitAnswerMutation(attemptId: string) {
   return useMutation({
     mutationFn: (payload: ISubmitAnswerRequest) => submitAnswer(attemptId, payload),
     onSuccess: (response) => {
-      const mainKey = ["evaluate", "attempts", attemptId, "details"] as const;
-      const prefetchKey = ["evaluate", "attempts", attemptId, "details", "prefetch"] as const;
+      const detailsKey = ["evaluate", "attempts", attemptId, "details"] as const;
 
-      if (!response.progress.is_complete) {
-        // Only hydrate from prefetched data if it corresponds to the next expected order
-        const prefetched = queryClient.getQueryData(prefetchKey) as IAttemptDetailsResponse | undefined;
-        const expectedNextOrder = response.progress.questions_answered + 1; // server already incremented
+      // Immediately replace cached details with server response so UI updates without refetch
+      queryClient.setQueryData(detailsKey, {
+        attempt: {
+          id: attemptId,
+          status: response.progress.is_complete ? "completed" : "in_progress",
+          questions_answered: response.progress.questions_answered,
+          correct_count: response.progress.correct_count,
+          total_questions: response.progress.total_questions,
+        },
+        next_question: response.next_question ?? null,
+      } as IAttemptDetailsResponse);
 
-        const isPrefetchForNextOrder =
-          !!prefetched?.next_question?.metadata?.question_order &&
-          prefetched.next_question.metadata.question_order === expectedNextOrder;
-
-        if (prefetched && prefetched.next_question && isPrefetchForNextOrder) {
-          const hydrated: IAttemptDetailsResponse = {
-            attempt: {
-              ...prefetched.attempt,
-              questions_answered: response.progress.questions_answered,
-              status: "in_progress",
-            },
-            next_question: prefetched.next_question,
-          } as IAttemptDetailsResponse;
-
-          queryClient.setQueryData(mainKey, hydrated);
-          queryClient.removeQueries({ queryKey: prefetchKey, exact: true });
-        } else {
-          // Fallback: no valid prefetch; refetch once to get the assigned question
-          queryClient.invalidateQueries({ queryKey: mainKey });
-        }
-      } else {
-        // If attempt is complete, ensure details are refreshed lazily and results are primed
-        queryClient.invalidateQueries({ queryKey: mainKey });
+      if (!response.progress.is_complete && !response.next_question) {
+        // When no question is returned but attempt isn't complete, refetch for safety
+        queryClient.invalidateQueries({ queryKey: detailsKey });
       }
 
-      // If attempt is now complete, invalidate results query
       if (response.progress.is_complete) {
         queryClient.invalidateQueries({ queryKey: ["evaluate", "attempts", attemptId, "results"] });
       }

@@ -97,10 +97,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       updateData.completed_at = new Date().toISOString();
     }
 
-    // Update metadata with session info
+    // Update metadata with session info and accumulate time spent
     const metadata = attempt.metadata || {};
+    const currentTotalTime = (metadata.time_spent_seconds as number) || 0;
+    const questionTime = time_spent_seconds || 0;
+    const newTotalTime = currentTotalTime + questionTime;
+
     updateData.metadata = {
       ...metadata,
+      time_spent_seconds: newTotalTime,
       last_session_at: new Date().toISOString(),
     };
 

@@ -132,6 +132,8 @@
  - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
  - `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
 - `animation.utils.ts`: Imports and re-exports animation enums from `app.types.ts`, provides `usePrefersReducedMotion` hook, and pre-built Framer Motion variants for question transitions, stagger lists, and results orchestration with reduced-motion fallbacks.
+- `static-ontology.utils.ts`: Loads statically defined topics, subtopics, and weights from JSON.
+- `selection.utils.ts`: Weighted random utilities for selection (`weightedRandomIndex`, `weightedRandomSelect`, `calculateCoverageWeights`).
 
 ### services
 
@@ -149,12 +151,14 @@
 
 ### data
 
-- `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries (ingestType, url, embedded flag) used to automate seeding and ingestion.
- - `label-rules.json`: Config-driven rules mapping for per-source regex/prefix → labels used by dynamic label resolver.
+- `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries.
+- `label-rules.json`: Config-driven rules mapping.
+- `static-ontology.json`: Hard-coded topics, subtopics, and topic weightings for the evaluation feature.
 
 ### scripts
 
 - `scripts/run-catalog.ts`: CLI to run catalog-driven ingestion with structured logs. Usage: `pnpm run:catalog [--topic=React] [--concurrency=4]`.
+- `scripts/generate-ontology.ts`: **Optional** pre-warming script to generate `data/ontology-cache.json` before deployment. Usage: `pnpm generate:ontology`. Not required for runtime—system auto-generates on first request if cache is missing.
 
 ### specs/work-items
 
@@ -198,6 +202,8 @@
  - `api/evaluate/attempts/[id]/route.ts`: Single attempt routes (GET fetches details with LLM-selected next question, PATCH pauses attempt).
  - `api/evaluate/attempts/[id]/answer/route.ts`: Answer submission route (POST) records answer silently without revealing correctness.
  - `api/evaluate/attempts/[id]/results/route.ts`: Results route (GET) provides post-attempt analytics, breakdowns, weak areas, and complete question review with feedback.
+- `api/ontology/status/route.ts`: Admin endpoint returning ontology cache source, age, staleness, and topic/subtopic counts.
+- `api/ontology/route.ts`: Provides ontology cache payload (topics, subtopics, chunk counts, optional archetypes, target weights) with cache metadata.
  - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
  - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
  - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.
@@ -214,4 +220,10 @@ Updates:
 - `types/mcq.types.ts`: Added `TReviserBuildArgs` interface for revision functionality.
 - `app/generate/mcq/page.tsx`: Enhanced with revision history tracking, TanStack Query integration, and revision feedback system.
 - `components/generate/revisionBox.component.tsx`: Updated with loading states and revision history integration.
+- **2025-10-03 - Lazy-Loading Ontology System**:
+  - `utils/ontology.utils.ts`: Replaced manual script-based generation with automatic LLM-powered lazy-loading. Multi-tier caching (memory → file → auto-generate). Mutex-protected generation prevents duplicate LLM calls. Background refresh for stale cache.
+  - `utils/interview-weights.utils.ts`: Converted to async functions calling `getTargetWeights()` from ontology system. Target weights now LLM-generated on demand instead of hardcoded.
+  - Deleted `data/interview-target-weights.json` (replaced by LLM generation in ontology cache).
+  - `README.md`: Added ontology system documentation.
+  - `scripts/generate-ontology.ts`: Now optional pre-warming script; not required for runtime.
  

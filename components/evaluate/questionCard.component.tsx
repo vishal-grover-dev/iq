@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useEffect, useState, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import CodeBlock from "./codeBlock.component";
 import OptionButton from "./optionButton.component";
-import { prefetchAttemptDetails } from "@/services/evaluate.services";
+import type { ICitation } from "@/types/evaluate.types";
 
 interface IQuestionCardProps {
   question: string;
@@ -21,13 +20,11 @@ interface IQuestionCardProps {
   // Evaluation mode props
   onSubmit?: (selectedIndex: number) => void;
   isSubmitting?: boolean;
-  attemptId?: string; // For prefetching N+2 during evaluation
   // Review mode props
   userAnswerIndex?: number | null;
   correctIndex?: number;
-  showExplanation?: boolean;
   explanation?: string;
-  citations?: string[];
+  citations?: ICitation[];
 }
 
 function MetadataChip({ label }: { label: string }) {
@@ -59,31 +56,23 @@ export default function QuestionCard({
   mode,
   onSubmit,
   isSubmitting = false,
-  attemptId,
   userAnswerIndex,
   correctIndex,
-  showExplanation = false,
   explanation,
   citations,
 }: IQuestionCardProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const queryClient = useQueryClient();
-  const hasPrefetchedN2 = useRef(false);
 
   // Normalize question text (merge isolated inline-code)
   const normalizedQuestion = useMemo(() => {
-    if (!question) return "";
+    if (!question || question.length === 0) return "";
     return question.replace(/\n\s*`([^`]+)`\s*\n/gm, " `$1` ");
-  }, [question]);
-
-  // Reset prefetch flag when question changes
-  useEffect(() => {
-    hasPrefetchedN2.current = false;
   }, [question]);
 
   // Keyboard shortcuts for evaluation mode
   useEffect(() => {
     if (mode !== "evaluation" || isSubmitting) return;
+    if (!Array.isArray(options) || options.length === 0) return;
 
     const handleKeyPress = (e: KeyboardEvent) => {
       // Option selection: 1-4 keys
@@ -168,8 +157,8 @@ export default function QuestionCard({
         </div>
       )}
 
-      {/* Explanation (review mode only, if enabled) */}
-      {mode === "review" && showExplanation && explanation && (
+      {/* Explanation (review mode only) */}
+      {mode === "review" && explanation && (
         <div className='bg-muted/50 mt-4 rounded-md p-3 text-sm' data-testid='question-explanation'>
           <div className='mb-1 font-semibold'>Explanation</div>
           <p className='text-muted-foreground'>{explanation}</p>
@@ -181,15 +170,15 @@ export default function QuestionCard({
         <div className='mt-4' data-testid='question-citations'>
           <div className='text-muted-foreground mb-1 text-xs font-semibold'>Learn More</div>
           <ul className='text-muted-foreground list-disc space-y-1 pl-5 text-xs'>
-            {citations.map((url, i) => (
+            {citations.map((citation, i) => (
               <li key={i}>
                 <a
-                  href={url}
+                  href={citation.url}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='hover:text-primary underline underline-offset-2 transition-colors'
                 >
-                  {url}
+                  {citation.title}
                 </a>
               </li>
             ))}

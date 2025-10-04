@@ -20,6 +20,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Ontology & Interview Weights
+
+The app uses a **lazy-loading** system for ontology (topics/subtopics) and interview target weights:
+
+- **Automatic generation**: On first request, if no cache exists, the system automatically:
+  - Queries the database for topics/subtopics
+  - Calls LLM (gpt-4o-mini) to generate interview archetypes and target weights
+  - Caches results in memory (8h TTL) and persists to `data/ontology-cache.json`
+
+- **Background refresh**: When cache is stale (8h-48h old), stale data is served while refreshing in background
+
+- **Optional pre-warming** (not required): Run `pnpm generate:ontology` to pre-generate the cache before deployment. This is purely for optimization—the app works fine without it.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

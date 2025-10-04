@@ -2,10 +2,49 @@ import OpenAI from "openai";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { parseJsonObject } from "@/utils/json.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
-import { EPromptMode, EBloomLevel, EDifficulty } from "@/types/mcq.types";
-import { buildGeneratorMessages, buildJudgeMessages, buildReviserMessages } from "@/utils/mcq-prompt.utils";
+import { EPromptMode, EBloomLevel, EDifficulty, EQuestionStyle } from "@/types/mcq.types";
+import {
+  buildGeneratorMessages,
+  buildJudgeMessages,
+  buildReviserMessages,
+  generateQuestionPrompt,
+} from "@/utils/mcq-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { LABEL_RESOLVER_MIN_CONFIDENCE } from "@/constants/app.constants";
+import {
+  getStaticSubtopicMap,
+  getStaticTopicList,
+  getStaticTopicWeights,
+  getStaticSubtopicsForTopic,
+} from "@/utils/static-ontology.utils";
+import { calculateCoverageWeights, weightedRandomIndex } from "@/utils/selection.utils";
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error === "object" && error !== null) {
+    const withStatus = error as { status?: number; response?: { status?: number } };
+    if (typeof withStatus.status === "number") {
+      return withStatus.status;
+    }
+    if (withStatus.response && typeof withStatus.response.status === "number") {
+      return withStatus.response.status;
+    }
+  }
+  return undefined;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch (jsonError) {
+    return String(jsonError);
+  }
+}
 
 /**
  * getEmbeddings
@@ -41,11 +80,11 @@ export async function getEmbeddings(
         }
         for (const d of data) out.push(d.embedding as number[]);
         break;
-      } catch (err: any) {
-        const status = err?.status ?? err?.response?.status;
+      } catch (err) {
+        const status = getErrorStatus(err);
         const retriable = status === 429 || (typeof status === "number" && status >= 500);
         if (!retriable || attempt >= maxRetries) {
-          throw new Error(err?.message ?? "OpenAI embeddings failed");
+          throw new Error(getErrorMessage(err) ?? "OpenAI embeddings failed");
         }
         const sleepMs = 500 * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, sleepMs));
@@ -116,7 +155,12 @@ export async function classifyLabels(args: {
   ].join(" ");
 
   const topicsJson = JSON.stringify(args.allowedTopics);
-  const subsJson = JSON.stringify(args.allowedSubtopicsByTopic);
+  // If caller didn't provide allowed subtopics or provided an empty mapping, fall back to dynamic ontology
+  let allowedSubs = args.allowedSubtopicsByTopic;
+  if (!allowedSubs || Object.keys(allowedSubs).length === 0) {
+    allowedSubs = getStaticSubtopicMap();
+  }
+  const subsJson = JSON.stringify(allowedSubs);
   const hint = args.topicHint ? `Topic hint: ${args.topicHint}` : "";
 
   const user = [
@@ -267,9 +311,18 @@ export async function generateMcqFromContext(args: {
   mode?: EPromptMode;
   codingMode?: boolean;
   negativeExamples?: string[];
+  avoidTopics?: string[];
+  avoidSubtopics?: string[];
+  questionStyle?: EQuestionStyle;
 }): Promise<IMcqItemView> {
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+  // Fetch available subtopics for this topic (dynamic ontology) to guide generation
+  const availableSubtopics = getStaticSubtopicsForTopic(args.topic);
+
+  const styleInfo = buildQuestionStyleInstruction(args.questionStyle, !!args.codingMode, args.bloomLevel);
+
   const { system, user } = buildGeneratorMessages({
     topic: args.topic,
     subtopic: args.subtopic ?? undefined,
@@ -281,7 +334,42 @@ export async function generateMcqFromContext(args: {
     examplesCount: 12,
     codingMode: args.codingMode,
     negativeExamples: args.negativeExamples,
+    availableSubtopics,
+    avoidTopics: args.avoidTopics,
+    avoidSubtopics: args.avoidSubtopics,
+    questionStyle: styleInfo?.style,
+    extraInstructions: styleInfo?.instruction ?? null,
   });
+
+  // Structured metrics: prompt context (avoid lists, negatives, ontology)
+  try {
+    console.log("generation_prompt_context", {
+      topic: args.topic,
+      subtopic: args.subtopic ?? null,
+      coding_mode: !!args.codingMode,
+      available_subtopics_count: (availableSubtopics ?? []).length,
+      avoid_topics_count: (args.avoidTopics ?? []).length,
+      avoid_subtopics_count: (args.avoidSubtopics ?? []).length,
+      negative_examples_count: (args.negativeExamples ?? []).length,
+      question_style_requested: args.questionStyle ?? null,
+      question_style_applied: styleInfo?.style ?? null,
+    });
+  } catch (_) {
+    // no-op
+  }
+
+  if (styleInfo?.style) {
+    try {
+      console.log("generation_style_target", {
+        requested: args.questionStyle ?? null,
+        applied: styleInfo.style,
+        coding_mode: !!args.codingMode,
+        bloom_level: args.bloomLevel ?? null,
+      });
+    } catch (_) {
+      // ignore
+    }
+  }
   const buildSchema = () => ({
     name: "mcq_item",
     strict: true,
@@ -504,6 +592,24 @@ export async function generateMcqFromContext(args: {
     }
   }
 
+  // Structured metrics: response summary (no content bodies)
+  try {
+    console.log("generation_response_summary", {
+      topic: out.topic,
+      subtopic: out.subtopic,
+      difficulty: out.difficulty,
+      bloom: out.bloomLevel,
+      has_code: !!out.code,
+      citations_count: Array.isArray(out.citations) ? out.citations.length : 0,
+    });
+  } catch (_) {
+    // no-op
+  }
+
+  if (styleInfo?.style) {
+    out.questionStyle = styleInfo.style;
+  }
+
   return out;
 }
 
@@ -668,13 +774,12 @@ export async function selectNextQuestion(context: {
   topic_distribution: Record<string, number>;
   subtopic_distribution: Record<string, number>;
   bloom_distribution: Record<string, number>;
-  recent_subtopics: string[]; // last 5
 }): Promise<{
   difficulty: EDifficulty;
   coding_mode: boolean;
-  preferred_topics: string[];
-  preferred_subtopics: string[];
-  preferred_bloom_levels: EBloomLevel[];
+  preferred_topic: string;
+  preferred_subtopic: string;
+  preferred_bloom_level: EBloomLevel;
   reasoning: string;
 }> {
   if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
@@ -689,7 +794,6 @@ export async function selectNextQuestion(context: {
     topic_distribution,
     subtopic_distribution,
     bloom_distribution,
-    recent_subtopics,
   } = context;
 
   const total_target = 60;
@@ -705,49 +809,52 @@ export async function selectNextQuestion(context: {
   const hard_remaining = Math.max(0, hard_target - hard_count);
   const coding_needed = Math.max(0, coding_target - coding_count);
 
-  // Coverage info
+  // Comprehensive coverage info
   const topic_list = Object.entries(topic_distribution)
     .map(([topic, count]) => `${topic}: ${count}`)
     .join(", ");
   const bloom_list = Object.entries(bloom_distribution)
     .map(([level, count]) => `${level}: ${count}`)
     .join(", ");
-  const recent_pattern = recent_subtopics.slice(-3).join(" → ");
+  // Detailed coverage breakdown
+  const subtopic_list = Object.entries(subtopic_distribution)
+    .map(([subtopic, count]) => `${subtopic}: ${count}`)
+    .join(", ");
 
-  const system = `You are an intelligent question selector for a React.js frontend skills evaluation. Your role is to analyze attempt context and determine optimal criteria for the next question to ensure:
-1. Balanced difficulty distribution (30 Easy, 20 Medium, 10 Hard)
-2. Coding threshold (≥35% coding questions, minimum 21 of 60)
-3. Topic balance (no single topic >40%)
-4. Bloom diversity (≥3 levels per difficulty tier)
-5. Avoid subtopic clustering (no >5 consecutive from same subtopic)
+  // Difficulty breakdown
+  const difficulty_list = [`Easy: ${easy_count}`, `Medium: ${medium_count}`, `Hard: ${hard_count}`].join(", ");
 
-Return strict JSON with:
-- difficulty: "Easy" | "Medium" | "Hard"
-- coding_mode: boolean
-- preferred_topics: string[] (1-3 topics)
-- preferred_subtopics: string[] (1-5 subtopics)
-- preferred_bloom_levels: string[] (1-3 Bloom levels)
-- reasoning: string (1-2 sentences explaining your choice)`;
+  // Coding breakdown
+  const coding_list = `Coding questions: ${coding_count}/${total_target} (${coding_needed} more needed)`;
 
-  const user = `Current attempt state:
-- Questions answered: ${questions_answered}/${total_target}
-- Remaining: ${remaining}
+  // Detailed Bloom level breakdown
+  const bloom_count_list = Object.entries(bloom_distribution)
+    .map(([level, count]) => `${level}: ${count}`)
+    .join(", ");
 
-Distribution:
-- Easy: ${easy_count}/${easy_target} (${easy_remaining} remaining)
-- Medium: ${medium_count}/${medium_target} (${medium_remaining} remaining)
-- Hard: ${hard_count}/${hard_target} (${hard_remaining} remaining)
-- Coding: ${coding_count}/${total_target} (need ≥${coding_target}, ${coding_needed} more needed)
-
-Coverage:
-- Topics: ${topic_list || "none yet"}
-- Bloom levels: ${bloom_list || "none yet"}
-- Recent subtopics pattern: ${recent_pattern || "none yet"}
-
-Available topics: React, JavaScript, TypeScript, HTML, CSS, State Management, Routing, Testing, Accessibility, PWA
-Available Bloom levels: Remember, Understand, Apply, Analyze, Evaluate, Create
-
-Determine optimal criteria for question #${questions_answered + 1}.`;
+  // Note: Topic/subtopic information is now dynamically generated within generateQuestionPrompt
+  const { system, user } = generateQuestionPrompt({
+    questions_answered,
+    total_target,
+    easy_count,
+    medium_count,
+    hard_count,
+    coding_count,
+    easy_target,
+    medium_target,
+    hard_target,
+    coding_target,
+    easy_remaining,
+    medium_remaining,
+    hard_remaining,
+    coding_needed,
+    topic_list,
+    subtopic_list,
+    bloom_list,
+    difficulty_list,
+    coding_list,
+    bloom_count_list,
+  });
 
   try {
     const res = await client.chat.completions.create({
@@ -765,11 +872,28 @@ Determine optimal criteria for question #${questions_answered + 1}.`;
     const parsed = parseJsonObject<any>(content, {
       difficulty: "Easy",
       coding_mode: false,
-      preferred_topics: ["React"],
-      preferred_subtopics: [],
-      preferred_bloom_levels: ["Understand"],
+      preferred_topic: "React",
+      preferred_subtopic: "",
+      preferred_bloom_level: "Understand",
       reasoning: "Default selection",
     });
+
+    // Structured log for selector output (non-sensitive)
+    try {
+      console.log("llm_selector_decision", {
+        attempt_id: context.attempt_id,
+        answered: context.questions_answered,
+        decision: {
+          difficulty: parsed.difficulty,
+          coding_mode: parsed.coding_mode,
+          preferred_topic: parsed.preferred_topic || "React",
+          preferred_subtopic: parsed.preferred_subtopic || "",
+          preferred_bloom_level: parsed.preferred_bloom_level || "Understand",
+        },
+      });
+    } catch (_) {
+      // no-op
+    }
 
     // Validate and normalize
     const difficulty = ((): EDifficulty => {
@@ -780,57 +904,179 @@ Determine optimal criteria for question #${questions_answered + 1}.`;
       return EDifficulty.EASY;
     })();
     const coding_mode = Boolean(parsed.coding_mode);
-    const preferred_topics = Array.isArray(parsed.preferred_topics)
-      ? parsed.preferred_topics.slice(0, 3).map(String)
-      : ["React"];
-    const preferred_subtopics = Array.isArray(parsed.preferred_subtopics)
-      ? parsed.preferred_subtopics.slice(0, 5).map(String)
-      : [];
-    const preferred_bloom_levels = ((): EBloomLevel[] => {
-      if (!Array.isArray(parsed.preferred_bloom_levels)) return [EBloomLevel.UNDERSTAND];
-      return parsed.preferred_bloom_levels.slice(0, 3).map((level: string) => {
-        const l = String(level || "").toLowerCase();
-        if (l === "remember") return EBloomLevel.REMEMBER;
-        if (l === "understand") return EBloomLevel.UNDERSTAND;
-        if (l === "apply") return EBloomLevel.APPLY;
-        if (l === "analyze") return EBloomLevel.ANALYZE;
-        if (l === "evaluate") return EBloomLevel.EVALUATE;
-        if (l === "create") return EBloomLevel.CREATE;
-        return EBloomLevel.UNDERSTAND;
-      });
+    const preferred_topic = String(parsed.preferred_topic || "React");
+    const preferred_subtopic = String(parsed.preferred_subtopic || "");
+    const preferred_bloom_level = ((): EBloomLevel => {
+      const l = String(parsed.preferred_bloom_level || "").toLowerCase();
+      if (l === "remember") return EBloomLevel.REMEMBER;
+      if (l === "understand") return EBloomLevel.UNDERSTAND;
+      if (l === "apply") return EBloomLevel.APPLY;
+      if (l === "analyze") return EBloomLevel.ANALYZE;
+      if (l === "evaluate") return EBloomLevel.EVALUATE;
+      if (l === "create") return EBloomLevel.CREATE;
+      return EBloomLevel.UNDERSTAND;
     })();
     const reasoning = String(parsed.reasoning || "Selected based on attempt context");
 
     return {
       difficulty,
       coding_mode,
-      preferred_topics,
-      preferred_subtopics,
-      preferred_bloom_levels,
+      preferred_topic,
+      preferred_subtopic,
+      preferred_bloom_level,
       reasoning,
     };
-  } catch (err: any) {
-    // Fallback to rule-based selection on LLM failure
-    console.error("LLM selector failed, using fallback:", err.message);
+  } catch (err) {
+    console.error("LLM selector failed, using fallback:", getErrorMessage(err));
 
-    // Enforce hard constraints
-    let difficulty: EDifficulty = EDifficulty.EASY;
-    if (easy_count >= easy_target) {
-      difficulty = medium_count < medium_target ? EDifficulty.MEDIUM : EDifficulty.HARD;
-    } else if (medium_count >= medium_target && hard_count < hard_target) {
-      difficulty = EDifficulty.HARD;
+    // Enforce hard constraints with weighted randomization
+    // Difficulty: pick by remaining quotas (weights proportional to deficit)
+    const deficits: Array<{ d: EDifficulty; remaining: number }> = [
+      { d: EDifficulty.EASY, remaining: easy_remaining },
+      { d: EDifficulty.MEDIUM, remaining: medium_remaining },
+      { d: EDifficulty.HARD, remaining: hard_remaining },
+    ];
+    const diffWeights = deficits.map((x) => Math.max(0, x.remaining));
+    const diffIdx = weightedRandomIndex(diffWeights);
+    const difficulty: EDifficulty = deficits[diffIdx]?.d ?? EDifficulty.EASY;
+
+    // Force coding if behind pace (accelerate late if needed)
+    const coding_mode = coding_needed > 0 && (questions_answered >= 30 ? true : questions_answered >= 40);
+
+    // Topics: use dynamic ontology and weight by inverse coverage
+    let topics: string[] = [];
+    try {
+      topics = getStaticTopicList();
+    } catch (err) {
+      console.error("ontology_refresh_failed", { error: getErrorMessage(err) });
+      topics = [
+        "React",
+        "JavaScript",
+        "TypeScript",
+        "HTML",
+        "CSS",
+        "State Management",
+        "Routing",
+        "Testing",
+        "Accessibility",
+        "PWA",
+      ];
+    }
+    const topicWeightsMap = calculateCoverageWeights(topic_distribution, topics, 1);
+    const topicWeights = topics.map((t) => topicWeightsMap[t] || 1);
+    const topicIdx = weightedRandomIndex(topicWeights);
+    const topic = topics[topicIdx] || "React";
+
+    const subtopicCandidates = getStaticSubtopicsForTopic(topic);
+    const subtopic = subtopicCandidates.length
+      ? subtopicCandidates[Math.floor(Math.random() * subtopicCandidates.length)]
+      : null;
+
+    // Subtopic: prefer dynamic ontology for chosen topic, pick 1 underrepresented
+    let preferred_subtopic: string = "";
+    try {
+      const subtopicsByTopic = getStaticSubtopicMap();
+      const subs = subtopicsByTopic[topic] || [];
+      if (subs.length > 0) {
+        // Build simple inverse-coverage weights using subtopic_distribution
+        const subWeights = subs.map((s) => 1 / ((subtopic_distribution[s] || 0) + 1));
+        const idx = weightedRandomIndex(subWeights);
+        preferred_subtopic = subs[idx] || "";
+      }
+    } catch (err) {
+      console.error("ontology_refresh_failed", { error: getErrorMessage(err) });
     }
 
-    // Force coding if behind pace
-    const coding_mode = coding_needed > 0 && questions_answered >= 40;
+    // Bloom level: prefer underrepresented globally
+    const allBlooms: EBloomLevel[] = [
+      EBloomLevel.REMEMBER,
+      EBloomLevel.UNDERSTAND,
+      EBloomLevel.APPLY,
+      EBloomLevel.ANALYZE,
+      EBloomLevel.EVALUATE,
+      EBloomLevel.CREATE,
+    ];
+    const bloomWeights = allBlooms.map((b) => 1 / ((bloom_distribution[b] || 0) + 1));
+    const preferred_bloom_level = allBlooms[weightedRandomIndex(bloomWeights)];
 
     return {
       difficulty,
       coding_mode,
-      preferred_topics: ["React", "JavaScript"],
-      preferred_subtopics: [],
-      preferred_bloom_levels: [EBloomLevel.APPLY, EBloomLevel.UNDERSTAND],
-      reasoning: "Fallback selection after LLM error",
+      preferred_topic: topic,
+      preferred_subtopic,
+      preferred_bloom_level,
+      reasoning: "Coverage-aware fallback after LLM error",
     };
+  }
+}
+
+function buildQuestionStyleInstruction(
+  userRequestedStyle: EQuestionStyle | undefined,
+  codingMode: boolean | undefined,
+  bloomLevel: EBloomLevel | undefined
+): { style: EQuestionStyle; instruction: string } | null {
+  if (userRequestedStyle) {
+    return {
+      style: userRequestedStyle,
+      instruction: buildStyleInstruction(userRequestedStyle),
+    };
+  }
+
+  const inferred = inferQuestionStyle(codingMode ?? false, bloomLevel);
+  if (!inferred) {
+    return null;
+  }
+
+  return {
+    style: inferred,
+    instruction: buildStyleInstruction(inferred),
+  };
+}
+
+function inferQuestionStyle(codingMode: boolean, bloomLevel: EBloomLevel | undefined): EQuestionStyle | null {
+  if (!codingMode) {
+    if (bloomLevel === EBloomLevel.APPLY || bloomLevel === EBloomLevel.EVALUATE) {
+      return EQuestionStyle.TRADEOFF;
+    }
+    return EQuestionStyle.THEORY;
+  }
+
+  const roll = Math.random();
+  if (roll < 0.5) return EQuestionStyle.CODE_READING;
+  if (roll < 0.7) return EQuestionStyle.DEBUG;
+  if (roll < 0.85) return EQuestionStyle.REFACTOR;
+  return EQuestionStyle.TRADEOFF;
+}
+
+function buildStyleInstruction(style: EQuestionStyle): string {
+  const base = "Question style directive (experimental): ";
+  switch (style) {
+    case EQuestionStyle.THEORY:
+      return (
+        base +
+        "Focus on conceptual understanding without code. Ask about definitions, principles, and when/why to use concepts."
+      );
+    case EQuestionStyle.CODE_READING:
+      return (
+        base +
+        "Provide a code snippet (3–15 lines) and ask the learner to reason about its behavior or output. Emphasize accurate execution tracing."
+      );
+    case EQuestionStyle.DEBUG:
+      return (
+        base +
+        "Show buggy code (5–20 lines) and ask the learner to identify the issue. Use realistic pitfalls such as missing dependencies or stale closures."
+      );
+    case EQuestionStyle.REFACTOR:
+      return (
+        base +
+        "Present working but suboptimal code (8–25 lines) and ask for the best improvement strategy. Compare optimization or refactoring approaches."
+      );
+    case EQuestionStyle.TRADEOFF:
+      return (
+        base +
+        "Describe a scenario and ask the learner to compare approaches (e.g., Context vs Redux). Highlight decision-making and tradeoffs."
+      );
+    default:
+      return base + "Focus on delivering an interview-relevant perspective for this topic.";
   }
 }

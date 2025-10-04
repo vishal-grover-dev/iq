@@ -143,6 +143,14 @@ export interface IWeakArea {
 }
 
 /**
+ * Citation object with URL and title
+ */
+export interface ICitation {
+  url: string;
+  title: string;
+}
+
+/**
  * Question review data (shown after completion)
  */
 export interface IQuestionReview {
@@ -154,7 +162,7 @@ export interface IQuestionReview {
   correct_index: number;
   is_correct: boolean;
   explanation: string;
-  citations: string[];
+  citations: ICitation[];
   metadata: {
     topic: string;
     subtopic: string | null;

@@ -17,7 +17,8 @@ import type { IAttemptResults, IWeakArea, IQuestionReview } from "@/types/evalua
  * - Complete question review (all 60 questions with user answer, correct answer, explanation, citations)
  */
 export async function GET(_request: NextRequest, context: any) {
-  const attemptId = context?.params?.id as string;
+  const params = await context.params;
+  const attemptId = params?.id as string;
 
   if (!attemptId) {
     return NextResponse.json({ error: "Attempt ID is required" }, { status: 400 });
@@ -52,7 +53,7 @@ export async function GET(_request: NextRequest, context: any) {
       );
     }
 
-    // 2. Fetch all attempt_questions with joined mcq_items
+    // 2. Fetch all attempt_questions with joined mcq_items and mcq_explanations
     const { data: attemptQuestions, error: questionsError } = await supabase
       .from("attempt_questions")
       .select(
@@ -73,9 +74,11 @@ export async function GET(_request: NextRequest, context: any) {
           question,
           options,
           correct_index,
-          explanation,
           citations,
-          code
+          code,
+          mcq_explanations (
+            explanation
+          )
         )
       `
       )
@@ -204,6 +207,7 @@ export async function GET(_request: NextRequest, context: any) {
     // 8. Build complete question review list
     const questions: IQuestionReview[] = attemptQuestions.map((aq) => {
       const mcq = aq.mcq_items as any;
+      const explanation = mcq?.mcq_explanations?.[0]?.explanation || "";
 
       return {
         question_order: aq.question_order,
@@ -213,7 +217,7 @@ export async function GET(_request: NextRequest, context: any) {
         user_answer_index: aq.user_answer_index ?? null,
         correct_index: mcq?.correct_index ?? 0,
         is_correct: aq.is_correct ?? false,
-        explanation: mcq?.explanation || "",
+        explanation: explanation,
         citations: Array.isArray(mcq?.citations) ? mcq.citations : [],
         metadata: {
           topic: mcq?.topic || "",

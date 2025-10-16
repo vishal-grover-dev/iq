@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { EQuestionReviewLabels } from "@/types/evaluate.types";
 
 /**
  * Question Review List Component
@@ -71,7 +72,7 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
 
   const groupedQuestions = useMemo(() => {
     if (groupMode === "none") {
-      return [{ groupKey: "All Questions", items: filteredQuestions }];
+      return [{ groupKey: EQuestionReviewLabels.ALL_QUESTIONS_GROUP, items: filteredQuestions }];
     }
 
     const map = new Map<string, IQuestionReview[]>();
@@ -120,7 +121,7 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
       <div className='mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
         <div>
           <h2 className='flex items-center gap-2 text-lg font-semibold md:text-xl'>
-            <FunnelSimpleIcon className='h-5 w-5 text-primary/80' weight='fill' /> Intelligent Question Review
+            <FunnelSimpleIcon className='h-5 w-5 text-primary/80' weight='fill' /> {EQuestionReviewLabels.SECTION_TITLE}
           </h2>
         </div>
 
@@ -132,7 +133,7 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder='Search questions, explanations, or tags'
+                placeholder={EQuestionReviewLabels.SEARCH_PLACEHOLDER}
                 className='pl-9'
               />
             </div>
@@ -143,7 +144,7 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 className='border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-40'
               >
-                <option value='all'>All Topics</option>
+                <option value='all'>{EQuestionReviewLabels.ALL_TOPICS_OPTION}</option>
                 {uniqueTopics.map((topic) => (
                   <option key={topic} value={topic}>
                     {topic}
@@ -154,7 +155,7 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
 
             <div className='flex items-center gap-2'>
               <Label htmlFor='show-incorrect-only' className='text-sm font-medium cursor-pointer whitespace-nowrap'>
-                Show only incorrect
+                {EQuestionReviewLabels.SHOW_ONLY_INCORRECT}
               </Label>
               <Switch id='show-incorrect-only' checked={showOnlyIncorrect} onCheckedChange={setShowOnlyIncorrect} />
             </div>
@@ -163,39 +164,39 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
           {/* Sort and Group Controls - Combined Row */}
           <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
             <div className='flex items-center gap-2'>
-              <span className='text-sm font-medium text-muted-foreground'>Sort:</span>
+              <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.SORT_LABEL}</span>
               <ToggleGroup
                 type='single'
                 value={sortMode}
                 onValueChange={(value) => value && setSortMode(value as typeof sortMode)}
               >
                 <ToggleGroupItem value='order' className='h-7 text-xs'>
-                  Order
+                  {EQuestionReviewLabels.ORDER_OPTION}
                 </ToggleGroupItem>
                 <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-                  Difficulty
+                  {EQuestionReviewLabels.DIFFICULTY_OPTION}
                 </ToggleGroupItem>
                 <ToggleGroupItem value='topic' className='h-7 text-xs'>
-                  Topic
+                  {EQuestionReviewLabels.TOPIC_OPTION}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <div className='flex items-center gap-2'>
-              <span className='text-sm font-medium text-muted-foreground'>Group:</span>
+              <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.GROUP_LABEL}</span>
               <ToggleGroup
                 type='single'
                 value={groupMode}
                 onValueChange={(value) => value && setGroupMode(value as typeof groupMode)}
               >
                 <ToggleGroupItem value='none' className='h-7 text-xs'>
-                  None
+                  {EQuestionReviewLabels.NONE_OPTION}
                 </ToggleGroupItem>
                 <ToggleGroupItem value='topic' className='h-7 text-xs'>
-                  Topic
+                  {EQuestionReviewLabels.TOPIC_OPTION}
                 </ToggleGroupItem>
                 <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-                  Difficulty
+                  {EQuestionReviewLabels.DIFFICULTY_OPTION}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
@@ -205,12 +206,14 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
 
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2'>
         <div className='text-muted-foreground text-sm'>
-          Showing {Math.min(filteredQuestions.length, itemsToShow)} of {filteredQuestions.length} filtered questions
-          (total {questions.length})
+          {EQuestionReviewLabels.FILTERED_SUMMARY_TEMPLATE.replace(
+            "{shown}",
+            String(Math.min(filteredQuestions.length, itemsToShow))
+          )
+            .replace("{filtered}", String(filteredQuestions.length))
+            .replace("{total}", String(questions.length))}
         </div>
-        <div className='text-muted-foreground text-xs uppercase tracking-wide'>
-          Tip: Use search to find explanations, tags, or specific phrasing.
-        </div>
+        <div className='text-muted-foreground text-xs uppercase tracking-wide'>{EQuestionReviewLabels.TIP_MESSAGE}</div>
       </div>
 
       {/* Questions List */}
@@ -234,7 +237,10 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
                   {group.groupKey}
                 </div>
                 <div className='text-muted-foreground text-xs'>
-                  {group.items.filter((item) => !item.is_correct).length} incorrect • {group.items.length} total
+                  {EQuestionReviewLabels.GROUP_STATS_TEMPLATE.replace(
+                    "{incorrect}",
+                    String(group.items.filter((item) => !item.is_correct).length)
+                  ).replace("{total}", String(group.items.length))}
                 </div>
               </div>
             )}
@@ -257,17 +263,17 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
                   >
                     <div className='mb-3 flex items-center gap-2'>
                       <span className='text-muted-foreground text-sm font-medium'>
-                        Question {question.question_order}
+                        {`${EQuestionReviewLabels.QUESTION_PREFIX} ${question.question_order}`}
                       </span>
                       {question.is_correct ? (
                         <div className='flex items-center gap-1 text-sm text-green-600 dark:text-green-400'>
                           <CheckCircleIcon weight='fill' className='h-4 w-4' />
-                          <span>Correct</span>
+                          <span>{EQuestionReviewLabels.CORRECT_LABEL}</span>
                         </div>
                       ) : (
                         <div className='flex items-center gap-1 text-sm text-red-600 dark:text-red-400'>
                           <XCircleIcon weight='fill' className='h-4 w-4' />
-                          <span>Incorrect</span>
+                          <span>{EQuestionReviewLabels.INCORRECT_LABEL}</span>
                         </div>
                       )}
                     </div>

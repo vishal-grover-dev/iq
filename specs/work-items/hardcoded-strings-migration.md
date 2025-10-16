@@ -334,9 +334,9 @@ const MCQ_PROMPT_TEMPLATES = {
 #### Task 2.2: Evaluate Components
 
 - [x] Migrate `components/evaluate/questionCard.component.tsx`
-- [ ] Migrate `components/evaluate/resultsHero.component.tsx`
-- [ ] Migrate `components/evaluate/weakAreasPanel.component.tsx`
-- [ ] Migrate `components/evaluate/questionReviewList.component.tsx`
+- [x] Migrate `components/evaluate/resultsHero.component.tsx` — centralized tier messaging, score copy, and stat labels in `types/evaluate.types.ts`
+- [x] Migrate `components/evaluate/weakAreasPanel.component.tsx` — moved panel headings, badge labels, and tone copy to enums/constants
+- [x] Migrate `components/evaluate/questionReviewList.component.tsx` — replaced filter controls, search placeholder, and status text with typed labels
 - [x] Run visual regression tests
 
 #### Task 2.3: Upload & Generate Components

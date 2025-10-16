@@ -4,6 +4,8 @@
  * Contains simple constants for evaluation functionality that don't require enums.
  */
 
+import { EResultsPageLabels, EWeakAreaLabels } from "@/types/evaluate.types";
+
 /**
  * Evaluation configuration
  */
@@ -91,33 +93,33 @@ export const WEAK_AREA_STYLES = {
  */
 export const RESULT_TIER_CONFIGS = {
   EXPERT: {
-    TITLE: "Expert Tier",
-    HEADLINE: "Outstanding mastery!",
-    DESCRIPTION: "You nailed this attempt with interview-ready precision. Keep the momentum going!",
+    TITLE: EResultsPageLabels.EXPERT_TIER,
+    HEADLINE: EResultsPageLabels.EXPERT_HEADLINE,
+    DESCRIPTION: EResultsPageLabels.EXPERT_DESCRIPTION,
     ACCENT_CLASS: "text-emerald-400",
     BADGE_CLASS: "bg-emerald-500/15 text-emerald-300",
     GRADIENT_CLASS: "from-emerald-500/20 via-emerald-500/10 to-sky-500/0",
   },
   PROFICIENT: {
-    TITLE: "Proficient Tier",
-    HEADLINE: "You're on track!",
-    DESCRIPTION: "Great performance across core topics. A few focused reps will unlock the next tier.",
+    TITLE: EResultsPageLabels.PROFICIENT_TIER,
+    HEADLINE: EResultsPageLabels.PROFICIENT_HEADLINE,
+    DESCRIPTION: EResultsPageLabels.PROFICIENT_DESCRIPTION,
     ACCENT_CLASS: "text-teal-300",
     BADGE_CLASS: "bg-teal-500/15 text-teal-200",
     GRADIENT_CLASS: "from-teal-500/15 via-cyan-500/10 to-transparent",
   },
   DEVELOPING: {
-    TITLE: "Developing Tier",
-    HEADLINE: "Solid foundation!",
-    DESCRIPTION: "You're building reliable instincts. Tackle the focus areas below to level up fast.",
+    TITLE: EResultsPageLabels.DEVELOPING_TIER,
+    HEADLINE: EResultsPageLabels.DEVELOPING_HEADLINE,
+    DESCRIPTION: EResultsPageLabels.DEVELOPING_DESCRIPTION,
     ACCENT_CLASS: "text-amber-300",
     BADGE_CLASS: "bg-amber-500/15 text-amber-200",
     GRADIENT_CLASS: "from-amber-500/15 via-orange-500/10 to-transparent",
   },
   GETTING_STARTED: {
-    TITLE: "Launch Tier",
-    HEADLINE: "Every expert starts here!",
-    DESCRIPTION: "Great first step. Follow the curated recommendations to build confidence quickly.",
+    TITLE: EResultsPageLabels.GETTING_STARTED_TIER,
+    HEADLINE: EResultsPageLabels.GETTING_STARTED_HEADLINE,
+    DESCRIPTION: EResultsPageLabels.GETTING_STARTED_DESCRIPTION,
     ACCENT_CLASS: "text-sky-300",
     BADGE_CLASS: "bg-sky-500/15 text-sky-200",
     GRADIENT_CLASS: "from-sky-500/15 via-indigo-500/10 to-transparent",
@@ -141,9 +143,9 @@ export const STAT_CARD_LABELS = {
  * Weak area accuracy tiers
  */
 export const WEAK_AREA_ACCURACY_TIERS = [
-  { THRESHOLD: 0.5, TONE: "critical", LABEL: "Critical" },
-  { THRESHOLD: 0.7, TONE: "caution", LABEL: "Needs Focus" },
-  { THRESHOLD: 0.85, TONE: "watch", LABEL: "Monitor" },
+  { THRESHOLD: 0.5, TONE: "critical", LABEL: EWeakAreaLabels.CRITICAL_LEVEL },
+  { THRESHOLD: 0.7, TONE: "caution", LABEL: EWeakAreaLabels.NEEDS_FOCUS },
+  { THRESHOLD: 0.85, TONE: "watch", LABEL: EWeakAreaLabels.MONITOR_LEVEL },
 ] as const;
 
 /**

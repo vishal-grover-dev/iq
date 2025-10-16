@@ -44,6 +44,13 @@ export enum EQuestionCardLabels {
 }
 
 /**
+ * Results hero labels
+ */
+export enum EResultsHeroLabels {
+  OVERALL_SCORE = "Overall Score",
+}
+
+/**
  * Result tier type
  */
 export type TResultTier = "expert" | "proficient" | "developing" | "getting_started";
@@ -82,6 +89,30 @@ export enum EWeakAreaLabels {
   ACCURACY_LABEL = "Accuracy",
   GOAL_REACH_80 = "Goal: reach 80%+ with focused practice",
   DEEP_DIVE_GUIDANCE = "Deep dive guidance",
+  MONITOR_LEVEL = "Monitor",
+}
+
+/**
+ * Question review list labels
+ */
+export enum EQuestionReviewLabels {
+  SECTION_TITLE = "Intelligent Question Review",
+  SEARCH_PLACEHOLDER = "Search questions, explanations, or tags",
+  ALL_TOPICS_OPTION = "All Topics",
+  SHOW_ONLY_INCORRECT = "Show only incorrect",
+  SORT_LABEL = "Sort:",
+  ORDER_OPTION = "Order",
+  DIFFICULTY_OPTION = "Difficulty",
+  TOPIC_OPTION = "Topic",
+  GROUP_LABEL = "Group:",
+  NONE_OPTION = "None",
+  TIP_MESSAGE = "Tip: Use search to find explanations, tags, or specific phrasing.",
+  ALL_QUESTIONS_GROUP = "All Questions",
+  QUESTION_PREFIX = "Question",
+  CORRECT_LABEL = "Correct",
+  INCORRECT_LABEL = "Incorrect",
+  FILTERED_SUMMARY_TEMPLATE = "Showing {shown} of {filtered} filtered questions (total {total})",
+  GROUP_STATS_TEMPLATE = "{incorrect} incorrect • {total} total",
 }
 
 /**

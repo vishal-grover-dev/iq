@@ -67,7 +67,7 @@ const TONE_STYLES: Record<string, { badge: string; glow: string; border: string 
 function getTone(accuracy: number) {
   const tier = WEAK_AREA_ACCURACY_TIERS.find((t) => accuracy <= t.THRESHOLD);
   if (!tier) {
-    return { tone: "watch", label: "Monitor" };
+    return { tone: "watch", label: EWeakAreaLabels.MONITOR_LEVEL };
   }
   return { tone: tier.TONE, label: tier.LABEL };
 }

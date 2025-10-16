@@ -14,6 +14,7 @@ import {
   SparkleIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { RESULT_TIER_CONFIGS, STAT_CARD_LABELS, CONFETTI_COLORS } from "@/constants/evaluate.constants";
+import { EResultsHeroLabels, EResultsPageLabels } from "@/types/evaluate.types";
 import type { TResultTier } from "@/types/evaluate.types";
 
 interface IResultsHeroProps {
@@ -294,7 +295,7 @@ export default function ResultsHero({
                 <span>{tierConfig.title}</span>
               </div>
               <div className='w-full flex justify-center md:justify-start'>
-                <ScoreGauge score={score} label='Overall Score' />
+                <ScoreGauge score={score} label={EResultsHeroLabels.OVERALL_SCORE} />
               </div>
             </div>
           </motion.div>
@@ -311,7 +312,9 @@ export default function ResultsHero({
               <SparkleIcon className='h-4 w-4' weight='fill' />
               {tierConfig.headline}
             </p>
-            <h2 className='text-2xl font-semibold md:text-3xl'>You scored {score}% on this attempt.</h2>
+            <h2 className='text-2xl font-semibold md:text-3xl'>
+              {EResultsPageLabels.YOU_SCORED.replace("{score}", String(score))}
+            </h2>
             <p className='text-muted-foreground mt-2 text-sm md:text-base'>{tierConfig.description}</p>
           </div>
 

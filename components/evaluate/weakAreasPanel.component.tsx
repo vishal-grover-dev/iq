@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { usePrefersReducedMotion, ANIMATION_EASING } from "@/utils/animation.utils";
 import { cn } from "@/utils/tailwind.utils";
 import { TrendDownIcon, WarningCircleIcon, ArrowSquareOutIcon, LightningIcon } from "@phosphor-icons/react/dist/ssr";
+import { WEAK_AREA_ACCURACY_TIERS, WEAK_AREA_STYLES } from "@/constants/evaluate.constants";
+import { EWeakAreaLabels } from "@/types/evaluate.types";
 
 /**
  * Weak Areas Panel Component
@@ -44,36 +46,30 @@ const cardVariants = {
   }),
 };
 
-const ACCURACY_TIERS = [
-  { threshold: 0.5, tone: "critical", label: "Critical" },
-  { threshold: 0.7, tone: "caution", label: "Needs Focus" },
-  { threshold: 0.85, tone: "watch", label: "Monitor" },
-];
-
 const TONE_STYLES: Record<string, { badge: string; glow: string; border: string }> = {
   critical: {
-    badge: "bg-red-600 text-white shadow-sm",
-    glow: "from-rose-500/20 via-orange-500/10 to-transparent",
-    border: "border-red-500/50",
+    badge: WEAK_AREA_STYLES.CRITICAL.BADGE,
+    glow: WEAK_AREA_STYLES.CRITICAL.GLOW,
+    border: WEAK_AREA_STYLES.CRITICAL.BORDER,
   },
   caution: {
-    badge: "bg-amber-500/20 text-amber-800 dark:text-amber-100",
-    glow: "from-amber-500/20 via-yellow-500/10 to-transparent",
-    border: "border-amber-500/30",
+    badge: WEAK_AREA_STYLES.HIGH.BADGE,
+    glow: WEAK_AREA_STYLES.HIGH.GLOW,
+    border: WEAK_AREA_STYLES.HIGH.BORDER,
   },
   watch: {
-    badge: "bg-sky-500/15 text-sky-200",
-    glow: "from-sky-500/20 via-cyan-500/10 to-transparent",
-    border: "border-sky-500/25",
+    badge: WEAK_AREA_STYLES.MEDIUM.BADGE,
+    glow: WEAK_AREA_STYLES.MEDIUM.GLOW,
+    border: WEAK_AREA_STYLES.MEDIUM.BORDER,
   },
 };
 
 function getTone(accuracy: number) {
-  const tier = ACCURACY_TIERS.find((t) => accuracy <= t.threshold);
+  const tier = WEAK_AREA_ACCURACY_TIERS.find((t) => accuracy <= t.THRESHOLD);
   if (!tier) {
     return { tone: "watch", label: "Monitor" };
   }
-  return tier;
+  return { tone: tier.TONE, label: tier.LABEL };
 }
 
 function formatAccuracy(accuracy: number): string {
@@ -128,7 +124,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.05 }}
           >
-            <WarningCircleIcon className='h-5 w-5 text-amber-500' weight='fill' /> Areas to Improve
+            <WarningCircleIcon className='h-5 w-5 text-amber-500' weight='fill' /> {EWeakAreaLabels.AREAS_TO_IMPROVE}
           </motion.h2>
           <motion.p
             className='text-muted-foreground mt-1 text-sm'
@@ -136,7 +132,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.12 }}
           >
-            Focus on the essentials first—each card includes targeted actions to raise your mastery.
+            {EWeakAreaLabels.FOCUS_ESSENTIALS}
           </motion.p>
         </div>
 
@@ -146,7 +142,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.2 }}
         >
-          <LightningIcon className='h-4 w-4' weight='fill' /> Top opportunities
+          <LightningIcon className='h-4 w-4' weight='fill' /> {EWeakAreaLabels.TOP_OPPORTUNITIES}
         </motion.div>
       </div>
 
@@ -183,7 +179,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
                     <div className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
                       {area.topic}
                     </div>
-                    <h3 className='text-base font-semibold'>{area.subtopic ?? "General mastery"}</h3>
+                    <h3 className='text-base font-semibold'>{area.subtopic ?? EWeakAreaLabels.GENERAL_MASTERY}</h3>
                   </div>
                   <span
                     className={cn(
@@ -198,12 +194,14 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
 
                 <div className='flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-50/70 px-3 py-2 text-sm dark:border-amber-500/30 dark:bg-amber-900/30'>
                   <div className='flex flex-col'>
-                    <span className='text-xs uppercase tracking-wide text-amber-600 dark:text-amber-200'>Accuracy</span>
+                    <span className='text-xs uppercase tracking-wide text-amber-600 dark:text-amber-200'>
+                      {EWeakAreaLabels.ACCURACY_LABEL}
+                    </span>
                     <span className='text-lg font-semibold text-amber-700 dark:text-amber-100'>
                       {formatAccuracy(area.accuracy)}
                     </span>
                   </div>
-                  <div className='text-muted-foreground text-xs'>Goal: reach 80%+ with focused practice</div>
+                  <div className='text-muted-foreground text-xs'>{EWeakAreaLabels.GOAL_REACH_80}</div>
                 </div>
 
                 <div className='rounded-xl bg-background/70 p-3 text-sm shadow-sm'>
@@ -218,7 +216,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
                     className='inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80'
                     whileHover={{ x: prefersReducedMotion ? 0 : 4 }}
                   >
-                    Deep dive guidance <ArrowSquareOutIcon className='h-4 w-4' weight='fill' />
+                    {EWeakAreaLabels.DEEP_DIVE_GUIDANCE} <ArrowSquareOutIcon className='h-4 w-4' weight='fill' />
                   </motion.a>
                 )}
               </div>

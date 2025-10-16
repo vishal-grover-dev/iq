@@ -18,6 +18,7 @@ import {
   getStaticSubtopicsForTopic,
 } from "@/utils/static-ontology.utils";
 import { calculateCoverageWeights, weightedRandomIndex } from "@/utils/selection.utils";
+import { AI_SERVICE_ERRORS, OPENAI_PROMPTS, OPENAI_CONFIG } from "@/constants/generation.constants";
 
 function getErrorStatus(error: unknown): number | undefined {
   if (typeof error === "object" && error !== null) {
@@ -55,7 +56,7 @@ export async function getEmbeddings(
   options?: { batchSize?: number; truncateCharsPerItem?: number; maxRetries?: number }
 ): Promise<number[][]> {
   if (!texts || texts.length === 0) return [];
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
   const batchSize = Math.max(1, Math.min(options?.batchSize ?? 64, 256));
@@ -73,10 +74,10 @@ export async function getEmbeddings(
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
-        const res = await client.embeddings.create({ model: "text-embedding-3-small", input: slice });
+        const res = await client.embeddings.create({ model: OPENAI_CONFIG.EMBEDDING_MODEL, input: slice });
         const data = res.data;
         if (!Array.isArray(data) || data.length !== slice.length) {
-          throw new Error("OpenAI embeddings count mismatch for batch");
+          throw new Error(AI_SERVICE_ERRORS.EMBEDDINGS_COUNT_MISMATCH);
         }
         for (const d of data) out.push(d.embedding as number[]);
         break;
@@ -84,7 +85,7 @@ export async function getEmbeddings(
         const status = getErrorStatus(err);
         const retriable = status === 429 || (typeof status === "number" && status >= 500);
         if (!retriable || attempt >= maxRetries) {
-          throw new Error(getErrorMessage(err) ?? "OpenAI embeddings failed");
+          throw new Error(getErrorMessage(err) ?? AI_SERVICE_ERRORS.EMBEDDINGS_FAILED);
         }
         const sleepMs = 500 * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, sleepMs));
@@ -101,10 +102,9 @@ export async function getEmbeddings(
  */
 export async function rerank(query: string, texts: string[]): Promise<number[]> {
   if (!query || texts.length === 0) return [];
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
-  const system =
-    "You are a reranking engine. Given a query and a list of passages, return strict JSON { items: [{ index, score }] } where index refers to the passage index and score is higher for more relevant passages. Do not include any other keys.";
+  const system = OPENAI_PROMPTS.RERANKER_SYSTEM;
   const prompt = [
     `Query: ${query}`,
     "Passages:",
@@ -112,7 +112,7 @@ export async function rerank(query: string, texts: string[]): Promise<number[]> 
     'Return JSON only: { "items": [ { "index": number, "score": number } ] }',
   ].join("\n");
   const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     temperature: 0,
     messages: [
       { role: "system", content: system },
@@ -145,10 +145,10 @@ export async function classifyLabels(args: {
   allowedSubtopicsByTopic: Record<string, string[]>;
   topicHint?: string;
 }): Promise<{ topic: string; subtopic: string | null; version: string | null; confidence: number }> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
   const sys = [
-    "You are a labeling classifier for documentation.",
+    OPENAI_PROMPTS.LABELER_SYSTEM,
     "Return STRICT JSON only: { topic: string, subtopic: string|null, version: string|null, confidence: number }",
     "Topic MUST be from allowed topics. Subtopic SHOULD be from the allowed list when a close match exists; otherwise, propose a concise, sensible subtopic.",
     "Prefer the topic hint when plausible.",
@@ -176,7 +176,7 @@ export async function classifyLabels(args: {
     .join("\n");
 
   const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     temperature: 0,
     messages: [
       { role: "system", content: sys },
@@ -210,7 +210,7 @@ export async function suggestCrawlHeuristics(args: {
   depthMap?: Record<string, number>;
   seeds?: string[];
 }> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
   const { url, htmlPreview, navigationPreview } = args;
@@ -263,7 +263,7 @@ export async function suggestCrawlHeuristics(args: {
   ].join("\n\n");
 
   const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     temperature: 0,
     messages: [
       { role: "system", content: sys },
@@ -315,7 +315,7 @@ export async function generateMcqFromContext(args: {
   avoidSubtopics?: string[];
   questionStyle?: EQuestionStyle;
 }): Promise<IMcqItemView> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
   // Fetch available subtopics for this topic (dynamic ontology) to guide generation
@@ -413,7 +413,7 @@ export async function generateMcqFromContext(args: {
     : { type: "json_object" };
 
   const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     temperature: 0.2,
     messages: [
       { role: "system", content: system },
@@ -519,7 +519,7 @@ export async function generateMcqFromContext(args: {
     ].join("\n\n");
 
     const repair = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: OPENAI_CONFIG.CHAT_MODEL,
       temperature: 0,
       messages: [
         { role: "system", content: repairSystem },
@@ -569,7 +569,7 @@ export async function generateMcqFromContext(args: {
       ].join("\n\n");
 
       const repair = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: OPENAI_CONFIG.CHAT_MODEL,
         temperature: 0,
         messages: [
           { role: "system", content: repairSystem },
@@ -622,7 +622,7 @@ export async function reviseMcqWithContext(args: {
   instruction: string;
   contextItems: Array<{ title?: string | null; url: string; content: string }>;
 }): Promise<IMcqItemView> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
   const { system, user } = buildReviserMessages({
@@ -632,7 +632,7 @@ export async function reviseMcqWithContext(args: {
   });
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -725,7 +725,7 @@ export async function judgeMcqQuality(args: {
   neighbors?: Array<{ question: string; options: [string, string, string, string] }>;
   codingMode?: boolean;
 }): Promise<{ verdict: "approve" | "revise"; reasons: string[]; suggestions?: string[] }> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
   const { system, user } = buildJudgeMessages({
     mcq: args.mcq,
@@ -734,7 +734,7 @@ export async function judgeMcqQuality(args: {
     codingMode: args.codingMode,
   });
   const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: OPENAI_CONFIG.CHAT_MODEL,
     temperature: 0,
     messages: [
       { role: "system", content: system },
@@ -782,7 +782,7 @@ export async function selectNextQuestion(context: {
   preferred_bloom_level: EBloomLevel;
   reasoning: string;
 }> {
-  if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
   const {
@@ -858,7 +858,7 @@ export async function selectNextQuestion(context: {
 
   try {
     const res = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: OPENAI_CONFIG.CHAT_MODEL,
       temperature: 0.3,
       messages: [
         { role: "system", content: system },

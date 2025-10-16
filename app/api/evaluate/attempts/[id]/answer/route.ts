@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { EAttemptStatus } from "@/types/evaluate.types";
+import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
 
 export const runtime = "nodejs";
 
@@ -16,10 +16,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
 
     const attemptId = resolvedParams.id;
-    if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
+    if (!attemptId) return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_ID_REQUIRED }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));
     const { question_id, user_answer_index, time_spent_seconds } = body;
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     if (attempt.status !== EAttemptStatus.InProgress) {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (updateQuestionError) {
       console.error("Error updating question answer:", updateQuestionError);
-      return NextResponse.json({ error: "Failed to record answer" }, { status: 500 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_RECORD_ANSWER }, { status: 500 });
     }
 
     // Update attempt counters
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       if (countError) {
         console.error("Error counting assigned questions:", countError);
-        return NextResponse.json({ error: "Failed to verify completion" }, { status: 500 });
+        return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_VERIFY_COMPLETION }, { status: 500 });
       }
 
       const actualAssignedCount = assignedQuestions?.length || 0;
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (updateAttemptError) {
       console.error("Error updating attempt:", updateAttemptError);
-      return NextResponse.json({ error: "Failed to update attempt" }, { status: 500 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_UPDATE_ATTEMPT }, { status: 500 });
     }
 
     // Return progress WITHOUT revealing correctness or score
@@ -180,6 +180,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   } catch (err: any) {
     console.error("Unexpected error in POST /api/evaluate/attempts/:id/answer:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { status: 500 }
+    );
   }
 }

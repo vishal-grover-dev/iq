@@ -6,6 +6,12 @@ import { MoonIcon, SunIcon } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/utils/tailwind.utils";
 import { useEffect, useState } from "react";
 import { ETheme as Theme } from "@/types/app.types";
+import {
+  THEME_DARK_MODE_LABEL,
+  THEME_LIGHT_MODE_LABEL,
+  THEME_SWITCH_TO_DARK_MODE_LABEL,
+  THEME_SWITCH_TO_LIGHT_MODE_LABEL,
+} from "@/constants/theme.constants";
 
 type ThemeToggleProps = {
   className?: string;
@@ -24,13 +30,14 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
     return (
       <div className={cn("inline-flex items-center gap-2", className)}>
         <SunIcon size={20} className={cn("text-primary transition-opacity")} aria-hidden />
-        <Switch checked={false} disabled aria-label='Toggle dark mode' />
+        <Switch checked={false} disabled aria-label={THEME_SWITCH_TO_DARK_MODE_LABEL} />
         <MoonIcon size={20} className={cn("dark:text-gray-200 text-black transition-opacity")} aria-hidden />
       </div>
     );
   }
 
   const isDark = resolvedTheme === Theme.DARK;
+  const ariaLabel = isDark ? THEME_SWITCH_TO_LIGHT_MODE_LABEL : THEME_SWITCH_TO_DARK_MODE_LABEL;
 
   return (
     <div className={cn("inline-flex items-center gap-2", className)}>
@@ -38,8 +45,9 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       <Switch
         checked={isDark}
         onCheckedChange={(checked) => setTheme(checked ? Theme.DARK : Theme.LIGHT)}
-        aria-label='Toggle dark mode'
+        aria-label={ariaLabel}
       />
+      <span className='sr-only'>{isDark ? THEME_DARK_MODE_LABEL : THEME_LIGHT_MODE_LABEL}</span>
       <MoonIcon size={20} className={cn("dark:text-gray-200 text-black transition-opacity")} aria-hidden />
     </div>
   );

@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import CodeBlock from "./codeBlock.component";
 import OptionButton from "./optionButton.component";
+import { EQuestionCardLabels } from "@/types/evaluate.types";
 import type { ICitation } from "@/types/evaluate.types";
 
 interface IQuestionCardProps {
@@ -150,9 +151,9 @@ export default function QuestionCard({
       {/* Submit button (evaluation mode only) */}
       {mode === "evaluation" && (
         <div className='mt-4 flex items-center justify-between'>
-          <p className='text-muted-foreground text-xs'>Press 1-4 to select, Enter to submit</p>
+          <p className='text-muted-foreground text-xs'>{EQuestionCardLabels.KEYBOARD_HINTS}</p>
           <Button onClick={handleSubmit} disabled={selectedIndex === null || isSubmitting} size='lg'>
-            {isSubmitting ? "Submitting..." : "Submit Answer"}
+            {isSubmitting ? EQuestionCardLabels.SUBMITTING : EQuestionCardLabels.SUBMIT_ANSWER}
           </Button>
         </div>
       )}
@@ -160,7 +161,7 @@ export default function QuestionCard({
       {/* Explanation (review mode only) */}
       {mode === "review" && explanation && (
         <div className='bg-muted/50 mt-4 rounded-md p-3 text-sm' data-testid='question-explanation'>
-          <div className='mb-1 font-semibold'>Explanation</div>
+          <div className='mb-1 font-semibold'>{EQuestionCardLabels.EXPLANATION}</div>
           <p className='text-muted-foreground'>{explanation}</p>
         </div>
       )}
@@ -168,7 +169,7 @@ export default function QuestionCard({
       {/* Citations (review mode only) */}
       {mode === "review" && citations && citations.length > 0 && (
         <div className='mt-4' data-testid='question-citations'>
-          <div className='text-muted-foreground mb-1 text-xs font-semibold'>Learn More</div>
+          <div className='text-muted-foreground mb-1 text-xs font-semibold'>{EQuestionCardLabels.LEARN_MORE}</div>
           <ul className='text-muted-foreground list-disc space-y-1 pl-5 text-xs'>
             {citations.map((citation, i) => (
               <li key={i}>

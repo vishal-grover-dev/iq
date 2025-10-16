@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { EAttemptStatus } from "@/types/evaluate.types";
+import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
 
 export const runtime = "nodejs";
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
 
     const supabase = getSupabaseServiceRoleClient();
 
@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating attempt:", error);
-      return NextResponse.json({ error: "Failed to create attempt", details: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: EEvaluateApiErrorMessages.FAILED_TO_CREATE_ATTEMPT, details: error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -49,7 +52,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Unexpected error creating attempt:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -64,7 +70,7 @@ export async function GET(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -90,7 +96,10 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error("Error fetching attempts:", error);
-      return NextResponse.json({ error: "Failed to fetch attempts", details: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_ATTEMPTS, details: error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -98,6 +107,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Unexpected error fetching attempts:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { status: 500 }
+    );
   }
 }

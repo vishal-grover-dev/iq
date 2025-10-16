@@ -8,6 +8,7 @@ import type {
 } from "@/types/mcq.types";
 import { EPromptMode, EBloomLevel as BloomLevel } from "@/types/mcq.types";
 import type { TExample } from "../data/mcq-examples";
+import { MCQ_PROMPT_TEMPLATES } from "@/constants/generation.constants";
 import { pickExamples } from "../data/mcq-examples";
 import { getStaticTopicWeights, getStaticSubtopicMap } from "./static-ontology.utils";
 
@@ -17,8 +18,8 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
   const mode = args.mode ?? EPromptMode.FEW_SHOT;
   const examples = pickExamples(args.examplesCount ?? 10, args.topic);
   const system = [
-    "You generate high-quality multiple-choice questions (MCQs) with citations.",
-    "Rules:",
+    MCQ_PROMPT_TEMPLATES.GENERATOR_SYSTEM_INTRO,
+    MCQ_PROMPT_TEMPLATES.RULES_HEADER,
     "- Always return STRICT JSON with fields: topic, subtopic, version, difficulty, bloomLevel, question, options (array of 4 strings), correctIndex (0-3), explanation (string), explanationBullets (array of 2-3 strings), citations (array of {title?, url}).",
     "- Use exactly four plausible options and exactly one correct answer.",
     "- Ground content in the provided context and cite 1–2 most relevant sources.",
@@ -75,7 +76,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     const list = (args.negativeExamples ?? []).filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 8);
     if (list.length === 0) return undefined;
     return [
-      "Avoid generating MCQs similar to the following question gists:",
+      MCQ_PROMPT_TEMPLATES.NEGATIVE_EXAMPLES_INTRO,
       ...list.map((q, i) => `${i + 1}. ${q.slice(0, 240)}`),
       "Do not copy these. Aim for different angles or scenarios.",
     ].join("\n");
@@ -88,15 +89,13 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
 
   const user = [
     `Labels: ${labels}`,
-    "Context (use for grounding and citations):",
+    MCQ_PROMPT_TEMPLATES.CONTEXT_HEADER,
     contextLines,
     mode === EPromptMode.FEW_SHOT ? "Examples (style reference):\n" + examplesBlock : undefined,
     negativeBlock,
     styleBlock,
     args.extraInstructions || undefined,
-    args.codingMode
-      ? "Task: Generate ONE coding MCQ. MUST include a fenced code block (```js``` or ```tsx```) in the dedicated 'code' field (3–50 lines). Do NOT place the code in the question; reference the snippet in prose. Ask about behavior/bugs/fixes."
-      : "Task: Generate one MCQ adhering to labels and grounded in the context.",
+    args.codingMode ? MCQ_PROMPT_TEMPLATES.CODING_TASK_INSTRUCTION : MCQ_PROMPT_TEMPLATES.STANDARD_TASK_INSTRUCTION,
     'Return JSON only with keys: {"topic","subtopic","version","difficulty","bloomLevel","question","options","correctIndex","explanation","explanationBullets","citations"' +
       (args.codingMode ? ',"code"' : "") +
       "}",

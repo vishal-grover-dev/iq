@@ -13,8 +13,8 @@ import {
   ClockIcon,
   SparkleIcon,
 } from "@phosphor-icons/react/dist/ssr";
-
-type TResultTier = "expert" | "proficient" | "developing" | "getting_started";
+import { RESULT_TIER_CONFIGS, STAT_CARD_LABELS, CONFETTI_COLORS } from "@/constants/evaluate.constants";
+import type { TResultTier } from "@/types/evaluate.types";
 
 interface IResultsHeroProps {
   score: number;
@@ -53,44 +53,42 @@ const TIER_CONFIG: Record<
   }
 > = {
   expert: {
-    title: "Expert Tier",
-    headline: "Outstanding mastery!",
-    description: "You nailed this attempt with interview-ready precision. Keep the momentum going!",
-    accentClass: "text-emerald-400",
-    badgeClass: "bg-emerald-500/15 text-emerald-300",
-    gradientClass: "from-emerald-500/20 via-emerald-500/10 to-sky-500/0",
+    title: RESULT_TIER_CONFIGS.EXPERT.TITLE,
+    headline: RESULT_TIER_CONFIGS.EXPERT.HEADLINE,
+    description: RESULT_TIER_CONFIGS.EXPERT.DESCRIPTION,
+    accentClass: RESULT_TIER_CONFIGS.EXPERT.ACCENT_CLASS,
+    badgeClass: RESULT_TIER_CONFIGS.EXPERT.BADGE_CLASS,
+    gradientClass: RESULT_TIER_CONFIGS.EXPERT.GRADIENT_CLASS,
     icon: MedalIcon,
   },
   proficient: {
-    title: "Proficient Tier",
-    headline: "You're on track!",
-    description: "Great performance across core topics. A few focused reps will unlock the next tier.",
-    accentClass: "text-teal-300",
-    badgeClass: "bg-teal-500/15 text-teal-200",
-    gradientClass: "from-teal-500/15 via-cyan-500/10 to-transparent",
+    title: RESULT_TIER_CONFIGS.PROFICIENT.TITLE,
+    headline: RESULT_TIER_CONFIGS.PROFICIENT.HEADLINE,
+    description: RESULT_TIER_CONFIGS.PROFICIENT.DESCRIPTION,
+    accentClass: RESULT_TIER_CONFIGS.PROFICIENT.ACCENT_CLASS,
+    badgeClass: RESULT_TIER_CONFIGS.PROFICIENT.BADGE_CLASS,
+    gradientClass: RESULT_TIER_CONFIGS.PROFICIENT.GRADIENT_CLASS,
     icon: TargetIcon,
   },
   developing: {
-    title: "Developing Tier",
-    headline: "Solid foundation!",
-    description: "You're building reliable instincts. Tackle the focus areas below to level up fast.",
-    accentClass: "text-amber-300",
-    badgeClass: "bg-amber-500/15 text-amber-200",
-    gradientClass: "from-amber-500/15 via-orange-500/10 to-transparent",
+    title: RESULT_TIER_CONFIGS.DEVELOPING.TITLE,
+    headline: RESULT_TIER_CONFIGS.DEVELOPING.HEADLINE,
+    description: RESULT_TIER_CONFIGS.DEVELOPING.DESCRIPTION,
+    accentClass: RESULT_TIER_CONFIGS.DEVELOPING.ACCENT_CLASS,
+    badgeClass: RESULT_TIER_CONFIGS.DEVELOPING.BADGE_CLASS,
+    gradientClass: RESULT_TIER_CONFIGS.DEVELOPING.GRADIENT_CLASS,
     icon: ChartLineUpIcon,
   },
   getting_started: {
-    title: "Launch Tier",
-    headline: "Every expert starts here!",
-    description: "Great first step. Follow the curated recommendations to build confidence quickly.",
-    accentClass: "text-sky-300",
-    badgeClass: "bg-sky-500/15 text-sky-200",
-    gradientClass: "from-sky-500/15 via-indigo-500/10 to-transparent",
+    title: RESULT_TIER_CONFIGS.GETTING_STARTED.TITLE,
+    headline: RESULT_TIER_CONFIGS.GETTING_STARTED.HEADLINE,
+    description: RESULT_TIER_CONFIGS.GETTING_STARTED.DESCRIPTION,
+    accentClass: RESULT_TIER_CONFIGS.GETTING_STARTED.ACCENT_CLASS,
+    badgeClass: RESULT_TIER_CONFIGS.GETTING_STARTED.BADGE_CLASS,
+    gradientClass: RESULT_TIER_CONFIGS.GETTING_STARTED.GRADIENT_CLASS,
     icon: RocketLaunchIcon,
   },
 };
-
-const CONFETTI_COLORS = ["#34d399", "#22c55e", "#fde047", "#38bdf8", "#f97316"];
 
 const containerVariants = {
   hidden: {
@@ -214,33 +212,33 @@ export default function ResultsHero({
   const statCards = useMemo<IStatCard[]>(() => {
     const cards: Array<IStatCard | null> = [
       {
-        label: "Correct Answers",
+        label: STAT_CARD_LABELS.CORRECT_ANSWERS,
         value: `${correctCount}/${totalQuestions}`,
-        caption: "Questions mastered",
+        caption: STAT_CARD_LABELS.QUESTIONS_MASTERED,
         tone: "positive",
       },
       {
-        label: "Time Spent",
+        label: STAT_CARD_LABELS.TIME_SPENT,
         value: formatDuration(timeSpentSeconds),
-        caption: "Focused practice",
+        caption: STAT_CARD_LABELS.FOCUSED_PRACTICE,
         tone: "neutral",
       },
     ];
 
     if (topTopic) {
       cards.push({
-        label: "Strongest Topic",
+        label: STAT_CARD_LABELS.STRONGEST_TOPIC,
         value: topTopic.name,
-        caption: `${Math.round(topTopic.accuracy * 100)}% accuracy`,
+        caption: `${Math.round(topTopic.accuracy * 100)}% ${STAT_CARD_LABELS.ACCURACY}`,
         tone: "positive",
       });
     }
 
     if (focusArea) {
       cards.push({
-        label: "Next Focus",
+        label: STAT_CARD_LABELS.NEXT_FOCUS,
         value: focusArea.topic, // Always show topic name, not subtopic
-        caption: `${Math.round(focusArea.accuracy * 100)}% accuracy`,
+        caption: `${Math.round(focusArea.accuracy * 100)}% ${STAT_CARD_LABELS.ACCURACY}`,
         tone: "attention",
       });
     }
@@ -338,7 +336,9 @@ export default function ResultsHero({
                   <span className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
                     {stat.label}
                   </span>
-                  {stat.label === "Time Spent" && <ClockIcon className='h-4 w-4 text-muted-foreground/70' />}
+                  {stat.label === STAT_CARD_LABELS.TIME_SPENT && (
+                    <ClockIcon className='h-4 w-4 text-muted-foreground/70' />
+                  )}
                 </div>
                 <div className='mt-2 text-lg font-semibold md:text-xl capitalize'>{stat.value}</div>
                 {stat.caption && <p className='text-muted-foreground mt-1 text-xs'>{stat.caption}</p>}

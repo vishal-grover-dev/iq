@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import type { IAttemptResults, IWeakArea, IQuestionReview } from "@/types/evaluate.types";
+import { EEvaluateApiErrorMessages } from "@/types/evaluate.types";
 
 /**
  * GET /api/evaluate/attempts/:id/results
@@ -21,7 +22,7 @@ export async function GET(_request: NextRequest, context: any) {
   const attemptId = params?.id as string;
 
   if (!attemptId) {
-    return NextResponse.json({ error: "Attempt ID is required" }, { status: 400 });
+    return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_ID_REQUIRED }, { status: 400 });
   }
 
   const supabase = getSupabaseServiceRoleClient();
@@ -30,7 +31,7 @@ export async function GET(_request: NextRequest, context: any) {
   const userId = DEV_DEFAULT_USER_ID || null;
 
   if (!userId && !DEV_DEFAULT_USER_ID) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    return NextResponse.json({ error: EEvaluateApiErrorMessages.AUTHENTICATION_REQUIRED }, { status: 401 });
   }
 
   try {
@@ -43,14 +44,11 @@ export async function GET(_request: NextRequest, context: any) {
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     if (attempt.status !== "completed") {
-      return NextResponse.json(
-        { error: "Attempt not completed yet. Complete all 60 questions first." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_COMPLETED }, { status: 400 });
     }
 
     // 2. Fetch all attempt_questions with joined mcq_items and mcq_explanations
@@ -87,7 +85,7 @@ export async function GET(_request: NextRequest, context: any) {
 
     if (questionsError || !attemptQuestions) {
       console.error("Error fetching attempt questions:", questionsError);
-      return NextResponse.json({ error: "Failed to fetch attempt questions" }, { status: 500 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_QUESTIONS }, { status: 500 });
     }
 
     // 3. Compute summary
@@ -239,6 +237,6 @@ export async function GET(_request: NextRequest, context: any) {
     });
   } catch (error) {
     console.error("Error fetching attempt results:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR }, { status: 500 });
   }
 }

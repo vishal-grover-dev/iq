@@ -4,7 +4,7 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { selectNextQuestion, getEmbeddings } from "@/services/ai.services";
 import { weightedRandomIndex, calculateCoverageWeights } from "@/utils/selection.utils";
-import { EAttemptStatus } from "@/types/evaluate.types";
+import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
 import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
 import { getStaticTopicList, getStaticSubtopicMap } from "@/utils/static-ontology.utils";
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
 
     const attemptId = resolvedParams.id;
     if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     // If attempt is completed, return without next question
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (questionsError) {
       console.error("Error fetching asked questions:", questionsError);
-      return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_QUESTIONS }, { status: 500 });
     }
 
     const asked = askedQuestions || [];
@@ -339,7 +339,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (candidatesError) {
       console.error("Error querying MCQ bank:", candidatesError);
-      return NextResponse.json({ error: "Failed to query questions" }, { status: 500 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_QUERY_QUESTIONS }, { status: 500 });
     }
 
     // If no candidates found, try with relaxed criteria first
@@ -474,7 +474,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
           if (contextError) {
             console.error("Error retrieving context:", contextError);
-            return NextResponse.json({ error: "Failed to retrieve context for question generation." }, { status: 500 });
+            return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_RETRIEVE_CONTEXT }, { status: 500 });
           }
 
           if (!contextItems || contextItems.length === 0) {
@@ -871,7 +871,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
           if (genAssignErr && genAssignErr.code !== "23505") {
             console.error("Error assigning generated question:", genAssignErr);
-            return NextResponse.json({ error: "Failed to assign question" }, { status: 500 });
+            return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_ASSIGN_QUESTION }, { status: 500 });
           }
 
           // If a parallel request won the race, read back the canonical question
@@ -1350,7 +1350,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
   } catch (err: any) {
     console.error("Unexpected error in GET /api/evaluate/attempts/:id:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -1363,7 +1366,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
 
     const attemptId = resolvedParams.id;
     if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
@@ -1386,7 +1389,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     // Update metadata
@@ -1416,6 +1419,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
   } catch (err: any) {
     console.error("Unexpected error in PATCH /api/evaluate/attempts/:id:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { status: 500 }
+    );
   }
 }

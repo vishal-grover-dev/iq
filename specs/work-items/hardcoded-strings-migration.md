@@ -61,241 +61,54 @@ This document provides a comprehensive audit of hardcoded strings across the IQ 
 ### Module: `components/common/`
 
 #### File: `header.component.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Upload" (line 55)
-- "Generate" (line 62)
-- "Evaluate" (line 69)
-- Navigation link text
-
-// REFACTOR TO:
-// In types/navigation.types.ts:
-enum ENavigationLabels {
-  UPLOAD = "Upload",
-  GENERATE = "Generate",
-  EVALUATE = "Evaluate"
-}
-```
+- Hardcoded strings: "Upload", "Generate", "Evaluate", and related navigation link text.
+- Refactor plan: define an enum named ENavigationLabels in `types/navigation.types.ts` to centralize these labels.
 
 #### File: `themeToggle.component.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- Theme-related labels and accessibility text
-
-// REFACTOR TO:
-enum EThemeLabels {
-  LIGHT_MODE = "Light mode",
-  DARK_MODE = "Dark mode"
-}
-```
+- Hardcoded strings: all theme toggle labels and accessibility text.
+- Refactor plan: introduce an enum named EThemeLabels capturing "Light mode" and "Dark mode" values.
 
 ### Module: `components/evaluate/`
 
 #### File: `questionCard.component.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Submitting..." (line 155)
-- "Submit Answer" (line 155)
-- "Explanation" (line 163)
-- "Learn More" (line 171)
-- "Press 1-4 to select, Enter to submit" (line 153)
-
-// REFACTOR TO:
-enum EQuestionCardLabels {
-  SUBMITTING = "Submitting...",
-  SUBMIT_ANSWER = "Submit Answer",
-  EXPLANATION = "Explanation",
-  LEARN_MORE = "Learn More",
-  KEYBOARD_HINTS = "Press 1-4 to select, Enter to submit"
-}
-```
+- Hardcoded strings: "Submitting...", "Submit Answer", "Explanation", "Learn More", and "Press 1-4 to select, Enter to submit".
+- Refactor plan: add an enum named EQuestionCardLabels encapsulating these values for reuse across the component.
 
 #### File: `resultsHero.component.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- Tier messages and descriptions
-- "Expert Tier", "Outstanding mastery!" etc.
-
-// REFACTOR TO:
-interface IResultTierConfig {
-  title: string;
-  headline: string;
-  description: string;
-  accentClass: string;
-  badgeClass: string;
-}
-
-const RESULT_TIER_CONFIGS: Record<TResultTier, IResultTierConfig> = {
-  expert: {
-    title: "Expert Tier",
-    headline: "Outstanding mastery!",
-    description: "You nailed this attempt with interview-ready precision. Keep the momentum going!",
-    accentClass: "text-emerald-400",
-    badgeClass: "bg-emerald-500/15 text-emerald-300"
-  },
-  // ... other tiers
-};
-```
+- Hardcoded strings: tier titles, headlines, descriptions, and tier-specific style class strings.
+- Refactor plan: create an interface named IResultTierConfig and a `RESULT_TIER_CONFIGS` record keyed by `TResultTier` to store copy and style classes.
 
 #### File: `weakAreasPanel.component.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Needs Focus", "General mastery"
-- CSS class strings for styling
-
-// REFACTOR TO:
-enum EWeakAreaLabels {
-  NEEDS_FOCUS = "Needs Focus",
-  GENERAL_MASTERY = "General mastery"
-}
-
-const WEAK_AREA_STYLES = {
-  critical: {
-    badge: "bg-red-600 text-white shadow-sm",
-    glow: "from-rose-500/20 via-orange-500/10 to-transparent",
-    border: "border-red-500/50"
-  },
-  // ... other styles
-} as const;
-```
+- Hardcoded strings: tone labels such as "Needs Focus" and "General mastery" plus badge/glow/border class strings.
+- Refactor plan: define an enum named EWeakAreaLabels for tone copy and a `WEAK_AREA_STYLES` constant object for style tokens.
 
 ### Module: `app/evaluate/`
 
 #### File: `page.tsx`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Frontend Skills Assessment" (line 59)
-- "Test your React.js ecosystem knowledge..." (line 61-62)
-- "Resume Your Evaluation" (line 70)
-- "Continue where you left off" (line 71)
-- "Progress" (line 78)
-- "questions" (line 79)
-- "Resume Evaluation" (line 94)
-- "Started" (line 96)
-- "Start New Evaluation" (line 107)
-- "Creating..." (line 155)
-- "Start Evaluation" (line 158)
-- "Past Attempts" (line 169)
-- "View Results" (line 193)
-- "No attempts yet..." (line 205-207)
-
-// REFACTOR TO:
-enum EEvaluatePageLabels {
-  PAGE_TITLE = "Frontend Skills Assessment",
-  PAGE_DESCRIPTION = "Test your React.js ecosystem knowledge with a comprehensive 60-question evaluation",
-  RESUME_TITLE = "Resume Your Evaluation",
-  RESUME_SUBTITLE = "Continue where you left off",
-  PROGRESS_LABEL = "Progress",
-  QUESTIONS_LABEL = "questions",
-  RESUME_BUTTON = "Resume Evaluation",
-  STARTED_LABEL = "Started",
-  START_NEW_TITLE = "Start New Evaluation",
-  CREATING_BUTTON = "Creating...",
-  START_EVALUATION_BUTTON = "Start Evaluation",
-  PAST_ATTEMPTS_TITLE = "Past Attempts",
-  VIEW_RESULTS_BUTTON = "View Results",
-  EMPTY_STATE_MESSAGE = "No attempts yet. Start your first evaluation to assess your frontend skills and identify areas for improvement."
-}
-```
+- Hardcoded strings: all landing page headings, subheadings, button labels, progress labels, and empty-state copy including "Frontend Skills Assessment", "Resume Your Evaluation", "Start New Evaluation", and related text.
+- Refactor plan: add an enum named EEvaluatePageLabels to house page text plus an empty-state message constant for consistent reuse.
 
 ### Module: `app/api/evaluate/`
 
 #### File: `attempts/route.ts`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Unauthorized" (lines 17, 67)
-- "Failed to create attempt" (line 42)
-- "Internal server error" (lines 52, 101)
-- "Failed to fetch attempts" (line 93)
-
-// REFACTOR TO:
-enum EApiErrorMessages {
-  UNAUTHORIZED = "Unauthorized",
-  FAILED_TO_CREATE_ATTEMPT = "Failed to create attempt",
-  INTERNAL_SERVER_ERROR = "Internal server error",
-  FAILED_TO_FETCH_ATTEMPTS = "Failed to fetch attempts"
-}
-```
+- Hardcoded strings: common error responses including "Unauthorized", "Failed to create attempt", "Internal server error", and "Failed to fetch attempts".
+- Refactor plan: define an enum named EApiErrorMessages capturing these shared error messages for reuse across evaluate API handlers.
 
 #### File: `attempts/[id]/results/route.ts`
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Attempt ID is required" (line 24)
-- "Authentication required" (line 33)
-- "Attempt not found" (line 46)
-- "Attempt not completed yet. Complete all 60 questions first." (line 51)
-- "Failed to fetch attempt questions" (line 90)
-
-// REFACTOR TO:
-enum EAttemptResultsErrorMessages {
-  ATTEMPT_ID_REQUIRED = "Attempt ID is required",
-  AUTHENTICATION_REQUIRED = "Authentication required",
-  ATTEMPT_NOT_FOUND = "Attempt not found",
-  ATTEMPT_NOT_COMPLETED = "Attempt not completed yet. Complete all 60 questions first.",
-  FAILED_TO_FETCH_QUESTIONS = "Failed to fetch attempt questions"
-}
-```
+- Hardcoded strings: validation and data-fetch errors such as "Attempt ID is required", "Authentication required", "Attempt not found", and completion gate messaging.
+- Refactor plan: create an enum named EAttemptResultsErrorMessages to consolidate these responses for consistent usage.
 
 ### Module: `services/ai.services.ts`
 
 #### Hardcoded Strings:
-
-```typescript
-// HARDCODED STRINGS FOUND:
-- "Missing OPENAI_API_KEY" (lines 58, 104, 148)
-- "OpenAI embeddings count mismatch for batch" (line 79)
-- "OpenAI embeddings failed" (line 87)
-- "text-embedding-3-small" (line 76)
-- "You are a reranking engine..." (line 107)
-- "You are a labeling classifier..." (line 151)
-
-// REFACTOR TO:
-enum EOpenAIErrorMessages {
-  MISSING_API_KEY = "Missing OPENAI_API_KEY",
-  EMBEDDINGS_COUNT_MISMATCH = "OpenAI embeddings count mismatch for batch",
-  EMBEDDINGS_FAILED = "OpenAI embeddings failed"
-}
-
-enum EOpenAIModels {
-  TEXT_EMBEDDING_SMALL = "text-embedding-3-small",
-  GPT_4O_MINI = "gpt-4o-mini"
-}
-
-const OPENAI_PROMPTS = {
-  RERANKER_SYSTEM: "You are a reranking engine. Given a query and a list of passages, return strict JSON { items: [{ index, score }] } where index refers to the passage index and score is higher for more relevant passages. Do not include any other keys.",
-  LABELER_SYSTEM: "You are a labeling classifier for documentation."
-} as const;
-```
+- Hardcoded strings: missing API key and embeddings error messages, model names like "text-embedding-3-small", plus system prompts for reranker and labeler flows.
+- Refactor plan: introduce enums for OpenAI error messages and model identifiers, along with a typed `OPENAI_PROMPTS` constant object for system messages.
 
 ### Module: `utils/mcq-prompt.utils.ts`
 
 #### Hardcoded Strings:
-
-````typescript
-// HARDCODED STRINGS FOUND:
-- "You generate high-quality multiple-choice questions..." (line 20)
-- "Rules:" (line 21)
-- "Avoid generating MCQs similar to..." (line 78)
-- "Context (use for grounding and citations):" (line 91)
-- "Task: Generate ONE coding MCQ..." (line 98)
-
-// REFACTOR TO:
-const MCQ_PROMPT_TEMPLATES = {
-  GENERATOR_SYSTEM_INTRO: "You generate high-quality multiple-choice questions (MCQs) with citations.",
-  RULES_HEADER: "Rules:",
-  NEGATIVE_EXAMPLES_INTRO: "Avoid generating MCQs similar to the following question gists:",
-  CONTEXT_HEADER: "Context (use for grounding and citations):",
-  CODING_TASK_INSTRUCTION: "Task: Generate ONE coding MCQ. MUST include a fenced code block (```js``` or ```tsx```) in the dedicated 'code' field (3–50 lines). Do NOT place the code in the question; reference the snippet in prose. Ask about behavior/bugs/fixes."
-} as const;
-````
+- Hardcoded strings: generator system prompt intro, rules header, negative example intro, context header, and coding task instructions containing code fence guidance.
+- Refactor plan: add a `MCQ_PROMPT_TEMPLATES` constant object with const assertion to centralize these prompt fragments for reuse across utilities.
 
 ## Refactoring Plan
 
@@ -310,8 +123,8 @@ const MCQ_PROMPT_TEMPLATES = {
 - [x] Create `types/generation.types.ts` for generation-related enums
 - [x] Create `constants/generation.constants.ts` for generation constants
 - [x] Create `constants/evaluate.constants.ts` for evaluation constants
-- [ ] Create `types/ingestion.types.ts` for ingestion-related enums
-- [ ] Create `constants/ingestion.constants.ts` for ingestion constants
+- [x] Create `types/ingestion.types.ts` for ingestion-related enums // Added canonical enums and shared interfaces for ingestion metadata/progress
+- [x] Create `constants/ingestion.constants.ts` for ingestion constants // Centralized defaults, labels, and toast copy for ingestion flows
 - [x] Establish naming conventions and module-specific structure
 
 #### Task 1.2: Create Type Definitions
@@ -413,22 +226,19 @@ const MCQ_PROMPT_TEMPLATES = {
 
 **Important Note**: Constants and types should be organized by module/domain, not by generic categories like "ui" or "api". This ensures better maintainability and follows the project's domain-driven structure.
 
-```
-constants/
-├── evaluate.constants.ts     # Evaluation-specific constants
-├── generation.constants.ts   # MCQ generation constants
-├── ingestion.constants.ts    # Ingestion constants
-├── navigation.constants.ts   # Navigation and routing constants
-└── theme.constants.ts        # Theme-related constants
-
-types/
-├── evaluate.types.ts         # Evaluation types and enums (existing)
-├── generation.types.ts       # Generation types and enums
-├── ingestion.types.ts        # Ingestion types and enums
-├── navigation.types.ts       # Navigation types and enums
-├── ui.types.ts              # UI-specific types and enums
-└── string.types.ts          # String-related types and interfaces
-```
+- `constants/`
+  - `evaluate.constants.ts`: Evaluation-specific constants
+  - `generation.constants.ts`: MCQ generation constants
+  - `ingestion.constants.ts`: Ingestion constants
+  - `navigation.constants.ts`: Navigation and routing constants
+  - `theme.constants.ts`: Theme-related constants
+- `types/`
+  - `evaluate.types.ts`: Evaluation types and enums (existing)
+  - `generation.types.ts`: Generation types and enums
+  - `ingestion.types.ts`: Ingestion types and enums
+  - `navigation.types.ts`: Navigation types and enums
+  - `ui.types.ts`: UI-specific types and enums
+  - `string.types.ts`: String-related types and interfaces
 
 ## Naming Conventions
 

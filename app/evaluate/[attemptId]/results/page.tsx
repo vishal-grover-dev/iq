@@ -12,6 +12,7 @@ import WeakAreasPanel from "@/components/evaluate/weakAreasPanel.component";
 import QuestionReviewList from "@/components/evaluate/questionReviewList.component";
 import { motion } from "framer-motion";
 import { usePrefersReducedMotion, resultsOrchestrationVariants } from "@/utils/animation.utils";
+import { RESULTS_PAGE_STATES } from "@/constants/evaluate.constants";
 
 /**
  * Results Page - Post-Attempt Analytics and Review
@@ -55,7 +56,7 @@ export default function EvaluateResultsPage() {
     return (
       <div className='mx-auto w-full max-w-6xl px-4 py-16'>
         <div className='flex items-center justify-center'>
-          <div className='text-muted-foreground'>Loading results...</div>
+          <div className='text-muted-foreground'>{RESULTS_PAGE_STATES.LOADING_RESULTS}</div>
         </div>
       </div>
     );
@@ -65,8 +66,10 @@ export default function EvaluateResultsPage() {
     return (
       <div className='mx-auto w-full max-w-6xl px-4 py-16'>
         <div className='text-center'>
-          <p className='text-muted-foreground mb-4'>{error ? "Failed to load results" : "Results not found"}</p>
-          <Button onClick={() => router.push("/evaluate")}>Return to Evaluate</Button>
+          <p className='text-muted-foreground mb-4'>
+            {error ? RESULTS_PAGE_STATES.FAILED_TO_LOAD_RESULTS : RESULTS_PAGE_STATES.RESULTS_NOT_FOUND}
+          </p>
+          <Button onClick={() => router.push("/evaluate")}>{RESULTS_PAGE_STATES.RETURN_TO_EVALUATE_BUTTON}</Button>
         </div>
       </div>
     );

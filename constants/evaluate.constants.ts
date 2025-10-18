@@ -140,6 +140,16 @@ export const STAT_CARD_LABELS = {
 } as const;
 
 /**
+ * Results page loading and error states
+ */
+export const RESULTS_PAGE_STATES = {
+  LOADING_RESULTS: "Loading results...",
+  FAILED_TO_LOAD_RESULTS: "Failed to load results",
+  RESULTS_NOT_FOUND: "Results not found",
+  RETURN_TO_EVALUATE_BUTTON: "Return to Evaluate",
+} as const;
+
+/**
  * Weak area accuracy tiers
  */
 export const WEAK_AREA_ACCURACY_TIERS = [

@@ -169,7 +169,6 @@
 - `interview-ingestion-and-retrieval.md`: Consolidated work-item for Interview Streams ingestion (repo/web), indexing, status, and retrieval. Includes complete coverage expansion history: initial ingestion (264 docs, 8 topics) → React expansion (551 docs, 10 topics). Documents State Management (Redux Toolkit: 87 docs, 676 chunks) and Routing (React Router: 200 docs, 744 chunks) additions from 2025-09-30. Generation is removed and will be redesigned separately.
 - `generation-of-questions.md`: Work-item for the MCQ Generation page, personas, streaming, revision chat, and save flow to `mcq_items`.
 - `evaluate-page.md`: Requirements for the Frontend Skills Assessment page featuring 60-question structured evaluations with adaptive selection, multi-session attempts, real-time feedback, and comprehensive post-attempt analytics with weak-area identification.
-- `hardcoded-strings-migration.md`: Comprehensive audit and phased refactor plan to replace hardcoded strings with strongly typed enums/constants across UI, APIs, and services.
 
 ### migrations
 

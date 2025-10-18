@@ -1,6 +1,11 @@
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { ILangchainChunk } from "@/types/ingest.types";
+
+interface ILangchainChunk {
+  index: number;
+  content: string;
+  tokens: number;
+}
 
 export async function extractTextFromPdfBufferLC(
   buffer: ArrayBuffer | Uint8Array | Buffer

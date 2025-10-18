@@ -9,6 +9,7 @@ import AutomationModal from "@/components/generate/automationModal.component";
 import { EBloomLevel } from "@/types/mcq.types";
 import { EDifficulty, IMcqItemView } from "@/types/mcq.types";
 import { openMcqSse, useMcqMutations } from "@/services/mcq.services";
+import { MCQ_PAGE_LABELS, MCQ_PAGE_TOAST_MESSAGES } from "@/constants/generation.constants";
 import { toast } from "sonner";
 
 export default function McqGenerationPage() {
@@ -37,13 +38,13 @@ export default function McqGenerationPage() {
                 changes: data.changes || `Applied revision: "${instruction}"`,
               },
             ]);
-            toast.success("Question revised successfully");
+            toast.success(MCQ_PAGE_TOAST_MESSAGES.QUESTION_REVISED);
           } else {
-            toast.error("Failed to revise question");
+            toast.error(MCQ_PAGE_TOAST_MESSAGES.REVISION_FAILED);
           }
         },
         onError: (error: any) => {
-          toast.error(error?.message || "Failed to revise question");
+          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.REVISION_FAILED);
         },
       }
     );
@@ -105,10 +106,10 @@ export default function McqGenerationPage() {
       { item: current },
       {
         onSuccess: () => {
-          toast.success("Saved question");
+          toast.success(MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVED);
         },
         onError: (error: any) => {
-          toast.error(error?.message || "Failed to save");
+          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVE_FAILED);
         },
       }
     );
@@ -122,11 +123,11 @@ export default function McqGenerationPage() {
       { item: current },
       {
         onSuccess: () => {
-          toast.success("Saved question");
+          toast.success(MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVED);
           handleNext();
         },
         onError: (error: any) => {
-          toast.error(error?.message || "Failed to save");
+          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVE_FAILED);
         },
       }
     );
@@ -144,13 +145,13 @@ export default function McqGenerationPage() {
           if (data?.ok && data?.item) {
             setCurrent(data.item);
             setPersonaStatus({});
-            toast.success("Loaded next question");
+            toast.success(MCQ_PAGE_TOAST_MESSAGES.NEXT_LOADED);
           } else {
-            toast.message("Generated next (placeholder)");
+            toast.message(MCQ_PAGE_TOAST_MESSAGES.PLACEHOLDER_GENERATED);
           }
         },
         onError: (error: any) => {
-          toast.error(error?.message || "Failed to generate next");
+          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.NEXT_FAILED);
         },
       }
     );
@@ -184,7 +185,7 @@ export default function McqGenerationPage() {
         <div className='mt-3 flex items-center justify-end gap-2'>
           <label className='mr-auto flex items-center gap-2 text-sm'>
             <input type='checkbox' checked={codingMode} onChange={(e) => setCodingMode(e.target.checked)} />
-            Coding questions
+            {MCQ_PAGE_LABELS.CODING_QUESTIONS_CHECKBOX}
           </label>
           <Button
             variant='secondary'
@@ -192,14 +193,18 @@ export default function McqGenerationPage() {
             disabled={generateMutation.isPending || saveMutation.isPending}
             aria-label='Generate next question'
           >
-            {generateMutation.isPending ? "Generating..." : "Next"}
+            {generateMutation.isPending ? MCQ_PAGE_LABELS.GENERATE_BUTTON_LOADING : MCQ_PAGE_LABELS.NEXT_BUTTON}
           </Button>
           <Button
             onClick={handleSubmitAndNext}
             disabled={generateMutation.isPending || saveMutation.isPending}
             aria-label='Submit question and generate next'
           >
-            {saveMutation.isPending ? "Saving..." : generateMutation.isPending ? "Generating..." : "Submit and Next"}
+            {saveMutation.isPending
+              ? MCQ_PAGE_LABELS.SAVE_BUTTON_LOADING
+              : generateMutation.isPending
+              ? MCQ_PAGE_LABELS.GENERATE_BUTTON_LOADING
+              : MCQ_PAGE_LABELS.SUBMIT_AND_NEXT_BUTTON}
           </Button>
         </div>
       </div>
@@ -207,7 +212,7 @@ export default function McqGenerationPage() {
         <PersonaPanel status={personaStatus} />
         <div className='mt-3 flex justify-end'>
           <Button variant='secondary' size='sm' onClick={() => setOpenAutomation(true)}>
-            Automate generation
+            {MCQ_PAGE_LABELS.AUTOMATE_BUTTON}
           </Button>
         </div>
       </div>

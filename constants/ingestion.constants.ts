@@ -23,7 +23,7 @@ export const INGESTION_STATUS_LABELS = {
   [EIngestionStatus.PROCESSING]: "Processing",
   [EIngestionStatus.AWAITING_NEXT_BATCH]: "Awaiting next batch",
   [EIngestionStatus.COMPLETED]: "Completed",
-  [EInestionStatus.FAILED]: "Failed",
+  [EIngestionStatus.FAILED]: "Failed",
 } as const;
 
 export const INGESTION_STAGE_LABELS = {

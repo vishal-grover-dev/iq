@@ -364,7 +364,7 @@ This document captures the "why" behind key technical choices in the IQ project.
 **Why:**
 
 - **Prevents question repetition:** Similar questions (Q46 and Q49) can occur when bank selection doesn't consider similarity to already-asked questions.
-- **Dual similarity checks:** 
+- **Dual similarity checks:**
   - **Attempt-level similarity:** Compare candidate embeddings against questions already asked in current attempt using cosine similarity.
   - **Cross-attempt similarity:** Use `retrieval_mcq_neighbors` RPC to find similar questions from other attempts.
 - **Configurable penalties:** Different penalty levels for high (≥0.92) and medium (≥0.85) similarity thresholds.
@@ -390,6 +390,57 @@ This document captures the "why" behind key technical choices in the IQ project.
 - The evaluation feature loads topics, subtopics, and topic weighting from `data/static-ontology.json` using `utils/static-ontology.utils.ts`.
 - This replaces LLM-driven generation for ontology, archetype, and weight data to ensure deterministic behavior.
 - Maintenance workflow: update the JSON file when topics or weights change and redeploy.
+
+---
+
+## Constants & Enums Pattern
+
+### One Source of Truth for Strings
+
+**Decision:** Organize all string constants (UI labels, error messages, configuration values) and enums into strongly-typed, single-location definitions using two complementary patterns.
+
+**Pattern Summary:**
+
+1. **Enums (in `types/*.ts`):** Use **only** for discriminators and compile-time type safety
+
+   - Examples: `EAttemptStatus = "pending" | "completed"`, `EIngestionMode = "repo" | "web"`, `EButtonVariants = "primary" | "secondary"`
+   - These are values used in conditionals, type guards, or discriminated unions
+
+2. **Constants (in `constants/*.ts`):** Use grouped objects with `as const` for everything else
+   - UI labels, copy, and text: `COMMON_LABELS = { LOADING: "Loading..." }`
+   - Configuration values and limits: `OPENAI_CONFIG = { CHAT_MODEL: "gpt-4o-mini", ... }`
+   - API error messages: `AI_SERVICE_ERRORS = { MISSING_API_KEY: "...", ... }`
+   - Related grouped strings: `MCQ_PROMPTS = { GENERATOR_SYSTEM_INTRO: "...", ... }`
+
+**Why:**
+
+- **No duplication:** Each string value exists in exactly one location; prevents "source of truth" ambiguity.
+- **Type safety:** Grouped constants with `as const` provide compile-time checking while being more flexible than enums.
+- **Maintainability:** Related strings grouped logically make updates easier and faster.
+- **Scalability:** Pattern is easy to extend as new domains/features are added; naming conventions keep everything consistent.
+- **Readability:** `MCQ_PROMPTS.GENERATOR_SYSTEM_INTRO` vs `EMcqPromptTemplates.GENERATOR_SYSTEM_INTRO` is clearer and more concise.
+
+**Forbidden Patterns:**
+
+- ❌ Enum + corresponding object constant with identical values (e.g., `EMcqPromptTemplates` enum + `MCQ_PROMPT_TEMPLATES` object)
+- ❌ Individual exported string constants (e.g., `THEME_LIGHT_MODE_LABEL`, `THEME_DARK_MODE_LABEL`; use `THEME_CONFIG = { LABELS: { LIGHT_MODE, DARK_MODE } }`)
+- ❌ Label/text enums (e.g., `ECommonLabels`, `EFormLabels`); these should be constants instead
+
+**Implementation:**
+
+- **File organization:** Constants and types by domain (navigation, theme, generation, ingestion, evaluation, etc.)
+  - `types/evaluation.types.ts` → discriminator enums like `EAttemptStatus`, `EDifficulty`
+  - `constants/evaluation.constants.ts` → grouped constants like `EVALUATION_CONFIG`, `RESULT_TIER_CONFIGS`, `STAT_CARD_LABELS`
+- **Naming conventions:**
+  - Enums: Prefix `E` (e.g., `EAttemptStatus`), SCREAMING_SNAKE_CASE values
+  - Constants: SCREAMING_SNAKE_CASE names, organized in logical groupings
+  - Objects: Use nested structure for related items (e.g., `{ LABELS: {...}, VALUES: {...} }`)
+- **Backward compatibility:** When refactoring existing patterns, maintain backward-compatible exports pointing to the grouped constant (e.g., `export const THEME_LIGHT_MODE_LABEL = THEME_CONFIG.LABELS.LIGHT_MODE`)
+
+**Trade-offs:**
+
+- Slightly more nesting when accessing deeply grouped constants; mitigated by auto-complete and clear naming.
+- Requires discipline to follow conventions; documented in Cursor rules and enforced during code review.
 
 ---
 

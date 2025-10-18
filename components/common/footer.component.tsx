@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/utils/tailwind.utils";
 import { LinkedinLogoIcon } from "@phosphor-icons/react/dist/ssr";
-import {
-  FOOTER_AUTHOR_LINKEDIN,
-  FOOTER_AUTHOR_LINK_ARIA_LABEL,
-  FOOTER_AUTHOR_NAME,
-  FOOTER_HEART_EMOJI,
-  FOOTER_LOCATION_SUFFIX,
-  FOOTER_MADE_WITH_LOVE_PREFIX,
-} from "@/constants/footer.constants";
+import { FOOTER_CONFIG } from "@/constants/footer.constants";
 
 type TFooterProps = {
   className?: string;
@@ -25,17 +18,18 @@ export default function Footer({ className }: TFooterProps) {
     >
       <div className='mx-auto flex max-w-6xl items-center justify-between px-4 py-4'>
         <Link
-          href={FOOTER_AUTHOR_LINKEDIN}
+          href={FOOTER_CONFIG.AUTHOR.LINKEDIN}
           target='_blank'
           rel='noopener noreferrer'
           className='inline-flex items-center gap-2 text-sm hover:underline'
-          aria-label={FOOTER_AUTHOR_LINK_ARIA_LABEL}
+          aria-label={FOOTER_CONFIG.AUTHOR.LINK_ARIA_LABEL}
         >
           <LinkedinLogoIcon size={24} aria-hidden='true' className='text-blue-500 dark:text-blue-500' />
-          <span>{FOOTER_AUTHOR_NAME}</span>
+          <span>{FOOTER_CONFIG.AUTHOR.NAME}</span>
         </Link>
         <p className='text-sm text-muted-foreground'>
-          {FOOTER_MADE_WITH_LOVE_PREFIX} <span aria-hidden='true'>{FOOTER_HEART_EMOJI}</span> {FOOTER_LOCATION_SUFFIX}
+          {FOOTER_CONFIG.COPY.MADE_WITH_LOVE_PREFIX} <span aria-hidden='true'>{FOOTER_CONFIG.ICONS.HEART_EMOJI}</span>{" "}
+          {FOOTER_CONFIG.COPY.LOCATION_SUFFIX}
         </p>
       </div>
     </footer>

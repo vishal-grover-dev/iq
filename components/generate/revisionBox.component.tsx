@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { REVISION_BOX_LABELS } from "@/constants/generation.constants";
 
 interface RevisionBoxProps {
   onRevise: (instruction: string) => void;
@@ -21,7 +22,7 @@ export default function RevisionBox({ onRevise, isLoading = false }: RevisionBox
       <div className='flex gap-2'>
         <input
           className='flex-1 rounded-md border px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-900'
-          placeholder='Ask to tweak wording, difficulty, Bloom level, or options…'
+          placeholder={REVISION_BOX_LABELS.PLACEHOLDER}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -30,10 +31,10 @@ export default function RevisionBox({ onRevise, isLoading = false }: RevisionBox
               onSend();
             }
           }}
-          aria-label='Revision instruction'
+          aria-label={REVISION_BOX_LABELS.ARIA_LABEL}
         />
         <Button size='sm' onClick={onSend} disabled={isLoading || !value.trim()}>
-          {isLoading ? "Revising…" : "Send"}
+          {isLoading ? REVISION_BOX_LABELS.REVISING_BUTTON : REVISION_BOX_LABELS.SEND_BUTTON}
         </Button>
       </div>
     </div>

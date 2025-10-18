@@ -1,0 +1,301 @@
+# IQ Codebase - Cursor AI Assistant Rules
+
+## Overview
+
+These rules guide Cursor AI when assisting with code generation, refactoring, and problem-solving in the IQ project (Next.js 15+, React 19, TypeScript, Supabase). Follow these conventions to maintain consistency and code quality.
+
+---
+
+## Project-aware assistance
+
+- Always consult the documents under `specs/` (especially `specs/blueprints/*.md` and `specs/work-items/*.md`) before answering a user question or performing any task. Use these docs to understand requirements, architecture, conventions, and workflows.
+- Treat `specs/blueprints/prd.md`, `specs/blueprints/tech-stack.md`, and `specs/blueprints/directory-structure.md` as authoritative for product scope, stack, and structural conventions. Align code and explanations with these documents.
+- If information in code and `specs/` conflicts or is missing, call it out and request clarification, referencing the specific document and section when possible.
+
+---
+
+## Communication and documentation norms
+
+- Do not include code or SQL in `.md` files (except `README.md`); markdown docs are for understanding and explanation.
+- If anything is unclear during a task or question, ask for clarification immediately; efficiency and correctness are priorities.
+- Be honest, transparent, and direct; candid questions and blunt feedback are welcome.
+
+---
+
+## Discussion mode and learning-friendly explanations
+
+- When the user asks "how", "why", "what", "explain", or "help me understand" questions, treat it as a discussion/learning query:
+  - Provide explanations in 2-5 bullet points without making code changes.
+  - Ask for confirmation before any file modifications.
+  - Offer examples and analogies when helpful.
+- The user is learning Generative AI concepts. When explaining AI/ML topics:
+  - Avoid technical jargon unless necessary.
+  - When jargon is needed, explain it simply first with concrete examples.
+  - Use real-world analogies to illustrate complex concepts.
+  - Break explanations into digestible steps.
+
+---
+
+## Visual verification for UI changes
+
+- When making any UI change, run visual and accessibility checks locally before concluding the task:
+  - Visual snapshots: `pnpm test:e2e` (or update baselines with `pnpm test:e2e:update`).
+  - Review diffs under `test-results/*-diff.png` and ensure the UI remains elegant and functional across desktop and mobile profiles.
+  - Accessibility smoke checks are non-blocking; still review the logged issues and address critical items (e.g., missing titles/labels) opportunistically.
+
+---
+
+## Context inclusion
+
+- Always include these `specs/blueprints` files in context (pin or @-include):
+  - `specs/blueprints/prd.md`
+  - `specs/blueprints/tech-stack.md`
+  - `specs/blueprints/directory-structure.md`
+  - `specs/blueprints/architecture-decisions.md`
+  - `specs/blueprints/existing-files.md`
+
+---
+
+## Work Items Task Checklists
+
+- After adding explanations for any new feature in `specs/work-items/*.md`, append a final "Tasks" section with a Markdown checklist (`- [ ]`).
+- As work progresses, update items to `- [x]` when completed and add brief notes inline or as indented sub-bullets (e.g., links to PRs/files, follow-ups).
+- Treat the checklist as the source of truth for progress; keep it synchronized with the implementation status.
+
+---
+
+## SQL & migrations
+
+- You may run schema SQL directly from the terminal (psql or Supabase CLI).
+- After applying any schema change manually, immediately create a new migration file under `migrations/` capturing the same SQL. Do not alter existing migrations.
+- Migration naming: use the next incremental number and a short, descriptive title (e.g., `005-Add-Quiz-Attempts.sql`).
+- The repo's migration files are authoritative; local or remote schema must be converged by running these migrations.
+
+---
+
+## Constants & Enums Organization
+
+### Rule 1: Enums - Use ONLY for Discriminators
+
+**When to create an enum:**
+
+- The value is used in conditionals or type guards (e.g., `if (status === EAttemptStatus.COMPLETED)`)
+- It represents a discriminated union type (e.g., status: `"pending" | "completed" | "abandoned"`)
+- Multiple parts of code need to compare/match against this value
+
+**Location:** Always in `types/*.ts` (e.g., `types/evaluation.types.ts`)
+
+**Examples of correct enums:**
+
+- Discriminator enum in `types/evaluation.types.ts`: `EAttemptStatus` with values `InProgress`, `Completed`, `Abandoned`
+- Discriminator enum in `types/ui.types.ts`: `EButtonVariants` with values `PRIMARY`, `SECONDARY`, `GHOST`
+- Discriminator enum in `types/mcq.types.ts`: `EDifficulty` with values `EASY`, `MEDIUM`, `HARD`
+
+**Examples of incorrect enums (convert to constants):**
+
+- ❌ WRONG: Label enum `ECommonLabels` with values `LOADING`, `ERROR`, `SAVE` (these are UI labels, not discriminators)
+- ✅ RIGHT: Use `COMMON_LABELS` constant object instead in `constants/ui.constants.ts`
+
+---
+
+### Rule 2: Constants - Use Grouped Objects with `as const`
+
+**When to create a constant:**
+
+- Any UI label, button text, or user-facing copy
+- Configuration values and limits
+- Error messages and API responses
+- Prompt templates, system messages, or other text blocks
+- Related grouped values that belong together
+
+**Location:** Always in `constants/*.ts` (e.g., `constants/generation.constants.ts`)
+
+**Structure: Group by logical category**
+
+See `constants/generation.constants.ts` for examples of:
+
+- `OPENAI_CONFIG`: Embedding model, chat model, batch sizes
+- `MCQ_PROMPTS`: Generator system intro, rules header, task instructions
+- `AI_SERVICE_ERRORS`: Error message constants
+
+See `constants/theme.constants.ts` for multi-level grouping example with:
+
+- `THEME_CONFIG.LABELS`: UI labels for mode switching
+- `THEME_CONFIG.VALUES`: Dark/light/system theme values
+- `THEME_CONFIG.CLASSES`: CSS class names
+- `THEME_CONFIG.STORAGE`: Storage key configurations
+- Backward compatibility exports for existing code
+
+---
+
+### Rule 3: Forbidden Patterns - NEVER Do This
+
+1. ❌ **Enum + Object Constant Duplication**
+
+   - WRONG: Two separate definitions of the same value (enum + constant)
+   - **Fix:** Use `MCQ_PROMPTS` constant only; remove the enum
+
+2. ❌ **Individual Scattered Exports**
+
+   - WRONG: Separate exports like `FOOTER_AUTHOR_NAME`, `FOOTER_AUTHOR_LINK`, `FOOTER_HEART_EMOJI`
+   - **Fix:** Group into `FOOTER_CONFIG` object in `constants/footer.constants.ts`
+
+3. ❌ **Label/Text Enums**
+
+   - WRONG: Enum like `EStatusLabels` with display text values
+   - **Fix:** Use `STATUS_LABELS` constant object instead
+
+4. ❌ **Hardcoded Strings in Components**
+   - WRONG: String literals like `isDark ? "Switch to light mode" : "Switch to dark mode"` in JSX
+   - **Fix:** Use constant from `THEME_CONFIG` (see `components/common/themeToggle.component.tsx`)
+
+---
+
+### Rule 4: Adding New Strings
+
+When adding a new string constant:
+
+1. **Check if domain file exists:** Look for `constants/[domain].constants.ts` and `types/[domain].types.ts`
+2. **Add to appropriate object:** If domain file exists, add to the logical grouping
+3. **Create if needed:** If new domain, create `constants/[domain].constants.ts` with grouped structure
+4. **Never create individual exports:** Always group related strings together
+
+**Example Workflow:**
+
+When adding label "Evaluating..." for evaluation feature:
+
+1. Check: Does `constants/evaluate.constants.ts` exist? ✓
+2. Check: Does `STAT_CARD_LABELS` object exist? → Yes
+3. Add the new label: `EVALUATING: "Evaluating..."` to `STAT_CARD_LABELS` in `constants/evaluate.constants.ts`
+4. Use in code: Import `STAT_CARD_LABELS` from `@/constants/evaluate.constants` and reference it in JSX
+
+---
+
+### Rule 5: Type Naming Conventions
+
+**Enums:**
+
+- Prefix: `E` (e.g., `EAttemptStatus`)
+- Values: `SCREAMING_SNAKE_CASE` (e.g., `IN_PROGRESS`, `COMPLETED`)
+- Location: `types/*.ts`
+
+**Constants:**
+
+- Name: `SCREAMING_SNAKE_CASE` (e.g., `THEME_CONFIG`, `MCQ_PROMPTS`)
+- Objects: Nested structure with logical categories
+- Location: `constants/*.ts`
+
+**Interfaces:**
+
+- Prefix: `I` (e.g., `IAttemptMetadata`)
+- Location: `types/*.ts`
+
+**Types:**
+
+- Prefix: `T` (e.g., `TResultTier`)
+- Location: `types/*.ts`
+
+---
+
+### Rule 6: Backward Compatibility During Refactoring
+
+When refactoring scattered constants into grouped objects, maintain backward-compatible exports.
+
+**Pattern:** Create the grouped object, then re-export individual keys for backward compatibility.
+
+Example in `constants/footer.constants.ts`:
+
+- Create `FOOTER_CONFIG` with nested structure
+- Add re-export: `export const FOOTER_AUTHOR_NAME = FOOTER_CONFIG.AUTHOR.NAME`
+
+This allows gradual migration of existing code without breaking changes.
+
+---
+
+## File Organization
+
+### Directory Structure
+
+```
+/types
+  - [domain].types.ts        (Enums, interfaces, discriminator types)
+/constants
+  - [domain].constants.ts    (Grouped constant objects with `as const`)
+```
+
+### Examples
+
+- `types/evaluation.types.ts` → `EAttemptStatus`, `EAttemptProgress`, `IUserAttempt`
+- `constants/evaluation.constants.ts` → `EVALUATION_CONFIG`, `RESULT_TIER_CONFIGS`, `STAT_CARD_LABELS`
+- `types/ui.types.ts` → `EButtonVariants`, `EModalTypes`, `EToastTypes`
+- `constants/ui.constants.ts` → `COMMON_LABELS`, `FORM_LABELS`, `STATUS_LABELS`
+
+---
+
+## Code Quality Checklist
+
+Before submitting code:
+
+- [ ] No hardcoded strings in components (except comments)
+- [ ] All labels/config values live in `constants/*.ts`
+- [ ] No enum + constant duplication (only one source per value)
+- [ ] No individual scattered exports (grouped objects only)
+- [ ] Constants organized logically by category/feature
+- [ ] Using `as const` for all grouped constant objects
+- [ ] Using path alias imports (`@/constants/...`, not `../../../constants/...`)
+- [ ] Enums used only for discriminators, not labels
+
+---
+
+## Plan Files Configuration
+
+All plan files should be saved under `specs/plans/` directory (not in project root).
+
+When using Cursor's Plan tool:
+
+1. Set the default save location to `specs/plans/`
+2. Organize plans by feature/domain (e.g., `specs/plans/standardize-constants.plan.md`)
+3. Use descriptive names reflecting the feature/task being tracked
+4. Keep the checklist format consistent with existing plans in `specs/work-items/`
+
+**Benefits:**
+
+- ✅ All documentation (blueprints, work-items, plans) centralized under `specs/`
+- ✅ Easy to navigate and reference during development
+- ✅ Maintains clean project root directory
+- ✅ Aligns with repo-specific rules treating `specs/` as authoritative
+
+---
+
+## No Code in Rules & Specs Documentation
+
+**Rule:** Do NOT include any code blocks or code snippets in:
+
+- `.cursor/rules` file
+- Any `.md` files under `specs/work-items/` directory
+
+**Exception:** Code is allowed in:
+
+- `README.md` (root level - for onboarding and quick-start examples)
+- `specs/blueprints/` (for architecture decision rationale with before/after examples)
+
+**Why:**
+
+- Documentation files are for architecture, requirements, and understanding (not implementation)
+- Code belongs in source files, not markdown
+- Keeps docs maintainable and prevents stale code examples
+- Single source of truth: working code lives in `/app`, `/components`, `/services`, etc.
+
+**When you need to reference code:**
+
+- Use **file paths and line ranges**: e.g., ` ```12:45:app/api/evaluate/route.ts `
+- Use **function/class names**: e.g., "See `evaluateAttempt()` in `services/evaluate.services.ts`"
+- Describe the **logic or pattern** in prose instead
+- Link to working implementation files for readers to review
+
+---
+
+## Reference
+
+- Full details: `specs/blueprints/architecture-decisions.md` → "Constants & Enums Pattern"
+- Migration guide: `specs/work-items/hardcoded-strings-migration.md`

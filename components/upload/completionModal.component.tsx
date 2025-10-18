@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { COMPLETION_MODAL_LABELS } from "@/constants/upload.constants";
 
 export interface ICompletionModalProps {
   open: boolean;
@@ -21,13 +22,21 @@ export default function CompletionModal({ open, topics, subtopics, onOpenChange 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Indexing completed</DialogTitle>
+          <DialogTitle>{COMPLETION_MODAL_LABELS.DIALOG_TITLE}</DialogTitle>
         </DialogHeader>
-        <DialogDescription>Embeddings generated for the following topics and subtopics.</DialogDescription>
+        <DialogDescription>{COMPLETION_MODAL_LABELS.DIALOG_DESCRIPTION}</DialogDescription>
         <div className='space-y-2' aria-live='polite'>
-          <p className='text-sm text-muted-foreground'>Embeddings generated for:</p>
-          {topics.length > 0 && <p className='text-sm'>Topics: {topics.join(", ")}</p>}
-          {subtopics.length > 0 && <p className='text-sm'>Subtopics: {subtopics.join(", ")}</p>}
+          <p className='text-sm text-muted-foreground'>{COMPLETION_MODAL_LABELS.EMBEDDINGS_GENERATED}</p>
+          {topics.length > 0 && (
+            <p className='text-sm'>
+              {COMPLETION_MODAL_LABELS.TOPICS_LABEL}: {topics.join(", ")}
+            </p>
+          )}
+          {subtopics.length > 0 && (
+            <p className='text-sm'>
+              {COMPLETION_MODAL_LABELS.SUBTOPICS_LABEL}: {subtopics.join(", ")}
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

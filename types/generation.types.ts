@@ -5,40 +5,6 @@
  */
 
 /**
- * AI prompt template types
- */
-export enum EMcqPromptTemplates {
-  GENERATOR_SYSTEM_INTRO = "You generate high-quality multiple-choice questions (MCQs) with citations.",
-  RULES_HEADER = "Rules:",
-  NEGATIVE_EXAMPLES_INTRO = "Avoid generating MCQs similar to the following question gists:",
-  CONTEXT_HEADER = "Context (use for grounding and citations):",
-  CODING_TASK_INSTRUCTION = "Task: Generate ONE coding MCQ. MUST include a fenced code block (```js``` or ```tsx```) in the dedicated 'code' field (3–50 lines). Do NOT place the code in the question; reference the snippet in prose. Ask about behavior/bugs/fixes.",
-  REVISER_SYSTEM_INTRO = "You are an expert MCQ reviser. Your task is to modify an existing multiple-choice question based on user instructions.",
-  JUDGE_SYSTEM_INTRO = "You are an MCQ quality judge. Evaluate clarity, correctness, option plausibility, single correct answer, appropriate difficulty and Bloom level, presence of citations grounded in context, and DUPLICATE RISK.",
-  JUDGE_VERDICT_FORMAT = "Return STRICT JSON: { verdict: 'approve' | 'revise', reasons: string[], suggestions?: string[] }",
-}
-
-/**
- * OpenAI model names
- */
-export enum EOpenAIModels {
-  TEXT_EMBEDDING_SMALL = "text-embedding-3-small",
-  GPT_4O_MINI = "gpt-4o-mini",
-}
-
-/**
- * OpenAI error messages
- */
-export enum EOpenAIErrorMessages {
-  MISSING_API_KEY = "Missing OPENAI_API_KEY",
-  EMBEDDINGS_COUNT_MISMATCH = "OpenAI embeddings count mismatch for batch",
-  EMBEDDINGS_FAILED = "OpenAI embeddings failed",
-  GENERATION_FAILED = "OpenAI generation failed",
-  RERANKING_FAILED = "OpenAI reranking failed",
-  CLASSIFICATION_FAILED = "OpenAI classification failed",
-}
-
-/**
  * Generation API error messages
  */
 export enum EGenerationApiErrorMessages {

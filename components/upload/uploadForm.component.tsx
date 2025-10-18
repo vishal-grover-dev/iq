@@ -10,6 +10,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { FormLabel } from "@/components/ui/form-label";
 import { formSchema } from "@/schema/upload.schema";
 import { INTERVIEW_DEFAULT_STREAM, INTERVIEW_SUBTOPICS } from "@/constants/interview-streams.constants";
+import { UPLOAD_FORM_LABELS, UPLOAD_TOAST_MESSAGES, UPLOAD_STATUS_MESSAGES } from "@/constants/upload.constants";
 import { toast } from "sonner";
 import { useCallback, useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
@@ -100,7 +101,7 @@ export default function UploadForm() {
       setUploadState("processing");
       if (isInterview) {
         try {
-          toast.success("Ingestions started. Tracking progress…");
+          toast.success(UPLOAD_TOAST_MESSAGES.INGESTIONS_STARTED);
           const { ingestionIds, coverage } = await startIngestions(
             items,
             ({ ingestionId, inflightStep, processed, totalPlanned, currentPathOrUrl }) => {
@@ -126,7 +127,7 @@ export default function UploadForm() {
             ingestionIds,
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to create ingestion(s)";
+          const message = err instanceof Error ? err.message : UPLOAD_TOAST_MESSAGES.INGESTION_FAILED;
           toast.error(message);
           setUploadState("failed");
           return;
@@ -149,14 +150,14 @@ export default function UploadForm() {
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
       <div className='grid gap-4'>
         <div className='grid gap-2 sm:max-w-sm'>
-          <FormLabel required>Content category</FormLabel>
+          <FormLabel required>{UPLOAD_FORM_LABELS.CONTENT_CATEGORY_LABEL}</FormLabel>
           <Combobox
             value={contentCategory}
             onChange={(val) => handleCategoryChange(val as ContentCategory)}
             options={contentCategoryOptions}
-            placeholder='Select category'
-            searchPlaceholder='Search category...'
-            emptyMessage='No category found.'
+            placeholder={UPLOAD_FORM_LABELS.PLACEHOLDER_CATEGORY}
+            searchPlaceholder={UPLOAD_FORM_LABELS.SEARCH_PLACEHOLDER}
+            emptyMessage={UPLOAD_FORM_LABELS.EMPTY_MESSAGE}
             disabled={disabled}
           />
           {errors?.contentCategory && <ErrorMessage message={errors.contentCategory.message as unknown as string} />}
@@ -188,11 +189,13 @@ export default function UploadForm() {
 
       <div className='flex items-center gap-3 justify-end'>
         <Button type='submit' size='lg' disabled={submitDisabled} className='sm:min-w-44'>
-          Submit
+          {UPLOAD_FORM_LABELS.SUBMIT_BUTTON}
         </Button>
 
-        {uploadState === "completed" && <span className='text-sm text-green-700'>Upload completed.</span>}
-        {uploadState === "failed" && <span className='text-sm text-red-600'>Something went wrong. Please retry.</span>}
+        {uploadState === "completed" && (
+          <span className='text-sm text-green-700'>{UPLOAD_STATUS_MESSAGES.COMPLETED}</span>
+        )}
+        {uploadState === "failed" && <span className='text-sm text-red-600'>{UPLOAD_STATUS_MESSAGES.FAILED}</span>}
       </div>
 
       <CompletionModal

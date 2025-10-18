@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
 import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
 import { resolveLabels } from "@/utils/label-resolver.utils";
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     let userId = await getAuthenticatedUserId();
     if (!userId) {
       if (DEV_DEFAULT_USER_ID) userId = DEV_DEFAULT_USER_ID;
-      else return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+      else return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
     const body = (await req.json()) as any;
@@ -95,6 +96,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

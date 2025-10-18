@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
 import { getEmbeddings } from "@/services/ai.services";
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     let userId = await getAuthenticatedUserId();
     if (!userId) {
       if (DEV_DEFAULT_USER_ID) userId = DEV_DEFAULT_USER_ID;
-      else return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+      else return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
     const { ingestionId } = (await req.json()) as { ingestionId?: string };
@@ -27,8 +28,10 @@ export async function POST(req: NextRequest) {
       .select("id, user_id, status, metadata")
       .eq("id", ingestionId)
       .single();
-    if (error || !ingestion) return NextResponse.json({ ok: false, message: "Ingestion not found" }, { status: 404 });
-    if (ingestion.user_id !== userId) return NextResponse.json({ ok: false, message: "Forbidden" }, { status: 403 });
+    if (error || !ingestion)
+      return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.NOT_FOUND }, { status: 404 });
+    if (ingestion.user_id !== userId)
+      return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.FORBIDDEN }, { status: 403 });
 
     const meta = ingestion.metadata as any;
     if (meta.mode !== "web") return NextResponse.json({ ok: false, message: "Not a web ingestion" }, { status: 400 });
@@ -171,6 +174,9 @@ export async function POST(req: NextRequest) {
       vectors: totalVectors,
     });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

@@ -149,7 +149,9 @@
 
 - `app.constants.ts`: Application constants from environment variables.
 - `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
+- `ui.constants.ts`: Consolidated UI-related constants including theme labels/config (THEME_CONFIG), footer content (FOOTER_CONFIG), and common UI labels (COMMON_LABELS, FORM_LABELS, STATUS_LABELS, ACCESSIBILITY_LABELS). Replaces separate theme.constants.ts and footer.constants.ts.
  - `app.constants.ts`: Feature flags for label resolver and confidence threshold.
+- `api.constants.ts`: Centralized API infrastructure constants including HTTP_STATUS_CODES, API_ERROR_MESSAGES, API_RESPONSE_KEYS, CONTENT_TYPES, and VALIDATION_ERRORS. Shared across all API routes and services.
 
 ### data
 

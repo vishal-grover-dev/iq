@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/utils/tailwind.utils";
 import { LinkedinLogoIcon } from "@phosphor-icons/react/dist/ssr";
-import { FOOTER_CONFIG } from "@/constants/footer.constants";
+import { FOOTER_CONFIG } from "@/constants/ui.constants";
 
 type TFooterProps = {
   className?: string;

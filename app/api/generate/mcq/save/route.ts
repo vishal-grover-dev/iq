@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
 import {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     // Accept both shapes: { item: IMcqItemView, requireCode?: boolean } or IMcqItemView directly
     const body = (await req.json().catch(() => ({}))) as any;
@@ -96,6 +97,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, id: data?.id });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

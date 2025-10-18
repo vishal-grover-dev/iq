@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { getEmbeddings, generateMcqFromContext, judgeMcqQuality } from "@/services/ai.services";
 import { buildMcqEmbeddingText, hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    if (!userId) return new NextResponse(API_ERROR_MESSAGES.UNAUTHORIZED, { status: 401 });
 
     const url = new URL(req.url);
     const topic = url.searchParams.get("topic") || "React";
@@ -184,7 +185,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }
 
@@ -192,7 +196,7 @@ export async function POST(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     const body = (await req.json().catch(() => ({}))) as any;
     const topic: string = body?.topic || "React";
@@ -310,6 +314,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, item });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

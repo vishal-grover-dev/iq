@@ -1,8 +1,51 @@
 /**
  * UI-related constants
  *
- * Contains constants for UI labels, button text, form elements, and other UI-related strings.
+ * Consolidated file containing constants for UI labels, theme, footer, button text,
+ * form elements, and other UI-related strings.
  */
+
+/**
+ * Theme configuration
+ */
+export const THEME_CONFIG = {
+  LABELS: {
+    SWITCH_TO_LIGHT: "Switch to light mode",
+    SWITCH_TO_DARK: "Switch to dark mode",
+    LIGHT_MODE: "Light mode",
+    DARK_MODE: "Dark mode",
+  },
+  VALUES: {
+    LIGHT: "light",
+    DARK: "dark",
+    SYSTEM: "system",
+  },
+  CLASSES: {
+    LIGHT: "light",
+    DARK: "dark",
+  },
+  STORAGE: {
+    KEY: "theme",
+  },
+} as const;
+
+/**
+ * Footer configuration
+ */
+export const FOOTER_CONFIG = {
+  AUTHOR: {
+    NAME: "Vishal Grover",
+    LINKEDIN: "https://www.linkedin.com/in/vishal-grover/",
+    LINK_ARIA_LABEL: "Open Vishal Grover's LinkedIn profile",
+  },
+  COPY: {
+    MADE_WITH_LOVE_PREFIX: "Made with",
+    LOCATION_SUFFIX: "in India",
+  },
+  ICONS: {
+    HEART_EMOJI: "❤️",
+  },
+} as const;
 
 /**
  * Common UI labels used across components

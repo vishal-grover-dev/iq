@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     let userId = await getAuthenticatedUserId();
     if (!userId) {
       if (DEV_DEFAULT_USER_ID) userId = DEV_DEFAULT_USER_ID;
-      else return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+      else return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
     const supabase = getSupabaseServiceRoleClient();
@@ -21,7 +22,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       .eq("id", id)
       .eq("user_id", userId)
       .single();
-    if (error || !data) return NextResponse.json({ ok: false, message: "Not found" }, { status: 404 });
+    if (error || !data) return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.NOT_FOUND }, { status: 404 });
 
     // Derived progress: documentsProcessed, chunksProcessed/vectorsStored, coverage, recent
     // Fetch documents for this ingestion (limited fanout for v1; jobs are capped to <=200 files)
@@ -112,6 +113,9 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 
     return NextResponse.json(response);
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

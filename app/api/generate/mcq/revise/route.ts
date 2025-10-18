@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { reviseMcqWithContext } from "@/services/ai.services";
 import type { IMcqItemView } from "@/types/mcq.types";
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    if (!userId) return new NextResponse(API_ERROR_MESSAGES.UNAUTHORIZED, { status: 401 });
 
     const body = (await req.json().catch(() => ({}))) as any;
     const { instruction, currentMcq } = body;

@@ -3,6 +3,7 @@ import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { ingestRepoRequestSchema } from "@/schema/ingest.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
       if (DEV_DEFAULT_USER_ID) {
         userId = DEV_DEFAULT_USER_ID;
       } else {
-        return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
       }
     }
 
@@ -77,6 +78,9 @@ export async function POST(req: NextRequest) {
       vectors: 0,
     });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, message: err?.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
   }
 }

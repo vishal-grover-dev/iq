@@ -1,0 +1,40 @@
+import { OPENAI_API_KEY } from "@/constants/app.constants";
+import { OPENAI_CONFIG, OPENAI_PROMPTS, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
+import { parseJsonObject } from "@/utils/json.utils";
+import { createOpenAIClient } from "./openai.services";
+
+/**
+ * rerank
+ * Server-only LLM-as-reranker using `gpt-4o-mini`. Returns one score per input text, same order.
+ */
+export async function rerank(query: string, texts: string[]): Promise<number[]> {
+  if (!query || texts.length === 0) return [];
+  if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
+  const client = createOpenAIClient();
+  const system = OPENAI_PROMPTS.RERANKER_SYSTEM;
+  const prompt = [
+    `Query: ${query}`,
+    "Passages:",
+    ...texts.map((t, i) => `${i}. ${t.slice(0, 700)}`),
+    'Return JSON only: { "items": [ { "index": number, "score": number } ] }',
+  ].join("\n");
+  const res = await client.chat.completions.create({
+    model: OPENAI_CONFIG.CHAT_MODEL,
+    temperature: 0,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+  });
+  const content = res.choices[0]?.message?.content ?? "{}";
+  const parsed = parseJsonObject<any>(content, { items: [] });
+  const scores: number[] = Array(texts.length).fill(0);
+  const items: Array<{ index: number; score: number }> = Array.isArray(parsed.items) ? parsed.items : [];
+  for (const it of items) {
+    if (typeof it?.index === "number" && typeof it?.score === "number" && it.index >= 0 && it.index < texts.length) {
+      scores[it.index] = it.score;
+    }
+  }
+  return scores;
+}

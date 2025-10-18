@@ -4,10 +4,9 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { getEmbeddings } from "@/services/ai.services";
+import { getEmbeddings } from "@/services/ai/embeddings.service";
 import { prefilterExistingWebPages, assessAndPreparePage, insertChunksBatch } from "@/utils/ingest-web-process.utils";
 import { getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
-import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
 
 export const runtime = "nodejs";
 

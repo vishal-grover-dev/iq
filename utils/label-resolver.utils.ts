@@ -1,6 +1,6 @@
 import { ENABLE_DYNAMIC_LABEL_RESOLUTION, LABEL_RESOLVER_MIN_CONFIDENCE } from "@/constants/app.constants";
 import { INTERVIEW_SUBTOPICS, INTERVIEW_TOPIC_OPTIONS } from "@/constants/interview-streams.constants";
-import { classifyLabels } from "@/services/ai.services";
+import { classifyLabels } from "@/services/ai/labeling.service";
 
 export type TLabelSource = "hint" | "rules" | "heuristic" | "llm";
 

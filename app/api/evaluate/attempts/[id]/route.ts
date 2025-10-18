@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { selectNextQuestion, getEmbeddings } from "@/services/ai.services";
+import { getEmbeddings } from "@/services/ai/embeddings.service";
+import { selectNextQuestion } from "@/services/ai/question-selector.service";
 import { weightedRandomIndex, calculateCoverageWeights } from "@/utils/selection.utils";
+import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
 import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
@@ -18,41 +20,6 @@ const BANK_SIMILARITY_PENALTY_HIGH = 50;
 const BANK_SIMILARITY_PENALTY_MEDIUM = 25;
 const BANK_NEIGHBOR_PENALTY_HIGH = 30;
 const BANK_NEIGHBOR_PENALTY_MEDIUM = 15;
-
-function toNumericVector(raw: unknown): number[] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw)) {
-    return raw.map((value) => Number(value));
-  }
-  if (typeof raw === "string") {
-    const normalized = raw.replace(/[{}()]/g, "");
-    const parts = normalized
-      .split(",")
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0);
-    if (!parts.length) return null;
-    const vector = parts.map((part) => Number(part));
-    return vector.every((value) => Number.isFinite(value)) ? vector : null;
-  }
-  return null;
-}
-
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  const length = Math.min(vecA.length, vecB.length);
-  if (length === 0) return 0;
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < length; i++) {
-    const a = vecA[i];
-    const b = vecB[i];
-    dot += a * b;
-    normA += a * a;
-    normB += b * b;
-  }
-  if (normA === 0 || normB === 0) return 0;
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
 
 /**
  * GET /api/evaluate/attempts/:id

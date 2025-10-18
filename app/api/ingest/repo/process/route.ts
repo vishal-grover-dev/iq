@@ -11,7 +11,7 @@ import {
   deriveTitleFromMarkdown,
 } from "@/utils/repo.utils";
 import { chunkTextLC } from "@/utils/langchain.utils";
-import { getEmbeddings } from "@/services/ai.services";
+import { getEmbeddings } from "@/services/ai/embeddings.service";
 import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
 
 export const runtime = "nodejs";

@@ -3,98 +3,14 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { getEmbeddings, generateMcqFromContext, judgeMcqQuality } from "@/services/ai.services";
-import { buildMcqEmbeddingText, hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
+import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
+import { judgeMcqQuality } from "@/services/ai/mcq-judge.service";
+import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
+import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";
 
 export const runtime = "nodejs";
-
-async function retrieveContextByLabels(args: {
-  userId: string;
-  topic: string;
-  subtopic?: string | null;
-  version?: string | null;
-  query: string;
-  topK?: number;
-}): Promise<Array<{ title?: string | null; url: string; content: string }>> {
-  const supabase = getSupabaseServiceRoleClient();
-  const [embedding] = await getEmbeddings([args.query]);
-  const { data: rows, error } = await supabase.rpc("retrieval_hybrid_by_labels", {
-    p_user_id: args.userId,
-    p_topic: args.topic,
-    p_query_embedding: embedding as unknown as any,
-    p_query_text: args.query,
-    p_subtopic: args.subtopic ?? null,
-    p_version: args.version ?? null,
-    p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
-    p_alpha: 0.5,
-  });
-  if (error) throw new Error(error.message);
-  const items = (rows ?? []).map((r: any) => ({
-    title: r.title as string | null,
-    url: r.path as string,
-    content: r.content as string,
-  }));
-  return items;
-}
-
-async function retrieveNeighbors(args: {
-  userId: string;
-  topic: string;
-  subtopic?: string | null;
-  mcq: IMcqItemView;
-  topK?: number;
-}): Promise<Array<{ question: string; options: [string, string, string, string]; score: number }>> {
-  const supabase = getSupabaseServiceRoleClient();
-  const [emb] = await getEmbeddings([buildMcqEmbeddingText(args.mcq)]);
-  const { data, error } = await supabase.rpc("retrieval_mcq_neighbors", {
-    p_user_id: args.userId,
-    p_topic: args.topic,
-    p_embedding: emb as unknown as any,
-    p_subtopic: args.subtopic ?? null,
-    p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
-  });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r: any) => ({
-    question: r.question as string,
-    options: (r.options ?? []).slice(0, 4) as [string, string, string, string],
-    score: Number(r.score ?? 0),
-  }));
-}
-
-async function retrieveRecentMcqQuestions(args: {
-  userId: string;
-  topic: string;
-  subtopic?: string | null;
-  limit?: number;
-}): Promise<string[]> {
-  const supabase = getSupabaseServiceRoleClient();
-  const q = supabase
-    .from("mcq_items")
-    .select("question, subtopic, topic")
-    .eq("user_id", args.userId)
-    .eq("topic", args.topic)
-    .order("created_at", { ascending: false })
-    .limit(Math.max(1, Math.min(args.limit ?? 12, 50)));
-  if (args.subtopic) q.eq("subtopic", args.subtopic);
-  const { data, error } = await q;
-  if (error) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const r of data ?? []) {
-    const s = String((r as any)?.question || "").trim();
-    if (s && !seen.has(s)) {
-      seen.add(s);
-      out.push(s);
-    }
-  }
-  // Add hardcoded banned gist observed repeatedly
-  out.push(
-    "What will happen when the button in the following code is clicked? Will it update the displayed count on the button?"
-  );
-  return out.slice(0, Math.max(1, Math.min(args.limit ?? 12, 50)));
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -118,7 +34,7 @@ export async function GET(req: NextRequest) {
         try {
           send("generation_started", { topic, subtopic, version });
           const context = await retrieveContextByLabels({ userId, topic, subtopic, version, query: q, topK: 8 });
-          const negativeExamples = await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined });
+          const negativeExamples = await getRecentQuestions({ userId, topic, subtopic: subtopic ?? undefined });
           let item = await generateMcqFromContext({
             topic,
             subtopic: subtopic ?? undefined,
@@ -269,7 +185,7 @@ export async function POST(req: NextRequest) {
       bloomLevel: blooms[Math.floor(Math.random() * blooms.length)],
       contextItems: context,
       codingMode,
-      negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
+      negativeExamples: await getRecentQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
     });
 
     // Retry if missing valid code block (3–50 lines)
@@ -283,7 +199,7 @@ export async function POST(req: NextRequest) {
         bloomLevel: blooms[Math.floor(Math.random() * blooms.length)],
         contextItems: context,
         codingMode: true,
-        negativeExamples: await retrieveRecentMcqQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
+        negativeExamples: await getRecentQuestions({ userId, topic, subtopic: subtopic ?? undefined }),
       });
       if (hasValidCodeBlock(attempt.code || "", { minLines: 3, maxLines: 50 })) {
         item = attempt;

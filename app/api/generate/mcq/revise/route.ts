@@ -3,8 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { reviseMcqWithContext } from "@/services/ai.services";
-import type { IMcqItemView } from "@/types/mcq.types";
+import { reviseMcqWithContext } from "@/services/ai/mcq-revision.service";
 
 export const runtime = "nodejs";
 

@@ -1,60 +1,11 @@
 import { EInterviewTopic } from "@/types/upload.types";
-import { INTERVIEW_SUBTOPICS } from "@/constants/interview-streams.constants";
 import { ingestRepoOrWeb } from "@/services/ingest.services";
 import { getIngestionStatus, processIngestion } from "@/services/ingest.services";
-import { IIngestCatalogItem, IIngestRunResult, ILogger, TIngestCatalog } from "@/types/interview-streams.types";
+import { IIngestCatalogItem, IIngestRunResult, ILogger } from "@/types/interview-streams.types";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-
-import fs from "fs";
-import path from "path";
+import { loadIngestCatalog } from "@/utils/catalog.utils";
+import { persistEmbeddedFlags } from "@/utils/ingest-preflight.utils";
 import { normalizeUrl as normalizeUrlShared } from "@/utils/url.utils";
-
-function getCatalogPath(): string {
-  return path.join(process.cwd(), "data", "interview-ingest-catalog.json");
-}
-
-// Load catalog once and provide helpers
-export function loadIngestCatalog(): TIngestCatalog {
-  const file = fs.readFileSync(getCatalogPath(), "utf-8");
-  return JSON.parse(file) as TIngestCatalog;
-}
-
-export function getSubtopicsFromCatalog(topic: EInterviewTopic): readonly string[] {
-  const catalog = loadIngestCatalog();
-  const items = catalog[topic] ?? [];
-  if (items.length > 0) return items.map((i) => i.subtopic);
-  return INTERVIEW_SUBTOPICS[topic] ?? [];
-}
-
-function persistEmbeddedFlags(completedUrls: Set<string>, logger: ILogger, alsoMarkEmbedded?: Set<string>) {
-  const catalogPath = getCatalogPath();
-  try {
-    const current = JSON.parse(fs.readFileSync(catalogPath, "utf-8")) as TIngestCatalog;
-    let updates = 0;
-    // Local normalizer for comparison
-    const norm = (raw: string) => normalizeUrlShared(raw);
-    const completedNorm = new Set<string>(Array.from(completedUrls).map(norm));
-    const alsoNorm = new Set<string>(Array.from(alsoMarkEmbedded ?? new Set<string>()).map(norm));
-    for (const topicKey of Object.keys(current)) {
-      const arr = current[topicKey] ?? [];
-      for (const item of arr) {
-        const itemNorm = norm(item.url);
-        if (!item.embedded && (completedNorm.has(itemNorm) || alsoNorm.has(itemNorm))) {
-          (item as IIngestCatalogItem).embedded = true;
-          updates++;
-        }
-      }
-    }
-    if (updates > 0) {
-      fs.writeFileSync(catalogPath, JSON.stringify(current, null, 2) + "\n", "utf-8");
-      logger.info("[ingest] catalog updated", { updates, path: catalogPath });
-    } else {
-      logger.info("[ingest] catalog up-to-date", { path: catalogPath });
-    }
-  } catch (e: any) {
-    logger.error("[ingest] failed to update catalog", { error: e?.message });
-  }
-}
 
 // Predefined subtopics per topic; UI will also allow "Other" which opens a modal
 

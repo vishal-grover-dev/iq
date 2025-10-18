@@ -4,14 +4,8 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
-import {
-  buildMcqEmbeddingText,
-  computeMcqContentKey,
-  hasValidCodeBlock,
-  questionRepeatsCodeBlock,
-  validateMcq,
-} from "@/utils/mcq.utils";
-import { getEmbeddings } from "@/services/ai.services";
+import { buildMcqEmbeddingText, computeMcqContentKey, validateMcq } from "@/utils/mcq.utils";
+import { getEmbeddings } from "@/services/ai/embeddings.service";
 
 export const runtime = "nodejs";
 

@@ -129,7 +129,11 @@
  - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
  - `label-resolver.utils.ts`: Pluggable label resolver applying rules, heuristics, and OpenAI fallback with caching and metrics.
  - `label-resolver.utils.ts`: Classifier-only resolver using OpenAI with whitelist ontology, URL/path caching, hints precedence, and metrics.
- 
+ - `vector.utils.ts`: Vector utilities for converting embeddings and computing cosine similarity (`toNumericVector`, `cosineSimilarity`). **Phase 1 modularization.**
+ - `catalog.utils.ts`: Catalog management helpers for loading ingestion catalog and deriving subtopics (`loadIngestCatalog`, `getSubtopicsFromCatalog`). **Phase 1 modularization.**
+ - `ingest-preflight.utils.ts`: Preflight validation utilities for marking completed ingestions and preventing duplicates (`persistEmbeddedFlags`). **Phase 1 modularization.**
+ - `mcq-retrieval.utils.ts`: MCQ retrieval helpers for context, neighbors, and recent questions (`retrieveContextByLabels`, `retrieveNeighbors`, `getRecentQuestions`). **Phase 1 modularization.**
+
  - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
  - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
  - `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
@@ -231,3 +235,20 @@ Updates:
   - `README.md`: Added ontology system documentation.
   - `scripts/generate-ontology.ts`: Now optional pre-warming script; not required for runtime.
  
+
+#### services/ai (Phase 2 Refactor)
+- `services/ai/openai.services.ts`: Shared OpenAI client instantiation and error utilities (`createOpenAIClient`, `getErrorStatus`, `getErrorMessage`)
+- `services/ai/embeddings.service.ts`: `getEmbeddings()` for 1536-d embeddings with batching, retry, and truncation
+- `services/ai/reranker.service.ts`: `rerank()` LLM-as-reranker using gpt-4o-mini
+- `services/ai/labeling.service.ts`: `classifyLabels()` strict classifier with whitelist ontology
+- `services/ai/mcq-generation.service.ts`: `generateMcqFromContext()` with schema validation and repair passes
+- `services/ai/mcq-revision.service.ts`: `reviseMcqWithContext()` for user-requested MCQ changes
+- `services/ai/mcq-judge.service.ts`: `judgeMcqQuality()` quality assessment with duplicate risk
+- `services/ai/question-selector.service.ts`: `selectNextQuestion()` LLM-driven selector for evaluations
+
+#### utils/mcq-prompts (Phase 2 Refactor)
+- `utils/mcq-prompts/shared.utils.ts`: Common formatting helpers (contextLines, examples, labels, neighbors)
+- `utils/mcq-prompts/generator-prompt.utils.ts`: `buildGeneratorMessages()` with few-shot/chain-of-thought modes
+- `utils/mcq-prompts/reviser-prompt.utils.ts`: `buildReviserMessages()` for MCQ revision
+- `utils/mcq-prompts/judge-prompt.utils.ts`: `buildJudgeMessages()` for quality judgment
+- `utils/mcq-prompts/selector-prompt.utils.ts`: `generateQuestionPrompt()` for LLM-driven selection

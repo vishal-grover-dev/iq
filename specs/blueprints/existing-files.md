@@ -67,7 +67,9 @@
 ### components/upload
 
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
-- `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls.
+- `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls. **Refactored Phase 3: Uses `useInterviewPlanner` hook, `InterviewRow` component, and consolidated modals.**
+- `interviewRow.component.tsx`: Single row form (topic, subtopic, ingest type, depth, URL). **Phase 3: Component extraction.**
+- `interviewModals.component.tsx`: Consolidated modal subcomponents (PlanModal for planning summary, CustomSubtopicModal for custom subtopic input). **Phase 3: Component extraction.**
   - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary (no generation action).
 
 ### components/evaluate
@@ -78,14 +80,20 @@
 - `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines. (Replaced by PerformanceBarChart for main results display)
 - `scoreGauge.component.tsx`: Radial gauge chart showing overall score (0-100%) with color-coded tiers using Recharts RadialBarChart. Mobile-responsive with centered score display. ~55 lines.
 - `performanceBarChart.component.tsx`: Animated horizontal bar chart for topic/Bloom/difficulty breakdowns using Recharts with motion-aware container.
-- `resultsHero.component.tsx`: Animated hero section for the results page with score gauge, tier messaging, confetti celebration, and stat cards.
+- `resultsHero.component.tsx`: Animated hero section for the results page. **Refactored Phase 3: Uses `useResultsTier` hook, `ConfettiOverlay` component, and `ResultStatCard` component.**
+- `confettiOverlay.component.tsx`: Reusable confetti animation subcomponent with reduced-motion support. **Phase 3: Component extraction.**
+- `resultStatCard.component.tsx`: Individual stat card for results with tone-based styling (positive, neutral, attention). **Phase 3: Component extraction.**
 - `weakAreasPanel.component.tsx`: Animated card grid highlighting prioritized weak areas with tone badges, accuracy metrics, and deep-dive links.
-- `questionReviewList.component.tsx`: Enhanced review list with search, grouping, sorting toggles, and animated question cards.
+- `questionReviewList.component.tsx`: Enhanced review list with search, grouping, sorting toggles, and animated question cards. **Refactored Phase 3: Uses `useQuestionReviewFiltering` hook and `ReviewFilterBar` component.**
+- `reviewFilterBar.component.tsx`: Consolidated filter UI component with search, topic select, incorrect-only toggle, sort, and group controls. **Phase 3: Component extraction.**
 
 ### hooks
 
 - `useTheme.hook.ts`: Custom hook for accessing theme context and state management.
 - `useInterviewIngestion.hook.ts`: Hook to create, process, and poll repo/web ingestions and return coverage.
+- `useInterviewPlanner.hook.ts`: Hook consolidating interview planning state (planning, modals, async handlers). **Phase 3: Component refactoring.**
+- `useResultsTier.hook.ts`: Hook extracting tier detection logic for results hero (getTierFromScore, tierConfig, showConfetti). **Phase 3: Component refactoring.**
+- `useQuestionReviewFiltering.hook.ts`: Hook consolidating question review filtering state (filter, sort, group, lazy-load). **Phase 3: Component refactoring.**
 
 ### public
 
@@ -102,7 +110,7 @@
 ### types
 
 - `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`, and animation enums (`EAnimationDuration`, `EAnimationTranslate`, `EAnimationScale`) with `ANIMATION_EASING` constant for Framer Motion cubic bezier arrays.
-- `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed. `IInterviewIngestItem.depth` supports 0-4.
+- `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed. `IInterviewIngestItem.depth` supports 0-4. **Phase 3: Added `TPlanData` and `TWebPlanData` types for planning.**
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
 - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.

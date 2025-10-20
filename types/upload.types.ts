@@ -40,3 +40,19 @@ export interface IInterviewStreamsFormValues {
   stream: EInterviewStream;
   items: IInterviewIngestItem[];
 }
+
+/**
+ * Interview Planning Types
+ */
+export type TPlanData = {
+  total: number;
+  batchSize: number;
+  slices: Array<{ name: string; start: number; end: number; count: number }>;
+  categories: Record<string, number>;
+};
+
+export type TWebPlanData = {
+  count: number;
+  pages: Array<{ url: string; title?: string }>;
+  groups?: Array<{ label: string; count: number; pages: Array<{ url: string; title?: string }> }>;
+};

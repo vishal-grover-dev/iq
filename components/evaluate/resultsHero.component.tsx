@@ -3,19 +3,14 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import ScoreGauge from "@/components/evaluate/scoreGauge.component";
+import ConfettiOverlay from "@/components/evaluate/confettiOverlay.component";
+import ResultStatCard from "@/components/evaluate/resultStatCard.component";
 import { usePrefersReducedMotion, ANIMATION_EASING } from "@/utils/animation.utils";
 import { cn } from "@/utils/tailwind.utils";
-import {
-  MedalIcon,
-  TargetIcon,
-  ChartLineUpIcon,
-  RocketLaunchIcon,
-  ClockIcon,
-  SparkleIcon,
-} from "@phosphor-icons/react/dist/ssr";
-import { RESULT_TIER_CONFIGS, STAT_CARD_LABELS, CONFETTI_COLORS } from "@/constants/evaluate.constants";
+import { SparkleIcon } from "@phosphor-icons/react/dist/ssr";
+import { STAT_CARD_LABELS } from "@/constants/evaluate.constants";
 import { EResultsHeroLabels, EResultsPageLabels } from "@/types/evaluate.types";
-import type { TResultTier } from "@/types/evaluate.types";
+import { useResultsTier } from "@/hooks/useResultsTier.hook";
 
 interface IResultsHeroProps {
   score: number;
@@ -24,12 +19,12 @@ interface IResultsHeroProps {
   timeSpentSeconds: number;
   topTopic?: {
     name: string;
-    accuracy: number; // 0-1
+    accuracy: number;
   } | null;
   focusArea?: {
     topic: string;
     subtopic: string | null;
-    accuracy: number; // 0-1
+    accuracy: number;
   } | null;
   className?: string;
 }
@@ -41,160 +36,23 @@ interface IStatCard {
   tone?: "positive" | "neutral" | "attention";
 }
 
-const TIER_CONFIG: Record<
-  TResultTier,
-  {
-    title: string;
-    headline: string;
-    description: string;
-    accentClass: string;
-    badgeClass: string;
-    gradientClass: string;
-    icon: typeof MedalIcon;
-  }
-> = {
-  expert: {
-    title: RESULT_TIER_CONFIGS.EXPERT.TITLE,
-    headline: RESULT_TIER_CONFIGS.EXPERT.HEADLINE,
-    description: RESULT_TIER_CONFIGS.EXPERT.DESCRIPTION,
-    accentClass: RESULT_TIER_CONFIGS.EXPERT.ACCENT_CLASS,
-    badgeClass: RESULT_TIER_CONFIGS.EXPERT.BADGE_CLASS,
-    gradientClass: RESULT_TIER_CONFIGS.EXPERT.GRADIENT_CLASS,
-    icon: MedalIcon,
-  },
-  proficient: {
-    title: RESULT_TIER_CONFIGS.PROFICIENT.TITLE,
-    headline: RESULT_TIER_CONFIGS.PROFICIENT.HEADLINE,
-    description: RESULT_TIER_CONFIGS.PROFICIENT.DESCRIPTION,
-    accentClass: RESULT_TIER_CONFIGS.PROFICIENT.ACCENT_CLASS,
-    badgeClass: RESULT_TIER_CONFIGS.PROFICIENT.BADGE_CLASS,
-    gradientClass: RESULT_TIER_CONFIGS.PROFICIENT.GRADIENT_CLASS,
-    icon: TargetIcon,
-  },
-  developing: {
-    title: RESULT_TIER_CONFIGS.DEVELOPING.TITLE,
-    headline: RESULT_TIER_CONFIGS.DEVELOPING.HEADLINE,
-    description: RESULT_TIER_CONFIGS.DEVELOPING.DESCRIPTION,
-    accentClass: RESULT_TIER_CONFIGS.DEVELOPING.ACCENT_CLASS,
-    badgeClass: RESULT_TIER_CONFIGS.DEVELOPING.BADGE_CLASS,
-    gradientClass: RESULT_TIER_CONFIGS.DEVELOPING.GRADIENT_CLASS,
-    icon: ChartLineUpIcon,
-  },
-  getting_started: {
-    title: RESULT_TIER_CONFIGS.GETTING_STARTED.TITLE,
-    headline: RESULT_TIER_CONFIGS.GETTING_STARTED.HEADLINE,
-    description: RESULT_TIER_CONFIGS.GETTING_STARTED.DESCRIPTION,
-    accentClass: RESULT_TIER_CONFIGS.GETTING_STARTED.ACCENT_CLASS,
-    badgeClass: RESULT_TIER_CONFIGS.GETTING_STARTED.BADGE_CLASS,
-    gradientClass: RESULT_TIER_CONFIGS.GETTING_STARTED.GRADIENT_CLASS,
-    icon: RocketLaunchIcon,
-  },
-};
-
 const containerVariants = {
-  hidden: {
-    opacity: 0,
-    y: 32,
-  },
+  hidden: { opacity: 0, y: 32 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.6,
-      ease: ANIMATION_EASING.easeOut,
-    },
+    transition: { duration: 0.6, ease: ANIMATION_EASING.easeOut },
   },
 };
-
-const statVariants = {
-  hidden: {
-    opacity: 0,
-    y: 12,
-  },
-  visible: (index: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.35,
-      delay: 0.3 + index * 0.08,
-      ease: ANIMATION_EASING.easeOut,
-    },
-  }),
-};
-
-function getTierFromScore(score: number): TResultTier {
-  if (score >= 90) return "expert";
-  if (score >= 75) return "proficient";
-  if (score >= 50) return "developing";
-  return "getting_started";
-}
 
 function formatDuration(totalSeconds: number): string {
-  if (!totalSeconds || totalSeconds < 0) {
-    return "—";
-  }
-
+  if (!totalSeconds || totalSeconds < 0) return "—";
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-
-  if (minutes > 0) {
-    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-  }
-
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
   return `${seconds}s`;
-}
-
-function ConfettiOverlay({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 14 }).map(() => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 0.6,
-        duration: 1.4 + Math.random() * 0.6,
-        rotation: Math.random() * 180 - 90,
-        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-        scale: 0.8 + Math.random() * 0.6,
-      })),
-    []
-  );
-
-  if (prefersReducedMotion) {
-    return null;
-  }
-
-  return (
-    <div className='pointer-events-none absolute inset-0 overflow-hidden' aria-hidden>
-      {pieces.map((piece, index) => (
-        <motion.span
-          key={index}
-          className='absolute block h-2 w-2 rounded-full opacity-0'
-          style={{
-            left: `${piece.left}%`,
-            backgroundColor: piece.color,
-          }}
-          initial={{
-            y: "-10%",
-            scale: piece.scale,
-          }}
-          animate={{
-            y: ["-10%", "110%"],
-            rotate: piece.rotation,
-            opacity: [0, 1, 1, 0],
-          }}
-          transition={{
-            duration: piece.duration,
-            delay: piece.delay,
-            ease: "easeOut",
-          }}
-        />
-      ))}
-    </div>
-  );
 }
 
 export default function ResultsHero({
@@ -207,8 +65,7 @@ export default function ResultsHero({
   className,
 }: IResultsHeroProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const tier = getTierFromScore(score);
-  const tierConfig = TIER_CONFIG[tier];
+  const { tier, tierConfig, showConfetti } = useResultsTier(score);
 
   const statCards = useMemo<IStatCard[]>(() => {
     const cards: Array<IStatCard | null> = [
@@ -238,7 +95,7 @@ export default function ResultsHero({
     if (focusArea) {
       cards.push({
         label: STAT_CARD_LABELS.NEXT_FOCUS,
-        value: focusArea.topic, // Always show topic name, not subtopic
+        value: focusArea.topic,
         caption: `${Math.round(focusArea.accuracy * 100)}% ${STAT_CARD_LABELS.ACCURACY}`,
         tone: "attention",
       });
@@ -248,7 +105,6 @@ export default function ResultsHero({
   }, [correctCount, totalQuestions, timeSpentSeconds, topTopic, focusArea]);
 
   const TierIcon = tierConfig.icon;
-  const showConfetti = tier === "expert" && score >= 90;
 
   return (
     <motion.section
@@ -260,7 +116,6 @@ export default function ResultsHero({
       initial='hidden'
       animate='visible'
     >
-      {/* Background gradient */}
       <motion.div
         className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", tierConfig.gradientClass)}
         initial={{ opacity: 0 }}
@@ -318,34 +173,15 @@ export default function ResultsHero({
             <p className='text-muted-foreground mt-2 text-sm md:text-base'>{tierConfig.description}</p>
           </div>
 
-          <motion.div
-            className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'
-            initial='hidden'
-            animate='visible'
-            variants={{}}
-          >
+          <motion.div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3' initial='hidden' animate='visible'>
             {statCards.map((stat, index) => (
-              <motion.div
+              <ResultStatCard
                 key={stat.label}
-                className={cn(
-                  "rounded-2xl border bg-background/70 p-4 shadow-sm backdrop-blur",
-                  stat.tone === "positive" && "border-emerald-500/20",
-                  stat.tone === "attention" && "border-amber-500/25"
-                )}
-                variants={statVariants}
-                custom={index}
-              >
-                <div className='flex items-center justify-between'>
-                  <span className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-                    {stat.label}
-                  </span>
-                  {stat.label === STAT_CARD_LABELS.TIME_SPENT && (
-                    <ClockIcon className='h-4 w-4 text-muted-foreground/70' />
-                  )}
-                </div>
-                <div className='mt-2 text-lg font-semibold md:text-xl capitalize'>{stat.value}</div>
-                {stat.caption && <p className='text-muted-foreground mt-1 text-xs'>{stat.caption}</p>}
-              </motion.div>
+                label={stat.label}
+                value={stat.value}
+                caption={stat.caption}
+                tone={stat.tone}
+              />
             ))}
           </motion.div>
         </motion.div>

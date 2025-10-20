@@ -1,26 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import QuestionCard from "./questionCard.component";
-import type { IQuestionReview } from "@/types/evaluate.types";
-import { CheckCircleIcon, FunnelSimpleIcon, MagnifyingGlassIcon, XCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import { motion } from "framer-motion";
+import QuestionCard from "./questionCard.component";
+import ReviewFilterBar from "./reviewFilterBar.component";
+import type { IQuestionReview } from "@/types/evaluate.types";
+import { CheckCircleIcon, FunnelSimpleIcon, XCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import {
   staggerChildrenVariants,
   staggerItemVariants,
   usePrefersReducedMotion,
   ANIMATION_EASING,
 } from "@/utils/animation.utils";
-import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { EQuestionReviewLabels } from "@/types/evaluate.types";
-
-/**
- * Question Review List Component
- *
- * Displays all 60 questions with filtering controls.
- * Shows user's answers, correct answers, explanations, and citations.
- */
+import { useQuestionReviewFiltering } from "@/hooks/useQuestionReviewFiltering.hook";
 
 interface IQuestionReviewListProps {
   questions: IQuestionReview[];
@@ -28,88 +18,23 @@ interface IQuestionReviewListProps {
 
 export default function QuestionReviewList({ questions }: IQuestionReviewListProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const [showOnlyIncorrect, setShowOnlyIncorrect] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<string>("all");
-  const [itemsToShow, setItemsToShow] = useState(20); // show first 20 initially
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortMode, setSortMode] = useState<"order" | "difficulty" | "topic">("order");
-  const [groupMode, setGroupMode] = useState<"none" | "topic" | "difficulty">("none");
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // Filter questions
-  const filteredQuestions = useMemo(() => {
-    const base = questions.filter((q) => {
-      if (showOnlyIncorrect && q.is_correct) return false;
-      if (selectedTopic !== "all" && q.metadata.topic !== selectedTopic) return false;
-      if (searchQuery.trim().length > 0) {
-        const query = searchQuery.toLowerCase();
-        const matchesText = q.question_text.toLowerCase().includes(query);
-        const matchesExplanation = q.explanation?.toLowerCase().includes(query);
-        const matchesMetadata =
-          q.metadata.subtopic?.toLowerCase().includes(query) ||
-          q.metadata.bloom_level.toLowerCase().includes(query) ||
-          q.metadata.difficulty.toLowerCase().includes(query);
-        if (!matchesText && !matchesExplanation && !matchesMetadata) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    const sorted = [...base];
-    if (sortMode === "order") {
-      sorted.sort((a, b) => a.question_order - b.question_order);
-    }
-    if (sortMode === "difficulty") {
-      const rank: Record<string, number> = { Easy: 0, Medium: 1, Hard: 2 };
-      sorted.sort((a, b) => rank[a.metadata.difficulty] - rank[b.metadata.difficulty]);
-    }
-    if (sortMode === "topic") {
-      sorted.sort((a, b) => a.metadata.topic.localeCompare(b.metadata.topic));
-    }
-    return sorted;
-  }, [questions, showOnlyIncorrect, selectedTopic, searchQuery, sortMode]);
-
-  const groupedQuestions = useMemo(() => {
-    if (groupMode === "none") {
-      return [{ groupKey: EQuestionReviewLabels.ALL_QUESTIONS_GROUP, items: filteredQuestions }];
-    }
-
-    const map = new Map<string, IQuestionReview[]>();
-    filteredQuestions.forEach((question) => {
-      const key =
-        groupMode === "topic"
-          ? question.metadata.topic
-          : `${question.metadata.difficulty} • ${question.metadata.topic}`;
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)?.push(question);
-    });
-
-    return Array.from(map.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([groupKey, items]) => ({ groupKey, items }));
-  }, [filteredQuestions, groupMode]);
-
-  // Get unique topics for filter
-  const uniqueTopics = useMemo(() => Array.from(new Set(questions.map((q) => q.metadata.topic))), [questions]);
-
-  // Lazy-load additional items on scroll (increments of 20)
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting) {
-          setItemsToShow((prev) => Math.min(prev + 20, filteredQuestions.length));
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [filteredQuestions.length]);
+  const {
+    showOnlyIncorrect,
+    setShowOnlyIncorrect,
+    selectedTopic,
+    setSelectedTopic,
+    itemsToShow,
+    searchQuery,
+    setSearchQuery,
+    sortMode,
+    setSortMode,
+    groupMode,
+    setGroupMode,
+    sentinelRef,
+    filteredQuestions,
+    groupedQuestions,
+    uniqueTopics,
+  } = useQuestionReviewFiltering(questions);
 
   return (
     <motion.section
@@ -125,82 +50,20 @@ export default function QuestionReviewList({ questions }: IQuestionReviewListPro
           </h2>
         </div>
 
-        <div className='space-y-3'>
-          {/* Search and Topic Filter */}
-          <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-            <div className='relative flex-1'>
-              <MagnifyingGlassIcon className='text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2' />
-              <Input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={EQuestionReviewLabels.SEARCH_PLACEHOLDER}
-                className='pl-9'
-              />
-            </div>
-
-            {uniqueTopics.length > 1 && (
-              <select
-                value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value)}
-                className='border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-40'
-              >
-                <option value='all'>{EQuestionReviewLabels.ALL_TOPICS_OPTION}</option>
-                {uniqueTopics.map((topic) => (
-                  <option key={topic} value={topic}>
-                    {topic}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <div className='flex items-center gap-2'>
-              <Label htmlFor='show-incorrect-only' className='text-sm font-medium cursor-pointer whitespace-nowrap'>
-                {EQuestionReviewLabels.SHOW_ONLY_INCORRECT}
-              </Label>
-              <Switch id='show-incorrect-only' checked={showOnlyIncorrect} onCheckedChange={setShowOnlyIncorrect} />
-            </div>
-          </div>
-
-          {/* Sort and Group Controls - Combined Row */}
-          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-            <div className='flex items-center gap-2'>
-              <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.SORT_LABEL}</span>
-              <ToggleGroup
-                type='single'
-                value={sortMode}
-                onValueChange={(value) => value && setSortMode(value as typeof sortMode)}
-              >
-                <ToggleGroupItem value='order' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.ORDER_OPTION}
-                </ToggleGroupItem>
-                <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.DIFFICULTY_OPTION}
-                </ToggleGroupItem>
-                <ToggleGroupItem value='topic' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.TOPIC_OPTION}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.GROUP_LABEL}</span>
-              <ToggleGroup
-                type='single'
-                value={groupMode}
-                onValueChange={(value) => value && setGroupMode(value as typeof groupMode)}
-              >
-                <ToggleGroupItem value='none' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.NONE_OPTION}
-                </ToggleGroupItem>
-                <ToggleGroupItem value='topic' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.TOPIC_OPTION}
-                </ToggleGroupItem>
-                <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-                  {EQuestionReviewLabels.DIFFICULTY_OPTION}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
+        <div className='w-full lg:w-auto'>
+          <ReviewFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedTopic={selectedTopic}
+            onTopicChange={setSelectedTopic}
+            showOnlyIncorrect={showOnlyIncorrect}
+            onShowOnlyIncorrectChange={setShowOnlyIncorrect}
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+            groupMode={groupMode}
+            onGroupModeChange={setGroupMode}
+            uniqueTopics={uniqueTopics}
+          />
         </div>
       </div>
 

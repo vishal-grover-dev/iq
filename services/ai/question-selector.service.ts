@@ -1,11 +1,11 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
-import { parseJsonObject } from "@/utils/json.utils";
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
+import { parseJsonObject } from "@/utils/json.utils";
 import { generateQuestionPrompt } from "@/utils/mcq-prompts/selector-prompt.utils";
 import { getStaticTopicList, getStaticSubtopicMap, getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
 import { calculateCoverageWeights, weightedRandomIndex } from "@/utils/selection.utils";
-import { createOpenAIClient, getErrorMessage } from "./openai.services";
+import { createOpenAIClient, getErrorMessage } from "@/services/openai.services";
 
 /**
  * selectNextQuestion
@@ -223,9 +223,6 @@ export async function selectNextQuestion(context: {
     const topic = topics[topicIdx] || "React";
 
     const subtopicCandidates = getStaticSubtopicsForTopic(topic);
-    const subtopic = subtopicCandidates.length
-      ? subtopicCandidates[Math.floor(Math.random() * subtopicCandidates.length)]
-      : null;
 
     // Subtopic: prefer dynamic ontology for chosen topic, pick 1 underrepresented
     let preferred_subtopic: string = "";

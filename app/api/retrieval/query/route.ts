@@ -3,9 +3,8 @@ import { retrievalRequestSchema } from "@/schema/mcqRetrieval.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { getEmbeddings } from "@/services/ai/embeddings.service";
-import { rerank } from "@/services/ai/reranker.service";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getEmbeddings, rerank } from "@/services/ai/embedding.service";
 
 export const runtime = "nodejs";
 

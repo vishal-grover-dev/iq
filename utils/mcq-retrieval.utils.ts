@@ -1,6 +1,6 @@
 import type { IMcqItemView } from "@/types/mcq.types";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { getEmbeddings } from "@/services/ai/embeddings.service";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getEmbeddings } from "@/services/ai/embedding.service";
 import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
 
 /**

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { reviseMcqWithContext } from "@/services/ai/mcq-revision.service";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { reviseMcqWithContext } from "@/services/ai/mcq-refinement.service";
 
 export const runtime = "nodejs";
 

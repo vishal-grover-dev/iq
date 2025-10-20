@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
-import { getEmbeddings } from "@/services/ai/embeddings.service";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getEmbeddings } from "@/services/ai/embedding.service";
 import { selectNextQuestion } from "@/services/ai/question-selector.service";
+import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { weightedRandomIndex, calculateCoverageWeights } from "@/utils/selection.utils";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
@@ -496,7 +497,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           }
 
           // Generate MCQ using retrieved context
-          const { generateMcqFromContext } = await import("@/services/ai.services");
           let generatedMcq = await generateMcqFromContext({
             topic: contextTopic,
             subtopic: contextSubtopic,

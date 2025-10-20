@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 
 export async function getAuthenticatedUserId(): Promise<string | null> {
   const cookieStore = await cookies();

@@ -2,7 +2,7 @@ import { EInterviewTopic } from "@/types/upload.types";
 import { ingestRepoOrWeb } from "@/services/ingest.services";
 import { getIngestionStatus, processIngestion } from "@/services/ingest.services";
 import { IIngestCatalogItem, IIngestRunResult, ILogger } from "@/types/interview-streams.types";
-import { getSupabaseServiceRoleClient } from "@/utils/supabase.utils";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { loadIngestCatalog } from "@/utils/catalog.utils";
 import { persistEmbeddedFlags } from "@/utils/ingest-preflight.utils";
 import { normalizeUrl as normalizeUrlShared } from "@/utils/url.utils";

@@ -12,9 +12,8 @@
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
- - `playwright.config.ts`: Playwright configuration (webServer runs Next dev; Chromium + mobile profiles).
- - `scripts/db.sh`: Helper to run psql queries/files against Supabase pooler URL in `supabase/.temp/pooler-url`.
- 
+- `playwright.config.ts`: Playwright configuration (webServer runs Next dev; Chromium + mobile profiles).
+- `scripts/db.sh`: Helper to run psql queries/files against Supabase pooler URL in `supabase/.temp/pooler-url`.
 
 ### specs/blueprints
 
@@ -32,18 +31,18 @@
 - `layout.tsx`: Root HTML layout; initializes theme and wraps `ThemeProvider` + `Header`.
 - `page.tsx`: Home page route rendering a simple placeholder.
 - `not-found.tsx`: 404 error page with return home link.
- - `upload/page.tsx`: Upload page route rendering the upload form flow.
- - `evaluate/page.tsx`: Evaluate landing page with start/resume flow, progress display, and past attempts summary.
- - `evaluate/[attemptId]/page.tsx`: In-progress evaluation page with question display, answer submission, and pause/resume.
- - `evaluate/[attemptId]/results/page.tsx`: Post-attempt results page with summary, performance breakdowns, weak areas, and complete question review with feedback.
+- `upload/page.tsx`: Upload page route rendering the upload form flow.
+- `evaluate/page.tsx`: Evaluate landing page with start/resume flow, progress display, and past attempts summary.
+- `evaluate/[attemptId]/page.tsx`: In-progress evaluation page with question display, answer submission, and pause/resume.
+- `evaluate/[attemptId]/results/page.tsx`: Post-attempt results page with summary, performance breakdowns, weak areas, and complete question review with feedback.
 
 ### components/common
 
 - `header.component.tsx`: Application header with brand link, navigation menu (Upload, Generate, Evaluate), and theme toggle. Includes active state detection using `usePathname` hook.
 - `logo.component.tsx`: Logo component using `next/image` for `/logo.svg`.
 - `themeToggle.component.tsx`: Theme toggle with sun/moon icons using Switch component.
- - `loader.component.tsx`: Full-page Lottie loader used for async/processing states.
- - `footer.component.tsx`: Application footer with brand and navigation links.
+- `loader.component.tsx`: Full-page Lottie loader used for async/processing states.
+- `footer.component.tsx`: Application footer with brand and navigation links.
 
 ### components/ui
 
@@ -54,14 +53,14 @@
 - `label.tsx`: shadcn/ui `Label` component.
 - `select.tsx`: shadcn/ui `Select` primitives and styling.
 - `switch.tsx`: Radix-based `Switch` component styled to shadcn/ui conventions.
- - `command.tsx`: shadcn/ui `Command` (command palette) primitives and styling.
- - `dialog.tsx`: shadcn/ui `Dialog` primitives and styling.
- - `navigation-menu.tsx`: shadcn/ui `NavigationMenu` primitives and styling.
- - `popover.tsx`: shadcn/ui `Popover` primitives and styling.
- - `combobox.tsx`: Reusable combobox built with `Popover` + `Command` and Phosphor icons.
- - `sonner.tsx`: shadcn/ui `Toaster` wrapper integrating theme-aware Sonner notifications.
- - `error-message.tsx`: Reusable error message component for forms and UI states.
- - `file-dropzone.tsx`: Reusable dropzone wrapper for file uploads built on react-dropzone.
+- `command.tsx`: shadcn/ui `Command` (command palette) primitives and styling.
+- `dialog.tsx`: shadcn/ui `Dialog` primitives and styling.
+- `navigation-menu.tsx`: shadcn/ui `NavigationMenu` primitives and styling.
+- `popover.tsx`: shadcn/ui `Popover` primitives and styling.
+- `combobox.tsx`: Reusable combobox built with `Popover` + `Command` and Phosphor icons.
+- `sonner.tsx`: shadcn/ui `Toaster` wrapper integrating theme-aware Sonner notifications.
+- `error-message.tsx`: Reusable error message component for forms and UI states.
+- `file-dropzone.tsx`: Reusable dropzone wrapper for file uploads built on react-dropzone.
 - `form-label.tsx`: Reusable label component that displays red asterisk for required form fields.
 - `toggle-group.tsx`: Radix Toggle Group primitives styled as pill segmented controls.
 
@@ -86,14 +85,14 @@
 ### hooks
 
 - `useTheme.hook.ts`: Custom hook for accessing theme context and state management.
- - `useInterviewIngestion.hook.ts`: Hook to create, process, and poll repo/web ingestions and return coverage.
+- `useInterviewIngestion.hook.ts`: Hook to create, process, and poll repo/web ingestions and return coverage.
 
 ### public
 
 - `logo.svg`: Vector logo asset.
 - `logo.png`: Raster logo asset.
- - `animations/girl-with-book.json`: Lottie animation used by the loader component.
- - `diagrams/iq-ingestion-architecture.mmd`: Mermaid architecture diagram for Interview Ingestion & Retrieval v1.
+- `animations/girl-with-book.json`: Lottie animation used by the loader component.
+- `diagrams/iq-ingestion-architecture.mmd`: Mermaid architecture diagram for Interview Ingestion & Retrieval v1.
 
 ### store/providers
 
@@ -118,43 +117,64 @@
 ### utils
 
 - `tailwind.utils.ts`: `cn` helper combining `clsx` with `tailwind-merge`.
-- `supabase.utils.ts`: Supabase client helpers (browser anon + server service role).
 - `upload.utils.ts`: Upload helpers (slugify, timestamped filenames). Academic path builder deprecated.
 - `langchain.utils.ts`: Combined PDF extraction and text chunking (LangChain-based).
- - `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
- - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
- - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
- - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for label derivation and content extraction across any documentation site.
- - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for content extraction and quality checks (URL heuristics for labels removed; classifier-only).
- - `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
- - `label-resolver.utils.ts`: Pluggable label resolver applying rules, heuristics, and OpenAI fallback with caching and metrics.
- - `label-resolver.utils.ts`: Classifier-only resolver using OpenAI with whitelist ontology, URL/path caching, hints precedence, and metrics.
- - `vector.utils.ts`: Vector utilities for converting embeddings and computing cosine similarity (`toNumericVector`, `cosineSimilarity`). **Phase 1 modularization.**
- - `catalog.utils.ts`: Catalog management helpers for loading ingestion catalog and deriving subtopics (`loadIngestCatalog`, `getSubtopicsFromCatalog`). **Phase 1 modularization.**
- - `ingest-preflight.utils.ts`: Preflight validation utilities for marking completed ingestions and preventing duplicates (`persistEmbeddedFlags`). **Phase 1 modularization.**
- - `mcq-retrieval.utils.ts`: MCQ retrieval helpers for context, neighbors, and recent questions (`retrieveContextByLabels`, `retrieveNeighbors`, `getRecentQuestions`). **Phase 1 modularization.**
+- `ingest.utils.ts`: Chapter extraction helpers from filenames and document text.
+- `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
+- `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
+- `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for content extraction and quality checks (URL heuristics for labels removed; classifier-only).
+- `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
+- `label-resolver.utils.ts`: Classifier-only resolver using OpenAI with whitelist ontology, URL/path caching, hints precedence, and metrics.
+- `vector.utils.ts`: Vector utilities for converting embeddings and computing cosine similarity (`toNumericVector`, `cosineSimilarity`). **Phase 1 modularization.**
+- `catalog.utils.ts`: Catalog management helpers for loading ingestion catalog and deriving subtopics (`loadIngestCatalog`, `getSubtopicsFromCatalog`). **Phase 1 modularization.**
+- `ingest-preflight.utils.ts`: Preflight validation utilities for marking completed ingestions and preventing duplicates (`persistEmbeddedFlags`). **Phase 1 modularization.**
+- `mcq-retrieval.utils.ts`: MCQ retrieval helpers for context, neighbors, and recent questions (`retrieveContextByLabels`, `retrieveNeighbors`, `getRecentQuestions`). **Phase 1 modularization.**
 
- - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
- - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
- - `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
+- `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
+- `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
+- `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
 - `animation.utils.ts`: Imports and re-exports animation enums from `app.types.ts`, provides `usePrefersReducedMotion` hook, and pre-built Framer Motion variants for question transitions, stagger lists, and results orchestration with reduced-motion fallbacks.
 - `static-ontology.utils.ts`: Loads statically defined topics, subtopics, and weights from JSON.
 - `selection.utils.ts`: Weighted random utilities for selection (`weightedRandomIndex`, `weightedRandomSelect`, `calculateCoverageWeights`).
+- `url.utils.ts`: URL manipulation utilities (normalize, extract domain).
+- `ingest-planner.utils.ts`: Interview Streams planner helpers for depth + type combinations and path derivation.
+- `ingest-web-process.utils.ts`: Web ingestion processing helpers (filtering, assessment, chunking, embedding).
+
+#### Nested: utils/mcq-prompts
+
+- `index.ts`: Re-export barrel for all prompt builders (optional).
+- `shared.utils.ts`: Shared prompt formatting helpers (context lines, negative examples, neighbors formatting).
+- `generator-prompt.utils.ts`: MCQ generation prompt builder with few-shot and chain-of-thought support.
+- `reviser-prompt.utils.ts`: MCQ revision workflow prompt builder.
+- `judge-prompt.utils.ts`: MCQ quality judgment prompt builder.
+- `selector-prompt.utils.ts`: LLM-driven question selection prompt builder.
 
 ### services
 
-- `ai.services.ts`: Server-only AI utilities exposing vendor-agnostic `getEmbeddings`, `rerank`, `generateMcqFromContext`, `reviseMcqWithContext`, `judgeMcqQuality`, `classifyLabels`, and `selectNextQuestion` (LLM-driven question selector for evaluations).
+#### Core Services & Shared Utilities
+
+- `supabase.services.ts`: Supabase client helpers (browser anon + server service role). **Moved from utils; Phase 2 architecture correction.**
+- `openai.services.ts`: Shared OpenAI client instantiation and error utilities (`createOpenAIClient`, `getErrorStatus`, `getErrorMessage`). Centralizes OpenAI setup for AI services. (~40 lines) **Phase 2: Moved outside ai/ as shared utility.**
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
 - `evaluate.services.ts`: Evaluation API client functions and TanStack Query hooks for attempts, questions, answers, and results.
+
+#### AI Services (Domain-Grouped Consolidation)
+
+- `ai/embedding.service.ts`: **Consolidated** embeddings + reranking operations (~110 lines). Exports: `getEmbeddings()` (1536-d text-embedding-3-small with batching), `rerank()` (LLM-as-reranker). **Phase 2 consolidation.**
+- `ai/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes. Exports: `generateMcqFromContext()`. (~380 lines)
+- `ai/mcq-refinement.service.ts`: **Consolidated** post-generation refinement pipeline (~160 lines). Exports: `reviseMcqWithContext()` (user-guided revision), `judgeMcqQuality()` (quality verdict with suggestions). **Phase 2 consolidation.**
+- `ai/labeling.service.ts`: Label classification using OpenAI with whitelist ontology. Exports: `classifyLabels()`. (~70 lines)
+- `ai/question-selector.service.ts`: LLM-driven question selection for evaluations. Exports: `selectNextQuestion()`. (~130 lines)
+- `ai/crawl-heuristics.service.ts`: Web crawl heuristics and utilities.
 
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
 - `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
 - `ui.constants.ts`: Consolidated UI-related constants including theme labels/config (THEME_CONFIG), footer content (FOOTER_CONFIG), and common UI labels (COMMON_LABELS, FORM_LABELS, STATUS_LABELS, ACCESSIBILITY_LABELS). Replaces separate theme.constants.ts and footer.constants.ts.
- - `app.constants.ts`: Feature flags for label resolver and confidence threshold.
+- `app.constants.ts`: Feature flags for label resolver and confidence threshold.
 - `api.constants.ts`: Centralized API infrastructure constants including HTTP_STATUS_CODES, API_ERROR_MESSAGES, API_RESPONSE_KEYS, CONTENT_TYPES, and VALIDATION_ERRORS. Shared across all API routes and services.
 
 ### data
@@ -180,9 +200,9 @@
 - `002-Ingestions-And-Embeddings.sql`: Creates ingestion, documents, and document_chunks tables with RLS and pgvector.
 - `003-Embeddings-1536-And-Hybrid.sql`: Switches to 1536-d embeddings and adds hybrid retrieval RPC and FTS index.
 - `004-MCQ-And-Label-Retrieval.sql`: Creates MCQ tables and adds label-based retrieval RPC `retrieval_hybrid_by_labels`.
- - `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
- - `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
- - `007-MCQ-Embeddings-And-Dedupe.sql`: Adds MCQ embeddings + content_key, ANN index, and `retrieval_mcq_neighbors` RPC for near-duplicate detection.
+- `005-Ingestion-Events.sql`: Adds `ingestion_events` table with RLS and indexes for step-level observability.
+- `006-Documents-Unique-Bucket-Path.sql`: Adds unique index on `documents(bucket, path)` to prevent duplicate URLs.
+- `007-MCQ-Embeddings-And-Dedupe.sql`: Adds MCQ embeddings + content_key, ANN index, and `retrieval_mcq_neighbors` RPC for near-duplicate detection.
 - `008-MCQ-Code-Column.sql`: Adds nullable `code` column to `mcq_items` for dedicated code snippets.
 - `009-WebDev-Topics-Fix.sql`: Backfill to correct `documents` and `document_chunks` topics for web.dev/learn to HTML/CSS/PWA.
 - `010-WebDev-Accessibility-Topics.sql`: Backfill to correct web.dev/learn accessibility topics.
@@ -196,29 +216,30 @@
 - `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
 - `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
 
- - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
- - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
+- `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
+- `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
 - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
- - `api/ingest/repo/plan/route.ts`: Planning endpoint to count repo files and propose batch slices (repo mode).
- - `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
- - `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
- - `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
- - `api/generate/mcq/route.ts`: Placeholder route for MCQ generation (SSE scaffold).
-  - `api/generate/mcq/revise/route.ts`: MCQ revision API route (POST) that applies user instructions to revise existing MCQs with AI-powered context-aware revisions.
-  - `api/generate/mcq/save/route.ts`: Placeholder route for saving finalized MCQs.
- - `api/evaluate/attempts/route.ts`: Evaluation attempts routes (GET lists attempts, POST creates new attempt).
- - `api/evaluate/attempts/[id]/route.ts`: Single attempt routes (GET fetches details with LLM-selected next question, PATCH pauses attempt).
- - `api/evaluate/attempts/[id]/answer/route.ts`: Answer submission route (POST) records answer silently without revealing correctness.
- - `api/evaluate/attempts/[id]/results/route.ts`: Results route (GET) provides post-attempt analytics, breakdowns, weak areas, and complete question review with feedback.
+- `api/ingest/repo/plan/route.ts`: Planning endpoint to count repo files and propose batch slices (repo mode).
+- `api/ingest/[id]/route.ts`: Ingestion status route (GET) by id.
+- `api/retrieval/query/route.ts`: Retrieval API route (POST) computing 1536-d query embeddings, calling hybrid RPC, with optional rerank.
+- `api/retrieval/enhance-query/route.ts`: Query enhancement API route (POST) stub.
+- `api/generate/mcq/route.ts`: Placeholder route for MCQ generation (SSE scaffold).
+- `api/generate/mcq/revise/route.ts`: MCQ revision API route (POST) that applies user instructions to revise existing MCQs with AI-powered context-aware revisions.
+- `api/generate/mcq/save/route.ts`: Placeholder route for saving finalized MCQs.
+- `api/evaluate/attempts/route.ts`: Evaluation attempts routes (GET lists attempts, POST creates new attempt).
+- `api/evaluate/attempts/[id]/route.ts`: Single attempt routes (GET fetches details with LLM-selected next question, PATCH pauses attempt).
+- `api/evaluate/attempts/[id]/answer/route.ts`: Answer submission route (POST) records answer silently without revealing correctness.
+- `api/evaluate/attempts/[id]/results/route.ts`: Results route (GET) provides post-attempt analytics, breakdowns, weak areas, and complete question review with feedback.
 - `api/ontology/status/route.ts`: Admin endpoint returning ontology cache source, age, staleness, and topic/subtopic counts.
 - `api/ontology/route.ts`: Provides ontology cache payload (topics, subtopics, chunk counts, optional archetypes, target weights) with cache metadata.
- - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
- - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
- - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.
- - `components/generate/automationModal.component.tsx`: Modal for automation controls and coverage placeholder.
- - `services/mcq.services.ts`: MCQ API client functions and SSE opener.
- 
+- `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
+- `components/generate/personaPanel.component.tsx`: Persona progress panel component.
+- `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.
+- `components/generate/automationModal.component.tsx`: Modal for automation controls and coverage placeholder.
+- `services/mcq.services.ts`: MCQ API client functions and SSE opener.
+
 Updates:
+
 - `api/ingest/web/plan/route.ts`: Added `returnAllPages` and `applyQuotas` flags; response includes `aiUsed`. MDN-specific sections removed; source-agnostic.
 - `api/ingest/web/process/route.ts`: Simplified selection to source-agnostic cap by `maxPages`; removed MDN-specific quotas.
 - `specs/work-items`: Merged `ingestion-reliability-hardening.md` into `interview-ingestion-and-retrieval.md`; removed the former.
@@ -234,9 +255,9 @@ Updates:
   - Deleted `data/interview-target-weights.json` (replaced by LLM generation in ontology cache).
   - `README.md`: Added ontology system documentation.
   - `scripts/generate-ontology.ts`: Now optional pre-warming script; not required for runtime.
- 
 
 #### services/ai (Phase 2 Refactor)
+
 - `services/ai/openai.services.ts`: Shared OpenAI client instantiation and error utilities (`createOpenAIClient`, `getErrorStatus`, `getErrorMessage`)
 - `services/ai/embeddings.service.ts`: `getEmbeddings()` for 1536-d embeddings with batching, retry, and truncation
 - `services/ai/reranker.service.ts`: `rerank()` LLM-as-reranker using gpt-4o-mini
@@ -247,6 +268,7 @@ Updates:
 - `services/ai/question-selector.service.ts`: `selectNextQuestion()` LLM-driven selector for evaluations
 
 #### utils/mcq-prompts (Phase 2 Refactor)
+
 - `utils/mcq-prompts/shared.utils.ts`: Common formatting helpers (contextLines, examples, labels, neighbors)
 - `utils/mcq-prompts/generator-prompt.utils.ts`: `buildGeneratorMessages()` with few-shot/chain-of-thought modes
 - `utils/mcq-prompts/reviser-prompt.utils.ts`: `buildReviserMessages()` for MCQ revision

@@ -1,12 +1,12 @@
-import type { IMcqItemView, EDifficulty, EBloomLevel } from "@/types/mcq.types";
-import { EPromptMode, EQuestionStyle } from "@/types/mcq.types";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
+import { EBloomLevel, EDifficulty, EPromptMode, IMcqItemView } from "@/types/mcq.types";
 import { parseJsonObject } from "@/utils/json.utils";
 import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
-import { createOpenAIClient } from "./openai.services";
+import { createOpenAIClient } from "@/services/openai.services";
+import { EQuestionStyle } from "@/types/mcq.types";
 
 /**
  * generateMcqFromContext

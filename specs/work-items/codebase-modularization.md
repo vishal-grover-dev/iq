@@ -339,41 +339,54 @@ hooks/
 - [ ] Create folder structures.
 - [ ] No breaking changes to public APIs; maintain re-export index files.
 
-### Phase 2: Services Refactor
+### Phase 2: Services Refactor & Supabase Migration
 
-- [x] Create `services/ai/` folder structure with `openai.services.ts`
-  - Created with shared OpenAI client instantiation and error utilities (`getErrorStatus`, `getErrorMessage`, `createOpenAIClient`) in `openai.services.ts`
-  - Centralizes OpenAI setup to avoid duplication across services
-- [x] Create `services/ai/embeddings.service.ts`
-  - Extracted `getEmbeddings()` with batching, retry logic, and truncation support (~70 lines)
-- [x] Create `services/ai/reranker.service.ts`
-  - Extracted `rerank()` LLM-as-reranker function (~40 lines)
-- [x] Create `services/ai/labeling.service.ts`
-  - Extracted `classifyLabels()` strict classifier with whitelist ontology (~70 lines)
-- [x] Create `services/ai/mcq-generation.service.ts`
-  - Extracted `generateMcqFromContext()` with schema validation, repair passes, and style inference (~380 lines)
-  - Includes helper functions: `buildQuestionStyleInstruction()`, `inferQuestionStyle()`, `buildStyleInstruction()`
-- [x] Create `services/ai/mcq-revision.service.ts`
-  - Extracted `reviseMcqWithContext()` with context-aware revisions (~110 lines)
-- [x] Create `services/ai/mcq-judge.service.ts`
-  - Extracted `judgeMcqQuality()` quality assessment with duplicate risk detection (~50 lines)
-- [x] Create `services/ai/question-selector.service.ts`
-  - Extracted `selectNextQuestion()` LLM-driven selector with fallback logic (~130 lines)
-- [x] Update `utils/mcq-prompts/` folder structure and split builders
-  - Created `utils/mcq-prompts/` directory with 6 files:
-    - `shared.utils.ts`: Common formatting helpers (contextLines, examples, labels, neighbors)
-    - `generator-prompt.utils.ts`: `buildGeneratorMessages()` with few-shot and chain-of-thought support
-    - `reviser-prompt.utils.ts`: `buildReviserMessages()` for MCQ revision workflow
-    - `judge-prompt.utils.ts`: `buildJudgeMessages()` for quality judgment
-    - `selector-prompt.utils.ts`: `generateQuestionPrompt()` for LLM-driven question selection
-- [x] Full build and TypeScript verification
-  - All new service modules compile successfully
-  - Build time: 11.0s
-  - No new TypeScript errors introduced (pre-existing linting issues in evaluate routes remain)
-- [x] Updated all imports in new services to reference correct modules
-  - Each service imports only its dependencies (client, utils, constants, types)
-  - MCQ services import from new `utils/mcq-prompts/` modules
-  - Selector service imports `generateQuestionPrompt` from `selector-prompt.utils.ts`
+#### Supabase Migration
+
+- [x] Move `utils/supabase.utils.ts` → `services/supabase.services.ts`
+  - Properly categorizes Supabase as a service (API-calling layer, not utility)
+  - Updated 18 files across codebase with new import paths
+  - Consistency: Services = external API calls; Utils = pure logic/helpers
+
+#### AI Services Consolidation (Domain-Grouped, <300 lines max)
+
+- [x] Consolidate `embeddings.service.ts` (~70 lines) + `reranker.service.ts` (~40 lines) → `embedding.service.ts` (~110 lines)
+  - Both embedding operations grouped by domain
+  - Exports: `getEmbeddings()` and `rerank()`
+- [x] Consolidate `mcq-revision.service.ts` (~110 lines) + `mcq-judge.service.ts` (~50 lines) → `mcq-refinement.service.ts` (~160 lines)
+  - Post-generation refinement pipeline (revision + judgment)
+  - Exports: `reviseMcqWithContext()` and `judgeMcqQuality()`
+- [x] Keep as-is (focused, <300 lines):
+  - `labeling.service.ts` (~70 lines): `classifyLabels()`
+  - `question-selector.service.ts` (~130 lines): `selectNextQuestion()`
+  - `mcq-generation.service.ts` (~380 lines): `generateMcqFromContext()` - core logic
+  - `crawl-heuristics.service.ts` (TBD): Web crawl utilities
+  - `openai.services.ts` (~40 lines): Shared OpenAI client + error utilities
+
+#### Import Updates
+
+- [x] Updated 8 API routes to use consolidated services:
+  - `app/api/retrieval/query/route.ts`: Uses `embedding.service`
+  - `app/api/generate/mcq/route.ts`: Uses `mcq-refinement.service`
+  - `app/api/generate/mcq/revise/route.ts`: Uses `mcq-refinement.service`
+  - `app/api/evaluate/attempts/[id]/route.ts`: Uses `embedding.service` + `supabase.services`
+  - 4 ingest routes: Updated to use `supabase.services`
+
+#### Cleanup
+
+- [x] Deleted old service files:
+  - `services/ai/embeddings.service.ts`
+  - `services/ai/reranker.service.ts`
+  - `services/ai/mcq-revision.service.ts`
+  - `services/ai/mcq-judge.service.ts`
+- [x] Deleted old util:
+  - `utils/supabase.utils.ts`
+
+#### Build & Verification
+
+- [x] Full TypeScript compilation: ✓ Compiled successfully (4.5s)
+- [x] No new linter errors introduced in new/modified service files
+- [x] Pre-existing ESLint issues remain (not introduced by refactoring)
 
 ### Phase 3: Component Refactors
 

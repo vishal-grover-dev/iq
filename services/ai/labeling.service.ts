@@ -3,7 +3,7 @@ import { OPENAI_CONFIG, OPENAI_PROMPTS, AI_SERVICE_ERRORS } from "@/constants/ge
 import { parseJsonObject } from "@/utils/json.utils";
 import { LABEL_RESOLVER_MIN_CONFIDENCE } from "@/constants/app.constants";
 import { getStaticSubtopicMap } from "@/utils/static-ontology.utils";
-import { createOpenAIClient } from "./openai.services";
+import { createOpenAIClient } from "@/services/openai.services";
 
 /**
  * classifyLabels

@@ -62,7 +62,7 @@ export enum EResultsPageLabels {
   EXPERT_TIER = "Expert Tier",
   EXPERT_HEADLINE = "Outstanding mastery!",
   EXPERT_DESCRIPTION = "You nailed this attempt with interview-ready precision. Keep the momentum going!",
-  PROFICIENT_TIER = "Proficient Tier", 
+  PROFICIENT_TIER = "Proficient Tier",
   PROFICIENT_HEADLINE = "You're on track!",
   PROFICIENT_DESCRIPTION = "Great performance across core topics. A few focused reps will unlock the next tier.",
   DEVELOPING_TIER = "Developing Tier",
@@ -370,3 +370,98 @@ export interface IAttemptContext {
   recent_subtopics: string[];
   asked_question_ids: string[];
 }
+
+/**
+ * Selection method used to assign a question
+ */
+export enum ESelectionMethod {
+  BANK_TOPK = "bank_topk",
+  GENERATED_ON_DEMAND = "generated_on_demand",
+  EXISTING_PENDING = "existing_pending",
+  BANK_EXISTING_ORDER = "bank_existing_order",
+  FALLBACK_ASSIGNMENT = "fallback_assignment",
+}
+
+/**
+ * Similarity gate that triggered rejection
+ */
+export enum ESimilarityGate {
+  ATTEMPT_EMBEDDING = "attempt_similarity_high_embedding",
+  ATTEMPT_TEXT = "attempt_similarity_high_text_similarity",
+  ATTEMPT_EXACT = "attempt_similarity_exact_text_match",
+  NEIGHBOR = "neighbor_similarity_high",
+  CONTENT_KEY = "content_key_match_in_attempt",
+}
+
+/**
+ * Question difficulty distribution
+ */
+export type TDistributions = {
+  easy_count: number;
+  medium_count: number;
+  hard_count: number;
+  coding_count: number;
+  topic_distribution: Record<string, number>;
+  subtopic_distribution: Record<string, number>;
+  bloom_distribution: Record<string, number>;
+};
+
+/**
+ * Similarity metrics for a candidate
+ */
+export type TSimilarityMetrics = {
+  attempt_similarity?: {
+    scores: number[];
+    top_score: number;
+  };
+  neighbor_similarity?: {
+    scores: number[];
+    top_score: number;
+  };
+};
+
+/**
+ * Candidate with similarity scoring
+ */
+export type TCandidateWithSimilarity = {
+  id: string;
+  topic: string;
+  subtopic: string;
+  difficulty: EDifficulty;
+  bloom_level: EBloomLevel;
+  question: string;
+  options: string[];
+  code: string | null;
+  embedding?: number[] | null;
+  _seenRecently?: boolean;
+  similarityPenalty: number;
+  similarityMetrics: TSimilarityMetrics;
+};
+
+/**
+ * Scored candidate for selection
+ */
+export type TScoredCandidate = TCandidateWithSimilarity & {
+  score: number;
+};
+
+/**
+ * LLM selector output
+ */
+export type TSelectionCriteria = {
+  difficulty: EDifficulty;
+  coding_mode: boolean;
+  preferred_topic?: string;
+  preferred_subtopic?: string;
+  preferred_bloom_level: EBloomLevel;
+};
+
+/**
+ * Question assignment result
+ */
+export type TQuestionAssignmentResult = {
+  success: boolean;
+  question_id: string;
+  method: ESelectionMethod;
+  error?: string;
+};

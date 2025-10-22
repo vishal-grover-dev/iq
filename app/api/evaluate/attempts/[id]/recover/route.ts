@@ -104,27 +104,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         // Call the question selection logic to generate a question for this order
         // This will trigger the same logic as the GET /api/evaluate/attempts/:id endpoint
-        const { selectNextQuestion, getEmbeddings } = await import("@/services/ai.services");
-        const { weightedRandomIndex, calculateCoverageWeights } = await import("@/utils/selection.utils");
-        const { getStaticTopicList, getStaticSubtopicMap } = await import("@/utils/static-ontology.utils");
+        // Note: Not using these directly in recovery, but left as reference for future enhancement
+        // const { getEmbeddings } = await import("@/services/ai/embedding.service");
+        // const { weightedRandomIndex, calculateCoverageWeights } = await import("@/utils/selection.utils");
+        // const { getStaticTopicList, getStaticSubtopicMap } = await import("@/utils/static-ontology.utils");
 
         // Build attempt context from existing questions
-        const distributions = assigned.reduce(
-          (acc, q: any) => {
-            // We need to fetch the MCQ details to get topic/subtopic info
-            // For now, use a simplified approach
-            return acc;
-          },
-          {
-            easy_count: 0,
-            medium_count: 0,
-            hard_count: 0,
-            coding_count: 0,
-            topic_distribution: {} as Record<string, number>,
-            subtopic_distribution: {} as Record<string, number>,
-            bloom_distribution: {} as Record<string, number>,
-          }
-        );
+        // (Simplified for recovery - not needed for basic fallback assignment)
+        // const distributions = assigned.reduce(
+        //   (acc: TDistributions, _q: any) => acc,
+        //   { ... }
+        // );
 
         // For recovery, use a simple fallback approach
         // Generate a basic question assignment without complex logic

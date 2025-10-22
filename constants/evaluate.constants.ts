@@ -162,3 +162,73 @@ export const WEAK_AREA_ACCURACY_TIERS = [
  * Confetti colors for celebration
  */
 export const CONFETTI_COLORS = ["#34d399", "#22c55e", "#fde047", "#38bdf8", "#f97316"] as const;
+
+/**
+ * Question selection and similarity configuration
+ */
+export const EVALUATE_SELECTION_CONFIG = {
+  // Similarity thresholds for duplicate detection
+  SIMILARITY: {
+    ATTEMPT_THRESHOLD: 0.85, // Similarity check threshold for questions already asked in attempt
+    BANK_THRESHOLD_HIGH: 0.92, // High similarity threshold for bank candidates
+    BANK_THRESHOLD_MEDIUM: 0.85, // Medium similarity threshold for bank candidates
+    TEXT_SIMILARITY_JACCARD_THRESHOLD: 0.7, // Jaccard similarity for text-based comparison
+  },
+
+  // Penalty scores applied to candidates for similarity issues
+  PENALTIES: {
+    BANK_SIMILARITY_HIGH: 50, // High penalty for high similarity to attempt questions
+    BANK_SIMILARITY_MEDIUM: 25, // Medium penalty for medium similarity to attempt questions
+    BANK_NEIGHBOR_HIGH: 30, // High penalty for high similarity to other questions
+    BANK_NEIGHBOR_MEDIUM: 15, // Medium penalty for medium similarity to other questions
+    CROSS_ATTEMPT_FRESHNESS: 15, // Penalty for questions seen recently in other attempts
+  },
+
+  // Topic balance configuration
+  TOPIC_BALANCE: {
+    LIMIT: 24, // Maximum questions from a single topic (40% of 60)
+    EARLY_STAGE_CAP: 18, // Early attempt cap (≤20 questions): 30% of 60
+    MID_STAGE_CAP: 24, // Mid attempt cap (21-40 questions): 40% of 60
+    EARLY_STAGE_THRESHOLD: 20, // Number of questions to consider "early stage"
+    MID_STAGE_THRESHOLD: 40, // Number of questions to consider "mid stage"
+    EARLY_PENALTY: 40, // Penalty for exceeding early stage cap
+    MID_PENALTY: 25, // Penalty for exceeding mid stage cap
+  },
+
+  // Scoring boosts for candidate preferences
+  CANDIDATE_SCORING: {
+    TOPIC_BOOST: 50, // Boost for preferred topic match
+    SUBTOPIC_BOOST: 30, // Boost for preferred subtopic match
+    BLOOM_BOOST: 20, // Boost for preferred Bloom level match
+    CODING_BOOST: 40, // Boost for coding mode match when requested
+    TOPK_COUNT: 8, // Number of top candidates for stochastic selection
+  },
+
+  // MCQ generation configuration
+  GENERATION: {
+    MAX_ATTEMPTS: 3, // Maximum generation retry attempts
+    INITIAL_ATTEMPT: 1, // First attempt number
+    RELAXATION_STEPS: 2, // Number of relaxation steps before max attempts
+    NEGATIVE_EXAMPLES_LIMIT: 25, // Maximum negative examples to maintain
+    NEGATIVE_EXAMPLES_LOOKAHEAD: 20, // Questions to look back for negative examples
+    NEIGHBOR_TOPK: 8, // Number of neighbors to check during generation
+    NEIGHBOR_HIGH_SIMILARITY_THRESHOLD: 0.92, // Threshold for neighbor similarity gate
+  },
+
+  // Assignment retry configuration
+  ASSIGNMENT: {
+    MAX_RETRIES: 3, // Maximum retry attempts for question assignment
+    INITIAL_RETRY: 0, // Starting retry count
+    EXPONENTIAL_BACKOFF_BASE_MS: 100, // Base milliseconds for exponential backoff (100ms, 200ms, 400ms)
+  },
+
+  // Bank query configuration
+  BANK_QUERY: {
+    LIMIT: 20, // Candidate pool size to query from bank
+  },
+
+  // Recent questions tracking for cross-attempt freshness
+  RECENT_ATTEMPTS: {
+    LOOK_BACK_COUNT: 2, // Number of recent completed attempts to check for freshness
+  },
+} as const;

@@ -135,4 +135,3 @@ export function selectTopKWithWeights(scoredCandidates: TScoredCandidate[]): TSc
 
   return [...topK.slice(chosenIdx, chosenIdx + 1), ...topK.slice(0, chosenIdx), ...scoredCandidates.slice(K)];
 }
-

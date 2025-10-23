@@ -1,7 +1,7 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosError } from "axios";
 import { NEXT_PUBLIC_APP_URL } from "@/constants/app.constants";
 
-function createBaseClient(baseURL: string, config?: { withAuth?: boolean }): AxiosInstance {
+function createBaseClient(baseURL: string): AxiosInstance {
   const instance = axios.create({ baseURL, withCredentials: true });
   instance.interceptors.request.use((req) => {
     // Attach any shared headers here
@@ -44,8 +44,9 @@ export async function externalGetWithRetry(
     try {
       const res = await externalClient.get(url, { responseType: "text", transformResponse: [(d) => d] });
       return typeof res.data === "string" ? res.data : String(res.data ?? "");
-    } catch (err: any) {
-      const status: number | undefined = err?.response?.status;
+    } catch (err) {
+      const error = err as AxiosError;
+      const status: number | undefined = error?.response?.status;
       if (typeof status === "number") {
         if (status === 429) {
           await new Promise((r) => setTimeout(r, delayMs * attempt * 2));

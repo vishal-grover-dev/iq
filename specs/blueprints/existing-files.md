@@ -109,7 +109,7 @@
 
 ### types
 
-- `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`, and animation enums (`EAnimationDuration`, `EAnimationTranslate`, `EAnimationScale`) with `ANIMATION_EASING` constant for Framer Motion cubic bezier arrays.
+- `app.types.ts`: Application-wide TypeScript types including `ETheme`, `TResolvedTheme`, `IThemeContextValue`, animation enums, and **Phase 1 additions: `IApiResponse<T>`, `IPaginated<T>`, `TResult<T, E>`, `TDomainError`** for standardized API responses and error handling across services.
 - `upload.types.ts`: Types for the upload flow. Includes Interview Streams types and `TUploadState`. Academic types removed. `IInterviewIngestItem.depth` supports 0-4. **Phase 3: Added `TPlanData` and `TWebPlanData` types for planning.**
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.

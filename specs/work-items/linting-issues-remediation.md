@@ -2,11 +2,42 @@
 
 ## Overview
 
-The codebase currently has **285 linting issues** (246 errors, 39 warnings) that need systematic remediation. This work item outlines a comprehensive approach to fix these issues properly without using `ts-nocheck` or other workarounds.
+The codebase currently has **282 linting issues** (244 errors, 38 warnings) that need systematic remediation. This work item outlines a comprehensive approach to fix these issues properly without using `ts-nocheck` or other workarounds.
+
+## Progress Log
+
+| Phase | Date | Errors → | Warnings → | Build | Notes |
+|------|------|----------|------------|-------|-------|
+| P0 Baseline | 2025-01-15 | 246 | 39 | ✓ | Baseline snapshot |
+| P1 Types Foundation | 2025-01-15 | 244 | 38 | ✗ (lint only) | Created shared API types, updated http/json utils |
+
+## Phase 1 — Impact Map & Changelog
+
+### What Changed
+- Created `types/app.types.ts`: Added `IApiResponse<T>`, `IPaginated<T>`, `TResult<T, E>`, `TDomainError` following conventions (I prefix for interfaces, T prefix for types).
+- Deleted temporary files: `types/api.types.ts`, `types/error.types.ts`.
+- Updated `utils/json.utils.ts`: Replaced `T = any` with constrained generic `T extends Record<string, unknown> = Record<string, unknown>`.
+- Updated `services/http.services.ts`: Removed unused `config` parameter; replaced `err: any` with proper `AxiosError` type.
+
+### Files Modified
+- `types/app.types.ts` (added 21 lines)
+- `utils/json.utils.ts` (improved generic constraint)
+- `services/http.services.ts` (removed unused param, fixed error type)
+
+### Blast Radius
+No call site updates needed; generic constraint is backward-compatible and internal refactor.
+
+### Issues Fixed
+- `json.utils.ts` line 5: `any` → constrained generic (1 error)
+- `http.services.ts` line 4: unused param removed (1 warning)
+- `http.services.ts` line 47: `err: any` → `AxiosError` (1 error)
+
+### Behavior Unchanged
+Runtime behavior identical; types only.
 
 ## Issue Analysis
 
-### Total Issues: 285
+### Total Issues: 282
 
 - **246 errors** (must fix)
 - **39 warnings** (should fix)

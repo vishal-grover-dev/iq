@@ -63,3 +63,28 @@ export const ANIMATION_EASING = {
   /** Ease in - subtle entrance */
   easeIn: [0.4, 0, 1, 1] as const,
 } as const;
+
+// API Response & Data Types
+export interface IApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface IPaginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export type TResult<T, E extends Error = Error> =
+  | { ok: true; value: T }
+  | { ok: false; error: E };
+
+// Error Types
+export type TDomainError =
+  | { kind: "ValidationError"; details: string }
+  | { kind: "NotFound"; resource: string }
+  | { kind: "ExternalServiceError"; service: string; message: string }
+  | { kind: "Unknown"; message: string };

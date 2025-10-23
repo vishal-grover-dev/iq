@@ -131,7 +131,7 @@
 - `repo.utils.ts`: GitHub repo Markdown fetch/list helpers for doc ingestion.
 - `web-crawler.utils.ts`: Simple crawler respecting robots.txt with domain/prefix limits.
 - `intelligent-web-adapter.utils.ts`: Universal intelligent web crawling helpers for content extraction and quality checks (URL heuristics for labels removed; classifier-only).
-- `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging.
+- `interview-streams.utils.ts`: Interview Streams catalog runner (`runCatalogIngestion`) with concurrency and logging. Phase 4: In-place delegation to existing utilities (uses `utils/url.utils.ts` for normalization; removed local normalizer helper).
 - `label-resolver.utils.ts`: Classifier-only resolver using OpenAI with whitelist ontology, URL/path caching, hints precedence, and metrics.
 - `vector.utils.ts`: Vector utilities for converting embeddings and computing cosine similarity (`toNumericVector`, `cosineSimilarity`). **Phase 1 modularization.**
 - `catalog.utils.ts`: Catalog management helpers for loading ingestion catalog and deriving subtopics (`loadIngestCatalog`, `getSubtopicsFromCatalog`). **Phase 1 modularization.**

@@ -28,11 +28,6 @@ export async function runCatalogIngestion(params?: {
 
   logger.info("[ingest] starting", { topicKeys, maxConcurrency, waitUntilComplete });
 
-  // URL normalization for dedupe and host grouping
-  function normalizeUrl(raw: string): string {
-    return normalizeUrlShared(raw);
-  }
-
   const seenNormalized = new Set<string>();
   const rawToNormalized = new Map<string, string>();
   const normalizedToRaw = new Map<string, string>();
@@ -51,7 +46,7 @@ export async function runCatalogIngestion(params?: {
       }
       if (!item.url) continue;
       if (item.ingestType === "web") {
-        const norm = normalizeUrl(item.url);
+        const norm = normalizeUrlShared(item.url);
         rawToNormalized.set(item.url, norm);
         // Track all raw URLs mapping to the same normalized URL (for later flag propagation)
         const bucket = normalizedToRaws.get(norm) ?? new Set<string>();

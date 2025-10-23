@@ -114,7 +114,7 @@
 - `ingest.types.ts`: Ingestion request/response, embedding types, and chunk types.
 - `mcq.types.ts`: MCQ view models, difficulty enum, Bloom enum, and revision interfaces including TReviserBuildArgs.
 - `interview-streams.types.ts`: Interfaces for catalog items, catalog map, run results, and logger.
-- `evaluate.types.ts`: Types for evaluation feature including attempt status, questions, results, analytics, and LLM selector interfaces.
+- `evaluate.types.ts`: Types for evaluation feature including attempt status, questions, results, analytics, and LLM selector interfaces. **Phase 4: Enhanced with T-prefixed types (`TDistributions`, `TCandidateWithSimilarity`, `TSimilarityMetrics`, `TSelectionCriteria`, `TQuestionAssignmentResult`, `TScoredCandidate`) and E-prefixed enums (`ESelectionMethod`, `ESimilarityGate`).**
 
 ### schema
 
@@ -137,6 +137,11 @@
 - `catalog.utils.ts`: Catalog management helpers for loading ingestion catalog and deriving subtopics (`loadIngestCatalog`, `getSubtopicsFromCatalog`). **Phase 1 modularization.**
 - `ingest-preflight.utils.ts`: Preflight validation utilities for marking completed ingestions and preventing duplicates (`persistEmbeddedFlags`). **Phase 1 modularization.**
 - `mcq-retrieval.utils.ts`: MCQ retrieval helpers for context, neighbors, and recent questions (`retrieveContextByLabels`, `retrieveNeighbors`, `getRecentQuestions`). **Phase 1 modularization.**
+
+- `evaluate-attempt-guard.utils.ts`: Attempt validation and fetching utilities (`fetchAttemptOrFail`, `checkCompletionStatus`, `findExistingPendingQuestion`, `validateAttemptQuestions`). Handles auth, completion checks, and race condition detection. **Phase 4: Evaluate route modularization.**
+- `evaluate-context-builder.utils.ts`: Distribution and context building utilities (`calculateDistributions`, `buildSelectionContext`, `identifyOverrepresentedTopics`, `fetchRecentAttemptQuestions`). Stage-aware topic balancing and cross-attempt freshness tracking. **Phase 4: Evaluate route modularization.**
+- `evaluate-candidate-scorer.utils.ts`: Candidate similarity checking and scoring utilities (`applyNeighborSimilarityChecks`, `scoreCandidate`, `selectTopKWithWeights`). Parallel embedding checks with preference-based scoring and stochastic selection. **Phase 4: Evaluate route modularization.**
+- `evaluate-assignment-executor.utils.ts`: Question assignment and generation utilities (`assignQuestionWithRetry`, `persistGeneratedMcq`, `ensureQuestionAssigned`, `generateMcqFallback`). Exponential backoff retry, MCQ persistence with duplicate handling, and fallback generation with 3 retry attempts. **Phase 4: Evaluate route modularization.**
 
 - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
@@ -177,6 +182,10 @@
 - `ai/question-selector.service.ts`: LLM-driven question selection for evaluations. Exports: `selectNextQuestion()`. (~130 lines)
 - `ai/crawl-heuristics.service.ts`: Web crawl heuristics and utilities.
 
+#### Evaluate Selection (Phase 4 Refactor)
+
+- `evaluate-selection.service.ts`: **NEW** Orchestrator service for question selection pipeline. Exports: `selectNextQuestionForAttempt()` with comprehensive JSDoc. Implements 5-stage pipeline (Guard → Context → Bank Query → Scoring → Assignment) with race condition handling, generation fallback, and emergency fallback assignment. (~445 lines) **Phase 4: Evaluate route modularization.**
+
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
@@ -184,6 +193,7 @@
 - `ui.constants.ts`: Consolidated UI-related constants including theme labels/config (THEME_CONFIG), footer content (FOOTER_CONFIG), and common UI labels (COMMON_LABELS, FORM_LABELS, STATUS_LABELS, ACCESSIBILITY_LABELS). Replaces separate theme.constants.ts and footer.constants.ts.
 - `app.constants.ts`: Feature flags for label resolver and confidence threshold.
 - `api.constants.ts`: Centralized API infrastructure constants including HTTP_STATUS_CODES, API_ERROR_MESSAGES, API_RESPONSE_KEYS, CONTENT_TYPES, and VALIDATION_ERRORS. Shared across all API routes and services.
+- `evaluate.constants.ts`: Question selection configuration with similarity thresholds, penalties, topic balance limits, candidate scoring boosts, generation retry config, and assignment retry settings. **Phase 4: Consolidated from evaluate route.**
 
 ### data
 
@@ -263,6 +273,13 @@ Updates:
   - Deleted `data/interview-target-weights.json` (replaced by LLM generation in ontology cache).
   - `README.md`: Added ontology system documentation.
   - `scripts/generate-ontology.ts`: Now optional pre-warming script; not required for runtime.
+- **2025-10-XX - Phase 4: Evaluate Route Refactoring (COMPLETED)**:
+  - Created `constants/evaluate.constants.ts`: Consolidated similarity thresholds, penalties, topic balance, generation config, and assignment retry settings.
+  - Enhanced `types/evaluate.types.ts`: Added 7 new types/enums (T/E prefixes) for distributions, candidates, similarity metrics, and selection criteria.
+  - Created 4 utility modules in `utils/`: `evaluate-attempt-guard.utils.ts`, `evaluate-context-builder.utils.ts`, `evaluate-candidate-scorer.utils.ts`, `evaluate-assignment-executor.utils.ts` (85-345 lines each).
+  - Created `services/evaluate-selection.service.ts`: Orchestrator service with 5-stage pipeline and comprehensive JSDoc (~445 lines).
+  - Refactored `app/api/evaluate/attempts/[id]/route.ts`: Reduced from 1,395 to 90 lines; GET handler now 30 lines calling orchestrator.
+  - Build status: ✓ Compiled in 4.1s; zero new linting errors; full backward compatibility.
 
 #### services/ai (Phase 2 Refactor)
 

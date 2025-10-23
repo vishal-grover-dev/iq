@@ -125,3 +125,24 @@ export interface IGitHubTreeItem {
 export interface IGitHubTreeResponse {
   tree: IGitHubTreeItem[];
 }
+
+// Ingestion status response types
+export interface IIngestionStatusResponse {
+  ok: boolean;
+  id: string;
+  status: string;
+  error?: string | null;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  progress?: Record<string, unknown>;
+  inflight?: Record<string, unknown>;
+}
+
+export interface IWebPlanResponse {
+  ok: boolean;
+  count: number;
+  pages: Array<{ url: string; title?: string }>;
+  sections?: Record<string, unknown>;
+  quotas?: { requested: number };
+  debug?: Record<string, unknown>;
+}

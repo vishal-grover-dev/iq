@@ -1,6 +1,7 @@
 import { ingestResponseSchema, TIngestRepoOrWebRequest } from "@/schema/ingest.schema";
 import { apiClient } from "@/services/http.services";
 import { useMutation } from "@tanstack/react-query";
+import type { IIngestionStatusResponse, IWebPlanResponse } from "@/types/ingestion.types";
 
 /**
  * Client helper for repo/web ingestion (server performs fetch/parse/chunk/embed).
@@ -23,16 +24,7 @@ export function useIngestRepoWebMutations() {
  */
 export async function getIngestionStatus(ingestionId: string) {
   const res = await apiClient.get(`/api/ingest/${ingestionId}`);
-  return res.data as {
-    ok: boolean;
-    id: string;
-    status: string;
-    error?: string | null;
-    created_at: string;
-    metadata: any;
-    progress?: any;
-    inflight?: any;
-  };
+  return res.data as IIngestionStatusResponse;
 }
 
 /**
@@ -73,15 +65,7 @@ export async function planWebIngestion(params: {
   applyQuotas?: boolean;
 }) {
   const res = await apiClient.post("/api/ingest/web/plan", params);
-  return res.data as {
-    ok: boolean;
-    count: number;
-    pages: Array<{ url: string; title?: string }>;
-  } & {
-    sections?: any;
-    quotas?: { requested: number } | undefined;
-    debug?: any;
-  };
+  return res.data as IWebPlanResponse;
 }
 
 /**

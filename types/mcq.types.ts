@@ -103,3 +103,36 @@ export type TReviserBuildArgs = {
   instruction: string;
   contextItems: Array<{ title?: string | null; url: string; content: string }>;
 };
+
+/**
+ * LLM response types for MCQ generation
+ */
+export interface IMcqGenerationRawResponse {
+  topic?: string;
+  subtopic?: string;
+  version?: string | null;
+  difficulty?: string;
+  bloomLevel?: string;
+  question?: string;
+  options?: unknown[];
+  correctIndex?: number;
+  citations?: Array<{ title?: string; url?: string }>;
+  explanation?: string;
+  explanationBullets?: unknown[];
+  code?: string;
+  [key: string]: unknown;
+}
+
+export interface IMcqJudgeResponse {
+  verdict?: "approve" | "revise";
+  reasons?: unknown[];
+  suggestions?: unknown[];
+  [key: string]: unknown;
+}
+
+export interface ICrawlHeuristicsResponse {
+  includePatterns?: unknown[];
+  seeds?: unknown[];
+  depthMap?: Record<string, unknown>;
+  [key: string]: unknown;
+}

@@ -1,6 +1,6 @@
 import { apiClient } from "@/services/http.services";
 import type { IMcqItemView } from "@/types/mcq.types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, type QueryKey } from "@tanstack/react-query";
 import type {
   TRetrievalRequest as IRetrievalRequest,
   TRetrievalResponse as IRetrievalResponse,
@@ -79,7 +79,7 @@ export async function postRetrievalEnhanceQuery(
   return data as IRetrievalEnhancementResponse;
 }
 
-export function useRetrievalQuery(key: any[], enabled: boolean, fn: () => Promise<IRetrievalResponse>) {
+export function useRetrievalQuery(key: QueryKey, enabled: boolean, fn: () => Promise<IRetrievalResponse>) {
   return useQuery({ queryKey: key, queryFn: fn, enabled });
 }
 

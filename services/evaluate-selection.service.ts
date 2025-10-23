@@ -1,5 +1,11 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { ESelectionMethod, EAttemptStatus } from "@/types/evaluate.types";
+import {
+  ESelectionMethod,
+  EAttemptStatus,
+  IBankCandidate,
+  IBankCandidateWithMetadata,
+  IAttemptQuestion,
+} from "@/types/evaluate.types";
 import { selectNextQuestion as callLLMSelector } from "@/services/ai/question-selector.service";
 import {
   fetchAttemptOrFail,
@@ -25,6 +31,8 @@ import {
 } from "@/utils/evaluate-assignment-executor.utils";
 import { toNumericVector } from "@/utils/vector.utils";
 import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
+import { ICandidateWithSimilarity } from "@/types/evaluate.types";
+import { IAttemptContext } from "@/types/evaluate.types";
 
 /**
  * Select the next question for a user attempt using a multi-stage adaptive pipeline.
@@ -113,7 +121,7 @@ export async function selectNextQuestionForAttempt(
         .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
         .eq("id", existingPending.question_id)
         .single();
-      if (fallbackMcq) mcq = fallbackMcq as any;
+      if (fallbackMcq) mcq = fallbackMcq as IBankCandidate;
     }
 
     if (mcq && mcq.id && Array.isArray(mcq.options) && mcq.options.length > 0) {
@@ -184,10 +192,12 @@ export async function selectNextQuestionForAttempt(
 
   // Build asked content keys for similarity checks
   const askedContentKeySet = new Set<string>(
-    asked.map((q: any) => String(q?.mcq_items?.content_key || "")).filter((s: string) => s.length > 0)
+    asked.map((q: IAttemptQuestion) => String(q?.mcq_items?.content_key || "")).filter((s: string) => s.length > 0)
   );
 
-  const askedIdSet = new Set<string>(asked.map((q: any) => q.question_id).filter((id: any) => typeof id === "string"));
+  const askedIdSet = new Set<string>(
+    asked.map((q: IAttemptQuestion) => q.question_id).filter((id: string) => typeof id === "string")
+  );
 
   // Fetch recent questions for cross-attempt freshness
   const recentIdSet = await fetchRecentAttemptQuestions(userId, supabase);
@@ -221,14 +231,14 @@ export async function selectNextQuestionForAttempt(
 
   // Filter primary candidates
   const filteredPrimary = (candidates || [])
-    .filter((c: any) => !askedIdSet.has(c.id))
-    .map((c: any) => ({ ...c, _seenRecently: recentIdSet.has(c.id) }));
+    .filter((c: IBankCandidate) => !askedIdSet.has(c.id))
+    .map((c: IBankCandidate) => ({ ...c, _seenRecently: recentIdSet.has(c.id) }));
 
   console.log("candidate_pool_primary", {
     attempt_id: attemptId,
     raw_count: (candidates || []).length,
     filtered_count: filteredPrimary.length,
-    seen_recently_count: filteredPrimary.filter((c: any) => c._seenRecently).length,
+    seen_recently_count: filteredPrimary.filter((c) => c._seenRecently).length,
     overrepresented_excluded: overrepresentedTopics,
     coding_required: !!criteria.coding_mode,
   });
@@ -353,7 +363,7 @@ export async function selectNextQuestionForAttempt(
   }
 
   const candidatesWithSimilarity = await applyNeighborSimilarityChecks(
-    filteredPrimary,
+    filteredPrimary.map((c) => ({ ...c, similarityPenalty: 0, similarityMetrics: {} })) as ICandidateWithSimilarity[],
     askedEmbeddings,
     userId,
     supabase,
@@ -362,7 +372,7 @@ export async function selectNextQuestionForAttempt(
 
   const scoredCandidates = candidatesWithSimilarity.map((candidate) => ({
     ...candidate,
-    score: scoreCandidate(candidate, criteria, distributions, attempt),
+    score: scoreCandidate(candidate, criteria, distributions, distributions as IAttemptContext),
   }));
 
   scoredCandidates.sort((a, b) => b.score - a.score);
@@ -370,7 +380,7 @@ export async function selectNextQuestionForAttempt(
   // Stage 5: Assignment - Stochastic top-K selection with fallback
   const selectionOrder = selectTopKWithWeights(scoredCandidates);
   const nextOrder = attempt.questions_answered + 1;
-  let final: any | null = null;
+  let final: IBankCandidate | null = null;
 
   for (const candidate of selectionOrder) {
     const { success, assigned_question_id } = await assignQuestionWithRetry(
@@ -389,14 +399,14 @@ export async function selectNextQuestionForAttempt(
         .eq("question_order", nextOrder)
         .single();
 
-      let selectedForResponse = candidate;
+      let selectedForResponse: IBankCandidate = candidate;
       if (assignedRow && assignedRow.question_id && assignedRow.question_id !== candidate.id) {
         const { data: assignedMcq } = await supabase
           .from("mcq_items")
           .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
           .eq("id", assignedRow.question_id)
           .single();
-        if (assignedMcq) selectedForResponse = assignedMcq as any;
+        if (assignedMcq) selectedForResponse = assignedMcq as IBankCandidate;
       }
 
       final = selectedForResponse;
@@ -422,7 +432,7 @@ export async function selectNextQuestionForAttempt(
         .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
         .eq("id", fallbackId)
         .single();
-      if (fallbackMcq) final = fallbackMcq;
+      if (fallbackMcq) final = fallbackMcq as IBankCandidate;
     }
   }
 
@@ -442,7 +452,7 @@ export async function selectNextQuestionForAttempt(
           code: final.code || null,
           metadata: {
             topic: final.topic,
-            subtopic: final.subtopic,
+            subtopic: final.subtopic || "",
             difficulty: final.difficulty,
             bloom_level: final.bloom_level,
             question_order: nextOrder,
@@ -452,5 +462,3 @@ export async function selectNextQuestionForAttempt(
       : null,
   };
 }
-
-

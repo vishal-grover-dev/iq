@@ -1,12 +1,12 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
-import { EBloomLevel, EDifficulty, EPromptMode, IMcqItemView } from "@/types/mcq.types";
+import type { IMcqItemView, IMcqGenerationRawResponse, TCitation } from "@/types/mcq.types";
+import { EDifficulty, EBloomLevel, EPromptMode, EQuestionStyle } from "@/types/mcq.types";
 import { parseJsonObject } from "@/utils/json.utils";
 import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
 import { createOpenAIClient } from "@/services/openai.services";
-import { EQuestionStyle } from "@/types/mcq.types";
 
 /**
  * generateMcqFromContext
@@ -133,7 +133,7 @@ export async function generateMcqFromContext(args: {
     response_format: responseFormat,
   });
   const content = res.choices[0]?.message?.content ?? "{}";
-  const raw = parseJsonObject<any>(content, {});
+  const raw = parseJsonObject<IMcqGenerationRawResponse>(content, {});
 
   // Coerce and validate minimal shape
   const topic: string = String(raw.topic || args.topic || "");
@@ -142,17 +142,18 @@ export async function generateMcqFromContext(args: {
   const difficultyStr: string = String(raw.difficulty || args.difficulty || "Medium");
   const bloomStr: string = String(raw.bloomLevel || args.bloomLevel || "Understand");
   const question: string = String(raw.question || "");
-  const optionsArr: string[] = Array.isArray(raw.options) ? raw.options.map((o: any) => String(o)).slice(0, 4) : [];
+  const optionsArr: string[] = Array.isArray(raw.options) ? raw.options.map((o) => String(o)).slice(0, 4) : [];
   const correctIndexNum: number = typeof raw.correctIndex === "number" ? raw.correctIndex : 0;
-  const citationsArr: Array<{ title?: string; url: string }> = Array.isArray(raw.citations)
-    ? raw.citations
-        .map((c: any) => ({ title: typeof c?.title === "string" ? c.title : undefined, url: String(c?.url || "") }))
-        .filter((c: any) => c.url)
-        .slice(0, 3)
+  const citationsArr: TCitation[] = Array.isArray(raw.citations)
+    ? (
+        (raw.citations as Array<{ title?: string; url?: string }>)
+          .map((c) => ({ title: c?.title, url: String(c?.url || "") }))
+          .filter((c) => !!c.url) as TCitation[]
+      ).slice(0, 3)
     : [];
   const explanation: string | undefined = typeof raw.explanation === "string" ? raw.explanation : undefined;
   const explanationBullets: string[] | undefined = Array.isArray(raw.explanationBullets)
-    ? raw.explanationBullets.map((s: any) => String(s)).slice(0, 5)
+    ? raw.explanationBullets.map((s) => String(s)).slice(0, 5)
     : undefined;
 
   // Normalize code into a dedicated field; also try extracting from question if missing
@@ -239,7 +240,7 @@ export async function generateMcqFromContext(args: {
       response_format: { type: "json_schema", json_schema: buildSchema() },
     });
     const repairedContent = repair.choices[0]?.message?.content ?? "{}";
-    const repairedRaw = parseJsonObject<any>(repairedContent, {});
+    const repairedRaw = parseJsonObject<IMcqGenerationRawResponse>(repairedContent, {});
     if (repairedRaw && typeof repairedRaw.question === "string") {
       out = {
         ...out,
@@ -289,7 +290,7 @@ export async function generateMcqFromContext(args: {
         response_format: { type: "json_schema", json_schema: buildSchema() },
       });
       const repairedContent = repair.choices[0]?.message?.content ?? "{}";
-      const repairedRaw = parseJsonObject<any>(repairedContent, {});
+      const repairedRaw = parseJsonObject<IMcqGenerationRawResponse>(repairedContent, {});
       const repairedCode = typeof repairedRaw.code === "string" ? repairedRaw.code : undefined;
       const fixed = (() => {
         const t = (repairedCode ?? "").trim();

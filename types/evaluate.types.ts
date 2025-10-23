@@ -226,6 +226,7 @@ export interface IEvaluationQuestion {
  */
 export interface IAttemptProgress {
   questions_answered: number;
+  correct_count: number;
   total_questions: number;
   is_complete: boolean;
 }
@@ -259,6 +260,7 @@ export interface ISubmitAnswerRequest {
 export interface ISubmitAnswerResponse {
   recorded: boolean;
   progress: IAttemptProgress;
+  next_question?: IEvaluationQuestion | null;
 }
 
 /**
@@ -497,4 +499,29 @@ export interface IMcqRowWithDetails {
   topic?: string;
   subtopic?: string | null;
   code?: string | null;
+}
+
+// Bank candidate types for selection queries
+export interface IBankCandidate {
+  id: string;
+  topic: string;
+  subtopic: string | null;
+  difficulty: string;
+  bloom_level: string;
+  question: string;
+  options: string[];
+  code: string | null;
+  embedding?: unknown;
+}
+
+export interface IBankCandidateWithMetadata extends IBankCandidate {
+  _seenRecently?: boolean;
+}
+
+// Database row types for asked questions
+export interface IAttemptQuestion {
+  question_id: string;
+  mcq_items?: {
+    content_key?: string;
+  };
 }

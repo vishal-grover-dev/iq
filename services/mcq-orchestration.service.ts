@@ -162,9 +162,10 @@ export async function orchestrateMcqGenerationSSE(
 
         // Stage 6: Finalize
         writeEvent(controller, "finalized", { ok: true });
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e));
         writeEvent(controller, "error", {
-          message: e?.message ?? "Failed",
+          message: error?.message ?? "Failed",
         });
       } finally {
         controller.close();

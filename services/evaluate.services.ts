@@ -95,10 +95,13 @@ export async function fetchInterviewAlignment(attemptId: string) {
 
   const weights = weightsResponse.data?.topics || {};
   const data = resultsResponse.data;
-  const distribution = data?.topic_breakdown?.reduce((acc: Record<string, number>, item: any) => {
-    acc[item.topic] = item.total ?? 0;
-    return acc;
-  }, {});
+  const distribution = data?.topic_breakdown?.reduce(
+    (acc: Record<string, number>, item: { topic: string; total?: number }) => {
+      acc[item.topic] = item.total ?? 0;
+      return acc;
+    },
+    {}
+  );
   return {
     ...data,
     interview_alignment: {

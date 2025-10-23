@@ -1,7 +1,8 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
 import { parseJsonObject } from "@/utils/json.utils";
-import { createOpenAIClient } from "./openai.services";
+import { createOpenAIClient } from "@/services/openai.services";
+import type { ICrawlHeuristicsResponse } from "@/types/mcq.types";
 
 /**
  * suggestCrawlHeuristics
@@ -81,13 +82,13 @@ export async function suggestCrawlHeuristics(args: {
     response_format: { type: "json_object" },
   });
 
-  const parsed = parseJsonObject<any>(res.choices[0]?.message?.content ?? "{}", {});
+  const parsed = parseJsonObject<ICrawlHeuristicsResponse>(res.choices[0]?.message?.content ?? "{}", {});
 
   const includePatterns: string[] = Array.isArray(parsed.includePatterns)
-    ? parsed.includePatterns.filter((s: any) => typeof s === "string" && s.length > 0).slice(0, 5)
+    ? (parsed.includePatterns as string[]).filter((s) => s.length > 0).slice(0, 5)
     : [];
   const seeds: string[] | undefined = Array.isArray(parsed.seeds)
-    ? parsed.seeds.filter((s: any) => typeof s === "string" && s.startsWith(new URL(url).origin)).slice(0, 3)
+    ? (parsed.seeds as string[]).filter((s) => new URL(s).origin === new URL(url).origin).slice(0, 3)
     : undefined;
   const depthMap: Record<string, number> | undefined = (() => {
     const obj = parsed.depthMap;

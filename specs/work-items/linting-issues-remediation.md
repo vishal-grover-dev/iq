@@ -12,6 +12,7 @@ The codebase currently has **282 linting issues** (244 errors, 38 warnings) that
 | P1 Types Foundation | 2025-01-15 | 244      | 38         | ✗ (lint only) | Created shared API types, updated http/json utils                                         |
 | P2 Core Utils & Web | 2025-01-15 | 226      | 38         | ✗ (lint only) | Fixed ingest-web-process, intelligent-web-adapter, repo, web-crawler, mcq-retrieval utils |
 | P2 Domain Utils     | 2025-01-16 | 200      | 38         | ✗ (lint only) | Fixed evaluate-assignment-executor, evaluate-context-builder, evaluate-candidate-scorer   |
+| P3 Services Layer   | 2025-01-16 | 167      | 39         | ✗ (lint only) | Fixed evaluate-selection, mcq-orchestration, AI services, client services                 |
 
 ## Phase 2 — Impact Map & Changelog
 
@@ -54,6 +55,70 @@ No breaking changes; all updates are internal type refinements. Functions mainta
 - 7 new type definitions for error/result handling
 - 4 error type improvements (instanceof checks)
 - 1 import correction (repo types moved)
+
+### Behavior Unchanged
+
+All runtime behavior identical; types only.
+
+## Phase 3 — Impact Map & Changelog
+
+### Summary
+
+**Phase 3 completed successfully:** 11 service files fully type-safe with zero remaining errors in services layer.
+
+### What Changed
+
+- **`types/evaluate.types.ts`**: Added 3 new interfaces for bank candidate selection + updated `IAttemptProgress` with `correct_count`; updated `ISubmitAnswerResponse` with optional `next_question`
+- **`types/mcq.types.ts`**: Added 4 new interfaces for LLM response parsing with index signatures
+- **`types/ingestion.types.ts`**: Added 2 new interfaces for ingestion status and web planning responses
+- **`services/evaluate-selection.service.ts`**: Replaced 6 `any` casts with proper candidate typing; added `ICandidateWithSimilarity` mapping
+- **`services/mcq-orchestration.service.ts`**: Fixed error handling with proper Error type checks
+- **`services/ai/mcq-generation.service.ts`**: Replaced 5 `any` casts; fixed enum imports (regular vs type-only)
+- **`services/ai/mcq-refinement.service.ts`**: Replaced 4 `any` casts with response types
+- **`services/ai/crawl-heuristics.service.ts`**: Replaced 2 `any` casts with proper response types
+- **`services/mcq.services.ts`**: Updated query key to use TanStack Query's `QueryKey` type
+- **`services/evaluate.services.ts`**: Fixed reduce callback type; updated progress property references
+- **`services/ingest.services.ts`**: Replaced 3 inline `any` types with response interfaces
+
+### Files Modified (11 total)
+
+**Type Files:**
+
+- `types/evaluate.types.ts` (6 properties added/updated)
+- `types/mcq.types.ts` (4 new interfaces)
+- `types/ingestion.types.ts` (2 new interfaces)
+
+**Service Files:**
+
+- `services/evaluate-selection.service.ts` (6 any fixes)
+- `services/mcq-orchestration.service.ts` (1 error fix)
+- `services/ai/mcq-generation.service.ts` (5 any fixes)
+- `services/ai/mcq-refinement.service.ts` (4 any fixes)
+- `services/ai/crawl-heuristics.service.ts` (2 any fixes)
+- `services/mcq.services.ts` (1 query key type fix)
+- `services/evaluate.services.ts` (2 type fixes)
+- `services/ingest.services.ts` (3 response type fixes)
+
+### Blast Radius
+
+No breaking changes; all updates are internal type refinements. Public API signatures unchanged.
+
+### Issues Fixed
+
+**33+ issues** from Phase 3 (services):
+
+- 24 `any` type replacements
+- 12 type definition updates/additions
+- 0 behavior changes
+
+### Remaining Issues
+
+**167 errors** (all in API routes - Phase 4):
+
+- `/api/evaluate/*` routes: 18 errors
+- `/api/generate/*` routes: 16 errors
+- `/api/ingest/*` routes: 28 errors
+- `/api/retrieval/*` routes: 5 errors
 
 ### Behavior Unchanged
 

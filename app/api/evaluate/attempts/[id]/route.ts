@@ -4,6 +4,7 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { selectNextQuestionForAttempt } from "@/services/evaluate-selection.service";
 import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -26,12 +27,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Use orchestrator service for question selection
     const result = await selectNextQuestionForAttempt(attemptId, userId, supabase);
     return NextResponse.json(result);
-  } catch (err: any) {
-    console.error("Error in GET /api/evaluate/attempts/:id:", err);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("Error in GET /api/evaluate/attempts/:id:", error);
     return NextResponse.json(
       {
         error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR,
-        message: err?.message,
+        message: error.message,
       },
       { status: 500 }
     );
@@ -90,7 +92,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq("user_id", userId);
 
     if (updateError) {
-      console.error("Error pausing attempt:", updateError);
+      logger.error("Error pausing attempt:", updateError);
       return NextResponse.json({ error: "Failed to pause attempt" }, { status: 500 });
     }
 
@@ -98,10 +100,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       status: EAttemptStatus.InProgress,
       message: "Attempt paused. Resume anytime.",
     });
-  } catch (err: any) {
-    console.error("Unexpected error in PATCH /api/evaluate/attempts/:id:", err);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("Unexpected error in PATCH /api/evaluate/attempts/:id:", error);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: error.message },
       { status: 500 }
     );
   }

@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
       chunks: 0,
       vectors: 0,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

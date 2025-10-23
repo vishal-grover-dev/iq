@@ -5,6 +5,7 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { getEmbeddings, rerank } from "@/services/ai/embedding.service";
+import type { IRetrievalResult } from "@/types/generation.types";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       p_board: filters.board,
       p_grade: filters.grade,
       p_subject: filters.subject,
-      p_query_embedding: queryEmbedding as unknown as any,
+      p_query_embedding: queryEmbedding as unknown as number[],
       p_query_text: query,
       p_resource_type: filters.resourceType ?? null,
       p_chapter_number: filters.chapterNumber ?? null,
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (error) {
       return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
     }
-    const fusedItems = (rows ?? []).map((r: any) => ({
+    const fusedItems = (rows ?? ([] as IRetrievalResult[])).map((r: IRetrievalResult) => ({
       documentId: r.document_id as string,
       chunkIndex: r.chunk_index as number,
       content: r.content as string,
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     let reranked = fusedItems;
     let rerankMs: number | undefined = undefined;
     try {
-      const texts = fusedItems.map((it: { content: string }) => it.content);
+      const texts = fusedItems.map((it: (typeof fusedItems)[0]) => it.content);
       if (texts.length > 0) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 2500);
@@ -82,8 +83,11 @@ export async function POST(req: NextRequest) {
         rerankMs = Date.now() - t1;
         // Apply scores
         reranked = fusedItems
-          .map((it: any, i: number) => ({ ...it, rerankScore: typeof scores[i] === "number" ? scores[i] : 0 }))
-          .sort((a: any, b: any) => (b.rerankScore ?? 0) - (a.rerankScore ?? 0));
+          .map((it: (typeof fusedItems)[0], i: number) => ({
+            ...it,
+            rerankScore: typeof scores[i] === "number" ? scores[i] : 0,
+          }))
+          .sort((a: (typeof fusedItems)[0], b: (typeof fusedItems)[0]) => (b.rerankScore ?? 0) - (a.rerankScore ?? 0));
       }
     } catch {
       // Fallback to fused order silently
@@ -97,9 +101,10 @@ export async function POST(req: NextRequest) {
         rerankMs,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
-import type { IAttemptResults, IWeakArea, IQuestionReview } from "@/types/evaluate.types";
+import type { IAttemptResults, IWeakArea, IQuestionReview, IMcqWithExplanation } from "@/types/evaluate.types";
 import { EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 /**
  * GET /api/evaluate/attempts/:id/results
@@ -17,7 +18,7 @@ import { EEvaluateApiErrorMessages } from "@/types/evaluate.types";
  * - Weak areas identification with recommendations
  * - Complete question review (all 60 questions with user answer, correct answer, explanation, citations)
  */
-export async function GET(_request: NextRequest, context: any) {
+export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const params = await context.params;
   const attemptId = params?.id as string;
 
@@ -84,7 +85,7 @@ export async function GET(_request: NextRequest, context: any) {
       .order("question_order", { ascending: true });
 
     if (questionsError || !attemptQuestions) {
-      console.error("Error fetching attempt questions:", questionsError);
+      logger.error("Error fetching attempt questions:", questionsError);
       return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_QUESTIONS }, { status: 500 });
     }
 
@@ -105,7 +106,7 @@ export async function GET(_request: NextRequest, context: any) {
     const topicMap = new Map<string, { correct: number; total: number }>();
 
     attemptQuestions.forEach((aq) => {
-      const mcq = aq.mcq_items as any;
+      const mcq = aq.mcq_items as unknown as IMcqWithExplanation;
       if (!mcq?.topic) return;
 
       const topic = mcq.topic.toLowerCase();
@@ -128,7 +129,7 @@ export async function GET(_request: NextRequest, context: any) {
     const subtopicMap = new Map<string, { correct: number; total: number }>();
 
     attemptQuestions.forEach((aq) => {
-      const mcq = aq.mcq_items as any;
+      const mcq = aq.mcq_items as unknown as IMcqWithExplanation;
       if (!mcq?.subtopic) return;
 
       const subtopic = mcq.subtopic.toLowerCase();
@@ -153,7 +154,7 @@ export async function GET(_request: NextRequest, context: any) {
     const bloomMap = new Map<string, { correct: number; total: number }>();
 
     attemptQuestions.forEach((aq) => {
-      const mcq = aq.mcq_items as any;
+      const mcq = aq.mcq_items as unknown as IMcqWithExplanation;
       if (!mcq?.bloom_level) return;
 
       const bloom = mcq.bloom_level.toLowerCase();
@@ -180,10 +181,10 @@ export async function GET(_request: NextRequest, context: any) {
       .map((sb) => {
         // Find topic for this subtopic
         const exampleQuestion = attemptQuestions.find((aq) => {
-          const mcq = aq.mcq_items as any;
+          const mcq = aq.mcq_items as unknown as IMcqWithExplanation;
           return mcq?.subtopic?.toLowerCase() === sb.category;
         });
-        const mcq = exampleQuestion?.mcq_items as any;
+        const mcq = exampleQuestion?.mcq_items as unknown as IMcqWithExplanation;
         const topic = mcq?.topic || "React";
 
         // Generate recommendation
@@ -204,7 +205,7 @@ export async function GET(_request: NextRequest, context: any) {
 
     // 8. Build complete question review list
     const questions: IQuestionReview[] = attemptQuestions.map((aq) => {
-      const mcq = aq.mcq_items as any;
+      const mcq = aq.mcq_items as unknown as IMcqWithExplanation;
       const explanation = mcq?.mcq_explanations?.[0]?.explanation || "";
 
       return {
@@ -236,7 +237,7 @@ export async function GET(_request: NextRequest, context: any) {
       questions,
     });
   } catch (error) {
-    console.error("Error fetching attempt results:", error);
+    logger.error("Error fetching attempt results:", error);
     return NextResponse.json({ error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * POST /api/evaluate/attempts
  * Creates a new 60-question evaluation attempt for the current user.
  */
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating attempt:", error);
+      logger.error("Error creating attempt:", error);
       return NextResponse.json(
         { error: EEvaluateApiErrorMessages.FAILED_TO_CREATE_ATTEMPT, details: error.message },
         { status: 500 }
@@ -50,10 +51,10 @@ export async function POST(req: NextRequest) {
       total_questions: data.total_questions,
       status: data.status,
     });
-  } catch (err: any) {
-    console.error("Unexpected error creating attempt:", err);
+  } catch (err: unknown) {
+    logger.error("Unexpected error creating attempt:", err);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
       { status: 500 }
     );
   }
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error fetching attempts:", error);
+      logger.error("Error fetching attempts:", error);
       return NextResponse.json(
         { error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_ATTEMPTS, details: error.message },
         { status: 500 }
@@ -105,10 +106,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       attempts: data || [],
     });
-  } catch (err: any) {
-    console.error("Unexpected error fetching attempts:", err);
+  } catch (err: unknown) {
+    logger.error("Unexpected error fetching attempts:", err);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
       { status: 500 }
     );
   }

@@ -3,6 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { EAttemptStatus } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .order("question_order", { ascending: true });
 
     if (questionsError) {
-      console.error("Error fetching assigned questions:", questionsError);
+      logger.error("Error fetching assigned questions:", questionsError);
       return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
     }
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const expectedOrders = Array.from({ length: expectedCount }, (_, i) => i + 1);
     const missingOrders = expectedOrders.filter((order) => !assignedOrders.includes(order));
 
-    console.log("recovery_analysis", {
+    logger.info("recovery_analysis", {
       attempt_id: attemptId,
       expected_questions: expectedCount,
       actual_assigned: actualCount,
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     for (const missingOrder of missingOrders) {
       try {
-        console.log("recovery_generating_question", {
+        logger.info("recovery_generating_question", {
           attempt_id: attemptId,
           missing_order: missingOrder,
           progress: `${missingOrders.indexOf(missingOrder) + 1}/${missingOrders.length}`,
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           });
 
           if (assignError) {
-            console.error("Error assigning recovery question:", assignError);
+            logger.error("Error assigning recovery question:", assignError);
             recoverySuccess = false;
             recoveryResults.push({
               order: missingOrder,
@@ -150,13 +151,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             error: "No questions available in bank",
           });
         }
-      } catch (recoveryError: any) {
-        console.error("Error during recovery for order", missingOrder, ":", recoveryError);
+      } catch (recoveryError: unknown) {
+        const error = recoveryError instanceof Error ? recoveryError : new Error(String(recoveryError));
+        logger.error(`Error during recovery for order ${missingOrder}:`, error);
         recoverySuccess = false;
         recoveryResults.push({
           order: missingOrder,
           success: false,
-          error: recoveryError.message,
+          error: error.message,
         });
       }
     }
@@ -173,7 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .eq("user_id", userId);
 
       if (updateError) {
-        console.error("Error updating attempt status after recovery:", updateError);
+        logger.error("Error updating attempt status after recovery:", updateError);
         return NextResponse.json({ error: "Failed to update attempt status" }, { status: 500 });
       }
     }
@@ -191,8 +193,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         recovery_results: recoveryResults,
       },
     });
-  } catch (err: any) {
-    console.error("Unexpected error in POST /api/evaluate/attempts/:id/recover:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("Unexpected error in POST /api/evaluate/attempts/:id/recover:", error);
+    return NextResponse.json({ error: "Internal server error", message: error.message }, { status: 500 });
   }
 }

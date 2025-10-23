@@ -39,8 +39,9 @@ export async function POST(req: NextRequest) {
           resolvedPaths = [subdir];
         }
       }
-    } catch (e: any) {
-      return NextResponse.json({ ok: false, message: e?.message ?? "Invalid repository URL" }, { status: 400 });
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return NextResponse.json({ ok: false, message: error.message ?? "Invalid repository URL" }, { status: 400 });
     }
 
     const supabase = getSupabaseServiceRoleClient();
@@ -77,9 +78,10 @@ export async function POST(req: NextRequest) {
       chunks: 0,
       vectors: 0,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

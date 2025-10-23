@@ -4,6 +4,7 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { parseRepoUrl, getDefaultBranch, listMarkdownPaths } from "@/utils/repo.utils";
 import { resolveLabels } from "@/utils/label-resolver.utils";
+import type { IRepoPlanRequest } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       else return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
-    const body = (await req.json()) as any;
+    const body = (await req.json()) as IRepoPlanRequest;
     let { repoUrl, paths, batchSize } = body ?? {};
     if (!repoUrl || typeof repoUrl !== "string")
       return NextResponse.json({ ok: false, message: "repoUrl is required" }, { status: 400 });
@@ -40,8 +41,9 @@ export async function POST(req: NextRequest) {
         repoUrl = `https://github.com/${owner}/${repo}`;
         if ((!Array.isArray(paths) || paths.length === 0) && subdir) paths = [subdir];
       }
-    } catch (e: any) {
-      return NextResponse.json({ ok: false, message: e?.message ?? "Invalid repository URL" }, { status: 400 });
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return NextResponse.json({ ok: false, message: error.message ?? "Invalid repository URL" }, { status: 400 });
     }
 
     const { owner, repo } = parseRepoUrl(repoUrl);
@@ -98,13 +100,11 @@ export async function POST(req: NextRequest) {
         distribution,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }
 }
-
-
-

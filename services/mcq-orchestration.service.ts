@@ -1,66 +1,32 @@
 import type { IMcqItemView } from "@/types/mcq.types";
+import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { judgeMcqQuality } from "@/services/ai/mcq-refinement.service";
 import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
-import {
-  retrieveContextByLabels,
-  retrieveNeighbors,
-  getRecentQuestions,
-} from "@/utils/mcq-retrieval.utils";
-
-/**
- * Type: SSE Event names for MCQ generation pipeline.
- */
-export type SseEventName =
-  | "generation_started"
-  | "generation_complete"
-  | "neighbors"
-  | "judge_started"
-  | "judge_result"
-  | "finalized"
-  | "error";
-
-/**
- * Interface: Arguments for orchestrating MCQ generation SSE.
- */
-export interface IOrchestrateArgs {
-  userId: string;
-  topic: string;
-  subtopic?: string | null;
-  version?: string | null;
-  codingMode?: boolean;
-  maxNeighbors?: number;
-}
+import type { TSseEventName, IOrchestrateArgs } from "@/types/generation.types";
+import { logger } from "@/utils/logger.utils";
 
 /**
  * Writes an SSE event to the ReadableStream controller.
  * Helper to keep events consistently formatted.
  */
-function writeEvent(
-  controller: ReadableStreamDefaultController<Uint8Array>,
-  event: SseEventName,
-  data: unknown
-) {
+function writeEvent(controller: ReadableStreamDefaultController<Uint8Array>, event: TSseEventName, data: unknown) {
   const payload = typeof data === "string" ? data : JSON.stringify(data);
   controller.enqueue(new TextEncoder().encode(`event: ${event}\n`));
   controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
 }
 
 /**
- * orchestrateMcqGenerationSSE
- * Server-only: Orchestrates the MCQ generation pipeline via SSE.
+ * Orchestrate MCQ generation via Server-Sent Events (SSE).
  * Pipeline stages:
  * 1. Retrieve context by labels
  * 2. Generate MCQ draft
  * 3. Fetch neighbors + recent questions
  * 4. Judge quality
  * 5. Finalize
- *
- * Returns a Response with text/event-stream content type.
  */
-export async function orchestrateMcqGenerationSSE(
-  args: IOrchestrateArgs
-): Promise<Response> {
+export async function orchestrateMcqGenerationSSE(args: IOrchestrateArgs): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -69,8 +35,7 @@ export async function orchestrateMcqGenerationSSE(
         writeEvent(controller, "generation_started", { topic, subtopic, version });
 
         // Stage 2: Retrieve context
-        const q = [topic, subtopic ?? "", version ?? ""].filter(Boolean).join(" ") +
-          " key concepts";
+        const q = [topic, subtopic ?? "", version ?? ""].filter(Boolean).join(" ") + " key concepts";
         const context = await retrieveContextByLabels({
           userId: args.userId,
           topic,
@@ -110,8 +75,7 @@ export async function orchestrateMcqGenerationSSE(
           } else {
             writeEvent(controller, "error", {
               reason: "missing_code",
-              message:
-                "Generated MCQ missing required js/tsx fenced code block (3–50 lines).",
+              message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines).",
             });
             controller.close();
             return;
@@ -141,13 +105,11 @@ export async function orchestrateMcqGenerationSSE(
         });
         writeEvent(controller, "neighbors", {
           count: neighbors.length,
-          top: neighbors
-            .slice(0, 5)
-            .map((n) => ({
-              question: n.question,
-              options: n.options,
-              score: n.score,
-            })),
+          top: neighbors.slice(0, 5).map((n) => ({
+            question: n.question,
+            options: n.options,
+            score: n.score,
+          })),
         });
 
         // Stage 5: Judge quality
@@ -164,6 +126,7 @@ export async function orchestrateMcqGenerationSSE(
         writeEvent(controller, "finalized", { ok: true });
       } catch (e: unknown) {
         const error = e instanceof Error ? e : new Error(String(e));
+        logger.error("Error in orchestrateMcqGenerationSSE", error);
         writeEvent(controller, "error", {
           message: error?.message ?? "Failed",
         });

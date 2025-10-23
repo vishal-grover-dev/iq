@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
-import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { EAttemptStatus, EEvaluateApiErrorMessages, IUserAttempt } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .eq("question_id", question_id);
 
     if (updateQuestionError) {
-      console.error("Error updating question answer:", updateQuestionError);
+      logger.error("Error updating question answer:", updateQuestionError);
       return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_RECORD_ANSWER }, { status: 500 });
     }
 
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .eq("attempt_id", attemptId);
 
       if (countError) {
-        console.error("Error counting assigned questions:", countError);
+        logger.error("Error counting assigned questions:", countError);
         return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_VERIFY_COMPLETION }, { status: 500 });
       }
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       isComplete = actualAssignedCount >= attempt.total_questions;
 
       // Log completion validation for debugging
-      console.log("completion_validation", {
+      logger.log("completion_validation", {
         attempt_id: attemptId,
         questions_answered: newQuestionsAnswered,
         total_questions: attempt.total_questions,
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       // If there are gaps, don't mark as complete and log the issue
       if (!isComplete) {
-        console.warn("attempt_completion_blocked", {
+        logger.warn("attempt_completion_blocked", {
           attempt_id: attemptId,
           reason: "insufficient_assigned_questions",
           expected: attempt.total_questions,
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    const updateData: any = {
+    const updateData: Partial<IUserAttempt> = {
       questions_answered: newQuestionsAnswered,
       correct_count: newCorrectCount,
     };
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .eq("user_id", userId);
 
     if (updateAttemptError) {
-      console.error("Error updating attempt:", updateAttemptError);
+      logger.error("Error updating attempt:", updateAttemptError);
       return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_UPDATE_ATTEMPT }, { status: 500 });
     }
 
@@ -178,10 +179,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           : null,
       },
     });
-  } catch (err: any) {
-    console.error("Unexpected error in POST /api/evaluate/attempts/:id/answer:", err);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("Unexpected error in POST /api/evaluate/attempts/:id/answer:", error);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: err?.message },
+      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: error.message },
       { status: 500 }
     );
   }

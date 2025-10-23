@@ -9,6 +9,8 @@ import { retrieveContextByLabels, getRecentQuestions } from "@/utils/mcq-retriev
 import { orchestrateMcqGenerationSSE } from "@/services/mcq-orchestration.service";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";
+import type { TMcqGenerationRequest, TDocumentWithLabels } from "@/types/generation.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -31,9 +33,10 @@ export async function GET(req: NextRequest) {
       codingMode: true,
       maxNeighbors: 8,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
     if (!userId) return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
-    const body = (await req.json().catch(() => ({}))) as any;
+    const body = (await req.json().catch(() => ({}))) as TMcqGenerationRequest;
     const topic: string = body?.topic || "React";
     let subtopic: string | null = body?.subtopic ?? null;
     const version: string | null = body?.version ?? null;
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
     if (!subtopic) {
       const supabase = getSupabaseServiceRoleClient();
       const { data: ing } = await supabase.from("ingestions").select("id").eq("user_id", userId);
-      const ingestionIds = (ing ?? []).map((r: any) => r.id);
+      const ingestionIds = (ing ?? []).map((r: { id: string }) => r.id);
       if (ingestionIds.length > 0) {
         const { data: docs } = await supabase
           .from("documents")
@@ -78,10 +81,10 @@ export async function POST(req: NextRequest) {
           .limit(2000);
         const subs = Array.from(
           new Set(
-            (docs ?? [])
-              .filter((d: any) => (d?.labels?.topic ?? d?.labels?.["topic"]) === topic)
-              .map((d: any) => d?.labels?.subtopic)
-              .filter((s: any) => typeof s === "string" && s.length > 0)
+            (docs ?? ([] as TDocumentWithLabels[]))
+              .filter((d) => (d?.labels?.["topic"] as string) === topic)
+              .map((d) => d?.labels?.["subtopic"] as string | null)
+              .filter((s) => typeof s === "string" && s.length > 0)
           )
         );
         if (subs.length > 0) subtopic = subs[Math.floor(Math.random() * subs.length)];
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
       "Create",
     ] as unknown as EBloomLevel[];
     const codingMode = codingRequested; // respect user toggle exactly
-    console.log(`[MCQ Generation] Coding mode: ${codingMode}, Coding requested: ${codingRequested}`);
+    logger.info(`[MCQ Generation] Coding mode: ${codingMode}, Coding requested: ${codingRequested}`);
     let item = await generateMcqFromContext({
       topic,
       subtopic: subtopic ?? undefined,
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     // Retry if missing valid code block (3–50 lines)
     if (codingMode && !hasValidCodeBlock(item.code || "", { minLines: 3, maxLines: 50 })) {
-      console.log(`[MCQ Generation] First attempt missing valid code, retrying`);
+      logger.info(`[MCQ Generation] First attempt missing valid code, retrying`);
       const attempt = await generateMcqFromContext({
         topic,
         subtopic: subtopic ?? undefined,
@@ -160,9 +163,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, item });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

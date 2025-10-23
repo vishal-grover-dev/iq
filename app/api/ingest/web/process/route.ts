@@ -10,6 +10,26 @@ import { getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/labe
 
 export const runtime = "nodejs";
 
+interface IWebIngestionMetadata {
+  mode: string;
+  topic: string;
+  subtopic?: string | null;
+  version?: string | null;
+  seeds: string[];
+  domain: string;
+  prefix?: string | null;
+  depth?: number;
+  maxPages?: number;
+  crawlDelayMs?: number;
+  progress?: Record<string, unknown>;
+}
+
+interface IEmbeddingBatchItem {
+  documentId: string;
+  chunks: Array<{ index: number; content: string; tokens: number }>;
+  url: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
@@ -32,14 +52,14 @@ export async function POST(req: NextRequest) {
     if (ingestion.user_id !== userId)
       return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.FORBIDDEN }, { status: 403 });
 
-    const meta = ingestion.metadata as any;
+    const meta = ingestion.metadata as IWebIngestionMetadata;
     if (meta.mode !== "web") return NextResponse.json({ ok: false, message: "Not a web ingestion" }, { status: 400 });
 
-    const updateProgress = async (progress: Record<string, any>) => {
+    const updateProgress = async (progress: Record<string, unknown>) => {
       const nextMeta = {
-        ...(ingestion.metadata as any),
+        ...(ingestion.metadata as IWebIngestionMetadata),
         progress: {
-          ...((ingestion.metadata as any)?.progress ?? {}),
+          ...((ingestion.metadata as IWebIngestionMetadata)?.progress ?? {}),
           ...progress,
           lastUpdatedAt: new Date().toISOString(),
         },
@@ -51,7 +71,7 @@ export async function POST(req: NextRequest) {
       stage: string,
       message: string,
       level: "info" | "warn" | "error" = "info",
-      meta?: Record<string, any>
+      meta?: Record<string, unknown>
     ) => {
       await supabase
         .from("ingestion_events")
@@ -69,7 +89,7 @@ export async function POST(req: NextRequest) {
       includePatterns: undefined,
       excludePatterns: undefined,
       depthMap: undefined,
-    } as any;
+    };
 
     const pages = await crawlWebsite({
       seeds: planner.seeds,
@@ -92,14 +112,14 @@ export async function POST(req: NextRequest) {
     let totalChunks = 0;
     let totalVectors = 0;
     const topic: string = meta.topic;
-    const subtopic: string | null = (meta.subtopic ?? "").trim() === "" ? null : meta.subtopic;
+    const subtopic: string | null = (meta.subtopic ?? "").trim() === "" ? null : meta.subtopic ?? null;
     const version: string | null = meta.version ?? null;
     const seenHashes = new Set<string>();
     const shinglesList: Array<Set<string>> = [];
 
     // Batch processing for better performance
     const BATCH_SIZE = 5; // Process 5 pages at a time
-    const embeddingBatch: Array<{ documentId: string; chunks: any[]; url: string }> = [];
+    const embeddingBatch: IEmbeddingBatchItem[] = [];
 
     for (let i = 0; i < selectedPages.length; i++) {
       const p = selectedPages[i];
@@ -151,7 +171,7 @@ export async function POST(req: NextRequest) {
         }
         // Emit classifier metrics snapshot periodically
         const m = getLabelResolverMetrics();
-        await writeEvent("labels", "Classifier metrics snapshot", "info", m as any);
+        await writeEvent("labels", "Classifier metrics snapshot", "info", m as Record<string, unknown>);
         embeddingBatch.length = 0;
       }
 
@@ -162,7 +182,7 @@ export async function POST(req: NextRequest) {
     await updateProgress({ step: "completed" });
     // Final classifier metrics
     const finalMetrics = getLabelResolverMetrics();
-    await writeEvent("labels", "Classifier metrics final", "info", finalMetrics as any);
+    await writeEvent("labels", "Classifier metrics final", "info", finalMetrics as Record<string, unknown>);
     await writeEvent("complete", "Web ingestion completed");
 
     return NextResponse.json({
@@ -172,9 +192,10 @@ export async function POST(req: NextRequest) {
       chunks: totalChunks,
       vectors: totalVectors,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

@@ -4,6 +4,90 @@
  * Contains enums and types for MCQ generation, AI prompts, and related functionality.
  */
 
+import type { IMcqItemView } from "./mcq.types";
+
+/**
+ * MCQ generation request parameters
+ */
+export type TMcqGenerationRequest = {
+  topic?: string;
+  subtopic?: string | null;
+  version?: string | null;
+  codingMode?: boolean;
+};
+
+/**
+ * Document with labels from ingestion
+ */
+export type TDocumentWithLabels = {
+  id: string;
+  labels: Record<string, unknown>;
+  ingestion_id: string;
+};
+
+/**
+ * MCQ revision request parameters
+ */
+export type TMcqRevisionRequest = {
+  instruction: string;
+  currentMcq: IMcqItemView;
+};
+
+/**
+ * RPC context result from retrieval
+ */
+export type TRpcContextResult = {
+  title: string | null;
+  path: string;
+  content: string;
+};
+
+/**
+ * MCQ save request - accepts either wrapped item or direct MCQItemView
+ */
+export type TMcqSaveRequest = {
+  item?: IMcqItemView;
+  requireCode?: boolean;
+} & IMcqItemView;
+
+/**
+ * Fused retrieval result from hybrid search RPC
+ */
+export interface IRetrievalResult {
+  document_id: string;
+  chunk_index: number;
+  content: string;
+  tokens: number;
+  score: number;
+  title: string | null;
+  bucket: string;
+  path: string;
+}
+
+/**
+ * SSE event names for MCQ generation pipeline
+ */
+export type TSseEventName =
+  | "generation_started"
+  | "generation_complete"
+  | "neighbors"
+  | "judge_started"
+  | "judge_result"
+  | "finalized"
+  | "error";
+
+/**
+ * Arguments for orchestrating MCQ generation SSE
+ */
+export interface IOrchestrateArgs {
+  userId: string;
+  topic: string;
+  subtopic?: string | null;
+  version?: string | null;
+  codingMode?: boolean;
+  maxNeighbors?: number;
+}
+
 /**
  * Generation API error messages
  */

@@ -3,6 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { EAttemptStatus } from "@/types/evaluate.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .eq("attempt_id", attemptId);
 
     if (questionsError) {
-      console.error("Error counting assigned questions:", questionsError);
+      logger.error("Error counting assigned questions:", questionsError);
       return NextResponse.json({ error: "Failed to count questions" }, { status: 500 });
     }
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const expectedCount = attempt.total_questions;
     const hasGaps = actualAssignedCount < expectedCount;
 
-    console.log("fix_attempt_analysis", {
+    logger.log("fix_attempt_analysis", {
       attempt_id: attemptId,
       status: attempt.status,
       questions_answered: attempt.questions_answered,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .eq("user_id", userId);
 
       if (updateError) {
-        console.error("Error fixing attempt:", updateError);
+        logger.error("Error fixing attempt:", updateError);
         return NextResponse.json({ error: "Failed to fix attempt" }, { status: 500 });
       }
 
@@ -109,8 +110,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         has_gaps: hasGaps,
       },
     });
-  } catch (err: any) {
-    console.error("Unexpected error in POST /api/evaluate/attempts/:id/fix:", err);
-    return NextResponse.json({ error: "Internal server error", message: err?.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("Unexpected error in POST /api/evaluate/attempts/:id/fix:", error);
+    return NextResponse.json({ error: "Internal server error", message: error.message }, { status: 500 });
   }
 }

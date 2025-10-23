@@ -3,8 +3,8 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { resolvePlannerBootstrap } from "@/utils/ingest-planner.utils";
 import { resolveLabels } from "@/utils/label-resolver.utils";
+import type { IWebPlanRequest } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";
 
@@ -16,18 +16,13 @@ export async function POST(req: NextRequest) {
       else return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
-    const body = (await req.json()) as any;
+    const body = (await req.json()) as IWebPlanRequest;
     const {
       seeds,
       domain,
-      prefix,
       depth = 2,
       maxPages = 50,
       crawlDelayMs = 300,
-      includePatterns = [],
-      excludePatterns = [],
-      depthMap = {},
-      useAiPlanner = false,
       topic,
       returnAllPages = false,
       applyQuotas = false,
@@ -39,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!domain) return NextResponse.json({ ok: false, message: "domain is required" }, { status: 400 });
 
     // Downward-only plan from the exact seed path
-    const planner = { seeds } as any;
+    const planner = { seeds };
 
     const pages = await crawlWebsite({
       seeds: planner.seeds,
@@ -95,9 +90,10 @@ export async function POST(req: NextRequest) {
         distribution,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

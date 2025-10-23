@@ -3,6 +3,7 @@ import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
+import type { IDocumentRow } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       .limit(1000);
 
     const documentsProcessed = Array.isArray(documentsRows) ? documentsRows.length : 0;
-    const documentIds = (documentsRows ?? []).map((d: any) => d.id as string);
+    const documentIds = (documentsRows ?? ([] as IDocumentRow[])).map((d) => d.id as string);
 
     // Count chunks for these documents
     let chunksProcessed = 0;
@@ -49,8 +50,8 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     const topicSet = new Set<string>();
     const subtopicSet = new Set<string>();
     const versionSet = new Set<string>();
-    for (const row of documentsRows ?? []) {
-      const labels = (row as any)?.labels as Record<string, any> | null | undefined;
+    for (const row of documentsRows ?? ([] as IDocumentRow[])) {
+      const labels = row?.labels as Record<string, unknown> | null | undefined;
       if (labels && typeof labels === "object") {
         const topic = labels["topic"];
         const subtopic = labels["subtopic"];
@@ -72,11 +73,15 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     // Coverage counts
     const coverageCounts = {
       subtopics: Array.from(subtopicSet).reduce<Record<string, number>>((acc, s) => {
-        acc[s] = (documentsRows ?? []).filter((d: any) => (d?.labels?.subtopic ?? null) === s).length;
+        acc[s] = (documentsRows ?? ([] as IDocumentRow[])).filter(
+          (d) => (d?.labels as Record<string, unknown> | null)?.["subtopic"] === s
+        ).length;
         return acc;
       }, {}),
       versions: Array.from(versionSet).reduce<Record<string, number>>((acc, v) => {
-        acc[v] = (documentsRows ?? []).filter((d: any) => (d?.labels?.version ?? null) === v).length;
+        acc[v] = (documentsRows ?? ([] as IDocumentRow[])).filter(
+          (d) => (d?.labels as Record<string, unknown> | null)?.["version"] === v
+        ).length;
         return acc;
       }, {}),
     } as const;
@@ -102,19 +107,20 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
           versions: Array.from(versionSet),
           counts: coverageCounts,
         },
-        recent: (recentDocs ?? []).map((d: any) => ({
+        recent: (recentDocs ?? ([] as Array<{ title: string | null; path: string }>)).map((d) => ({
           title: (d?.title as string | null) ?? null,
           path: d?.path as string,
         })),
       },
-      inflight: (data?.metadata as any)?.progress ?? null,
+      inflight: (data?.metadata as Record<string, unknown>)?.["progress"] ?? null,
       events: recentEvents ?? [],
     } as const;
 
     return NextResponse.json(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     return NextResponse.json(
-      { ok: false, message: err?.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
+      { ok: false, message: error.message ?? API_ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }

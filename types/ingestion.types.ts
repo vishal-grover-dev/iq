@@ -30,6 +30,65 @@ export enum EIngestionStage {
   COMPLETED = "completed",
 }
 
+/**
+ * Database row for documents table
+ */
+export interface IDocumentRow {
+  id: string;
+  title: string | null;
+  path: string;
+  labels: Record<string, unknown> | null;
+  ingestion_id: string;
+}
+
+/**
+ * Database row for ingestions table
+ */
+export interface IIngestionRow {
+  id: string;
+  status: string;
+  error: string | null;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  user_id: string;
+}
+
+/**
+ * Database row for ingestion_events table
+ */
+export interface IIngestionEvent {
+  created_at: string;
+  stage: string;
+  level: string;
+  message: string;
+}
+
+/**
+ * Repo ingestion plan request parameters
+ */
+export interface IRepoPlanRequest {
+  repoUrl: string;
+  paths?: string[];
+  batchSize?: number;
+}
+
+/**
+ * Web ingestion plan request parameters
+ */
+export interface IWebPlanRequest {
+  seeds: string[];
+  domain: string;
+  depth?: number;
+  maxPages?: number;
+  crawlDelayMs?: number;
+  includePatterns?: string[];
+  excludePatterns?: string[];
+  depthMap?: Record<string, unknown>;
+  topic?: string;
+  returnAllPages?: boolean;
+  applyQuotas?: boolean;
+}
+
 export interface IIngestionBatchCursor {
   totalPlanned: number;
   nextStart: number;

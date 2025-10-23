@@ -6,6 +6,37 @@
 import { EDifficulty, EBloomLevel, IMcqItemView } from "./mcq.types";
 
 /**
+ * MCQ item with explanation, joined from mcq_items + mcq_explanations
+ */
+export interface IMcqWithExplanation {
+  id: string;
+  topic: string;
+  subtopic: string | null;
+  difficulty: string;
+  bloom_level: string;
+  question: string;
+  options: string[];
+  correct_index: number;
+  citations: Array<{ title?: string; url?: string }>;
+  code: string | null;
+  mcq_explanations: Array<{ explanation: string }>;
+}
+
+/**
+ * Attempt question with joined MCQ data
+ */
+export interface IAttemptQuestionWithMcq {
+  id: string;
+  question_id: string;
+  question_order: number;
+  user_answer_index: number | null;
+  is_correct: boolean | null;
+  answered_at: string | null;
+  time_spent_seconds: number | null;
+  mcq_items: IMcqWithExplanation;
+}
+
+/**
  * Evaluate page labels
  */
 export enum EEvaluatePageLabels {

@@ -4,6 +4,8 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { reviseMcqWithContext } from "@/services/ai/mcq-refinement.service";
+import type { TMcqRevisionRequest, TRpcContextResult } from "@/types/generation.types";
+import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
@@ -13,14 +15,14 @@ export async function POST(req: NextRequest) {
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
     if (!userId) return new NextResponse(API_ERROR_MESSAGES.UNAUTHORIZED, { status: 401 });
 
-    const body = (await req.json().catch(() => ({}))) as any;
+    const body = (await req.json().catch(() => ({}))) as TMcqRevisionRequest;
     const { instruction, currentMcq } = body;
 
     if (!instruction || !currentMcq) {
       return NextResponse.json({ ok: false, message: "Missing instruction or current MCQ" }, { status: 400 });
     }
 
-    console.log(`[MCQ Revision] User instruction: "${instruction}"`);
+    logger.info(`[MCQ Revision] User instruction: "${instruction}"`);
 
     // Get context for the revision (similar to generation but focused on the current topic)
     const supabase = getSupabaseServiceRoleClient();
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
       p_alpha: 0.5,
     });
 
-    const contextItems = (context.data ?? []).slice(0, 8).map((r: any) => ({
+    const contextItems = (context.data ?? ([] as TRpcContextResult[])).slice(0, 8).map((r: TRpcContextResult) => ({
       title: r.title as string | null,
       url: r.path as string,
       content: r.content as string,
@@ -47,15 +49,16 @@ export async function POST(req: NextRequest) {
       contextItems,
     });
 
-    console.log(`[MCQ Revision] Successfully revised MCQ with instruction: "${instruction}"`);
+    logger.info(`[MCQ Revision] Successfully revised MCQ with instruction: "${instruction}"`);
 
     return NextResponse.json({
       ok: true,
       item: revisedItem,
       changes: `Applied instruction: "${instruction}" - Updated question based on your feedback.`,
     });
-  } catch (err: any) {
-    console.error("[MCQ Revision] Error:", err);
-    return NextResponse.json({ ok: false, message: err?.message ?? "Failed to revise MCQ" }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error("[MCQ Revision] Error:", error);
+    return NextResponse.json({ ok: false, message: error.message ?? "Failed to revise MCQ" }, { status: 500 });
   }
 }

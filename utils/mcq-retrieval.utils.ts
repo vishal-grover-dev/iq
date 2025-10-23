@@ -1,4 +1,5 @@
 import type { IMcqItemView } from "@/types/mcq.types";
+import type { IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/app.types";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { getEmbeddings } from "@/services/ai/embedding.service";
 import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
@@ -20,7 +21,7 @@ export async function retrieveContextByLabels(args: {
   const { data: rows, error } = await supabase.rpc("retrieval_hybrid_by_labels", {
     p_user_id: args.userId,
     p_topic: args.topic,
-    p_query_embedding: embedding as unknown as any,
+    p_query_embedding: embedding as unknown as number[],
     p_query_text: args.query,
     p_subtopic: args.subtopic ?? null,
     p_version: args.version ?? null,
@@ -28,10 +29,10 @@ export async function retrieveContextByLabels(args: {
     p_alpha: 0.5,
   });
   if (error) throw new Error(error.message);
-  const items = (rows ?? []).map((r: any) => ({
-    title: r.title as string | null,
-    url: r.path as string,
-    content: r.content as string,
+  const items = (rows ?? []).map((r: IContextRow) => ({
+    title: r.title,
+    url: r.path,
+    content: r.content,
   }));
   return items;
 }
@@ -52,13 +53,13 @@ export async function retrieveNeighbors(args: {
   const { data, error } = await supabase.rpc("retrieval_mcq_neighbors", {
     p_user_id: args.userId,
     p_topic: args.topic,
-    p_embedding: emb as unknown as any,
+    p_embedding: emb as unknown as number[],
     p_subtopic: args.subtopic ?? null,
     p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
   });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: any) => ({
-    question: r.question as string,
+  return (data ?? []).map((r: INeighborRow) => ({
+    question: r.question,
     options: (r.options ?? []).slice(0, 4) as [string, string, string, string],
     score: Number(r.score ?? 0),
   }));
@@ -88,7 +89,7 @@ export async function getRecentQuestions(args: {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const r of data ?? []) {
-    const s = String((r as any)?.question || "").trim();
+    const s = String((r as IRecentQuestionRow)?.question || "").trim();
     if (s && !seen.has(s)) {
       seen.add(s);
       out.push(s);

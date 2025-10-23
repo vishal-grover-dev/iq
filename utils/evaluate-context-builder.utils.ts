@@ -1,15 +1,20 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { TDistributions, IAttemptContext } from "@/types/evaluate.types";
-import { EAttemptStatus } from "@/types/evaluate.types";
+import {
+  IDistributions,
+  IAttemptContext,
+  EAttemptStatus,
+  IAskedQuestionRow,
+  IMcqRowWithDetails,
+} from "@/types/evaluate.types";
 import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
 
 /**
  * Calculate difficulty, coding, topic, subtopic, and Bloom distributions from asked questions
  */
-export function calculateDistributions(askedQuestions: any[]): TDistributions {
+export function calculateDistributions(askedQuestions: IAskedQuestionRow[]): IDistributions {
   return askedQuestions.reduce(
-    (acc, q: any) => {
-      const mcq = q.mcq_items;
+    (acc, q) => {
+      const mcq = q.mcq_items as IMcqRowWithDetails | undefined;
       if (!mcq) return acc;
 
       const difficulty = mcq.difficulty as string;
@@ -57,7 +62,7 @@ export function calculateDistributions(askedQuestions: any[]): TDistributions {
 export function buildSelectionContext(
   attemptId: string,
   questionsAnswered: number,
-  distributions: TDistributions
+  distributions: IDistributions
 ): IAttemptContext {
   return {
     attempt_id: attemptId,
@@ -77,7 +82,7 @@ export function buildSelectionContext(
 /**
  * Identify topics that have exceeded balance limits based on stage
  */
-export function identifyOverrepresentedTopics(distributions: TDistributions, questionsAnswered: number): string[] {
+export function identifyOverrepresentedTopics(distributions: IDistributions, questionsAnswered: number): string[] {
   const { EARLY_STAGE_THRESHOLD, MID_STAGE_THRESHOLD, EARLY_STAGE_CAP, MID_STAGE_CAP, LIMIT } =
     EVALUATE_SELECTION_CONFIG.TOPIC_BALANCE;
 
@@ -106,7 +111,7 @@ export async function fetchRecentAttemptQuestions(userId: string, supabase: Supa
     .order("completed_at", { ascending: false })
     .limit(EVALUATE_SELECTION_CONFIG.RECENT_ATTEMPTS.LOOK_BACK_COUNT);
 
-  const recentAttemptIds = (recentCompleted ?? []).map((r: any) => r.id);
+  const recentAttemptIds = (recentCompleted ?? []).map((r: { id: string }) => r.id);
 
   if (recentAttemptIds.length === 0) {
     return new Set<string>();
@@ -117,5 +122,5 @@ export async function fetchRecentAttemptQuestions(userId: string, supabase: Supa
     .select("question_id")
     .in("attempt_id", recentAttemptIds);
 
-  return new Set<string>((recentQs ?? []).map((r: any) => r.question_id).filter(Boolean));
+  return new Set<string>((recentQs ?? []).map((r: { question_id: string }) => r.question_id).filter(Boolean));
 }

@@ -6,33 +6,86 @@ The codebase currently has **282 linting issues** (244 errors, 38 warnings) that
 
 ## Progress Log
 
-| Phase | Date | Errors → | Warnings → | Build | Notes |
-|------|------|----------|------------|-------|-------|
-| P0 Baseline | 2025-01-15 | 246 | 39 | ✓ | Baseline snapshot |
-| P1 Types Foundation | 2025-01-15 | 244 | 38 | ✗ (lint only) | Created shared API types, updated http/json utils |
+| Phase               | Date       | Errors → | Warnings → | Build         | Notes                                                                                     |
+| ------------------- | ---------- | -------- | ---------- | ------------- | ----------------------------------------------------------------------------------------- |
+| P0 Baseline         | 2025-01-15 | 246      | 39         | ✓             | Baseline snapshot                                                                         |
+| P1 Types Foundation | 2025-01-15 | 244      | 38         | ✗ (lint only) | Created shared API types, updated http/json utils                                         |
+| P2 Core Utils & Web | 2025-01-15 | 226      | 38         | ✗ (lint only) | Fixed ingest-web-process, intelligent-web-adapter, repo, web-crawler, mcq-retrieval utils |
+| P2 Domain Utils     | 2025-01-16 | 200      | 38         | ✗ (lint only) | Fixed evaluate-assignment-executor, evaluate-context-builder, evaluate-candidate-scorer   |
+
+## Phase 2 — Impact Map & Changelog
+
+### What Changed
+
+- **`types/evaluate.types.ts`**: Refactored 6 types to interfaces (`IDistributions`, `ISimilarityMetrics`, `ICandidateWithSimilarity`, `IScoredCandidate`, `ISelectionCriteria`, `IQuestionAssignmentResult`); deleted unnecessary thin wrappers (`IPersistMcqResult`, `IEnsureQuestionAssignedResult`, `IRecentAttemptRow`, `TGeneratedMcqFallbackResult`)
+- **`utils/ingest-web-process.utils.ts`**: Added `SupabaseClient` typing; replaced 6 `any` casts with proper types
+- **`utils/ingest-preflight.utils.ts`**: Fixed error handling
+- **`utils/intelligent-web-adapter.utils.ts`**: Fixed require() import (cheerio)
+- **`utils/repo.utils.ts`**: Moved GitHub types to `types/ingestion.types.ts`
+- **`utils/web-crawler.utils.ts`**: Added `Robot` type import from robots-parser
+- **`utils/mcq-retrieval.utils.ts`**: Added database row interfaces
+- **`utils/evaluate-assignment-executor.utils.ts`**: Replaced 9 `any` casts; improved error handling
+- **`utils/evaluate-context-builder.utils.ts`**: Replaced 4 `any` casts; updated type references
+- **`utils/evaluate-candidate-scorer.utils.ts`**: Replaced 5 `any` casts; improved error handling
+
+### Files Modified
+
+- `types/evaluate.types.ts` (added 7 interfaces/types for error handling and database rows)
+- `types/ingestion.types.ts` (moved GitHub API types here)
+- `utils/ingest-web-process.utils.ts` (6 any fixes)
+- `utils/ingest-preflight.utils.ts` (1 error type fix)
+- `utils/intelligent-web-adapter.utils.ts` (1 require + 1 any fixes)
+- `utils/repo.utils.ts` (2 any fixes, updated imports)
+- `utils/web-crawler.utils.ts` (2 any + 1 import fix)
+- `utils/mcq-retrieval.utils.ts` (5 any fixes, added 3 interfaces)
+- `utils/evaluate-assignment-executor.utils.ts` (9 any fixes)
+- `utils/evaluate-context-builder.utils.ts` (4 any fixes)
+- `utils/evaluate-candidate-scorer.utils.ts` (5 any fixes)
+
+### Blast Radius
+
+No breaking changes; all updates are internal type refinements. Functions maintain identical signatures and behavior.
+
+### Issues Fixed
+
+**46 issues** from Phase 2 (domains):
+
+- 34 `any` type replacements across evaluate utilities
+- 7 new type definitions for error/result handling
+- 4 error type improvements (instanceof checks)
+- 1 import correction (repo types moved)
+
+### Behavior Unchanged
+
+All runtime behavior identical; types only.
 
 ## Phase 1 — Impact Map & Changelog
 
 ### What Changed
+
 - Created `types/app.types.ts`: Added `IApiResponse<T>`, `IPaginated<T>`, `TResult<T, E>`, `TDomainError` following conventions (I prefix for interfaces, T prefix for types).
 - Deleted temporary files: `types/api.types.ts`, `types/error.types.ts`.
 - Updated `utils/json.utils.ts`: Replaced `T = any` with constrained generic `T extends Record<string, unknown> = Record<string, unknown>`.
 - Updated `services/http.services.ts`: Removed unused `config` parameter; replaced `err: any` with proper `AxiosError` type.
 
 ### Files Modified
+
 - `types/app.types.ts` (added 21 lines)
 - `utils/json.utils.ts` (improved generic constraint)
 - `services/http.services.ts` (removed unused param, fixed error type)
 
 ### Blast Radius
+
 No call site updates needed; generic constraint is backward-compatible and internal refactor.
 
 ### Issues Fixed
+
 - `json.utils.ts` line 5: `any` → constrained generic (1 error)
 - `http.services.ts` line 4: unused param removed (1 warning)
 - `http.services.ts` line 47: `err: any` → `AxiosError` (1 error)
 
 ### Behavior Unchanged
+
 Runtime behavior identical; types only.
 
 ## Issue Analysis

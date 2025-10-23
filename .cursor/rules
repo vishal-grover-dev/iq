@@ -177,23 +177,31 @@ When adding label "Evaluating..." for evaluation feature:
 
 - Prefix: `E` (e.g., `EAttemptStatus`)
 - Values: `SCREAMING_SNAKE_CASE` (e.g., `IN_PROGRESS`, `COMPLETED`)
+- Use: **Only as discriminators** for conditionals and type guards (e.g., `if (status === EAttemptStatus.COMPLETED)`)
+- Location: `types/*.ts`
+
+**Interfaces (Object Shapes):**
+
+- Prefix: `I` (e.g., `IAttemptMetadata`, `IDistributions`, `IApiResponse`)
+- Use: For concrete data structures with named properties (database rows, API objects, function parameters)
+- Examples: `IUser`, `IApiResponse<T>`, `IDistributions`, `ICandidateWithSimilarity`
+- Avoid: Single-property interfaces (use inline types in function signatures instead, e.g., `{ prop: type }`)
+- Location: `types/*.ts`
+
+**Types (Unions, Aliases, Generics):**
+
+- Prefix: `T` (e.g., `TResult<T, E>`, `TSelectionMethod`)
+- Use: For type unions, discriminated unions, generics, mapped types, or conditional type aliases
+- Examples: `TResult<T, E> = { ok: true; value: T } | { ok: false; error: E }`, `TDomainError = { kind: "ValidationError"; ... } | { kind: "NotFound"; ... }`
+- **NEVER use `type` for simple object shapes** (use `interface` instead)
 - Location: `types/*.ts`
 
 **Constants:**
 
 - Name: `SCREAMING_SNAKE_CASE` (e.g., `THEME_CONFIG`, `MCQ_PROMPTS`)
 - Objects: Nested structure with logical categories
+- Use `as const` for type inference
 - Location: `constants/*.ts`
-
-**Interfaces:**
-
-- Prefix: `I` (e.g., `IAttemptMetadata`)
-- Location: `types/*.ts`
-
-**Types:**
-
-- Prefix: `T` (e.g., `TResultTier`)
-- Location: `types/*.ts`
 
 ---
 

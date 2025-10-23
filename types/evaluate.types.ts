@@ -3,7 +3,7 @@
  * Defines interfaces for attempts, questions, results, and analytics
  */
 
-import { EDifficulty, EBloomLevel } from "./mcq.types";
+import { EDifficulty, EBloomLevel, IMcqItemView } from "./mcq.types";
 
 /**
  * Evaluate page labels
@@ -396,7 +396,7 @@ export enum ESimilarityGate {
 /**
  * Question difficulty distribution
  */
-export type TDistributions = {
+export interface IDistributions {
   easy_count: number;
   medium_count: number;
   hard_count: number;
@@ -404,12 +404,12 @@ export type TDistributions = {
   topic_distribution: Record<string, number>;
   subtopic_distribution: Record<string, number>;
   bloom_distribution: Record<string, number>;
-};
+}
 
 /**
  * Similarity metrics for a candidate
  */
-export type TSimilarityMetrics = {
+export interface ISimilarityMetrics {
   attempt_similarity?: {
     scores: number[];
     top_score: number;
@@ -418,12 +418,12 @@ export type TSimilarityMetrics = {
     scores: number[];
     top_score: number;
   };
-};
+}
 
 /**
  * Candidate with similarity scoring
  */
-export type TCandidateWithSimilarity = {
+export interface ICandidateWithSimilarity {
   id: string;
   topic: string;
   subtopic: string;
@@ -435,33 +435,66 @@ export type TCandidateWithSimilarity = {
   embedding?: number[] | null;
   _seenRecently?: boolean;
   similarityPenalty: number;
-  similarityMetrics: TSimilarityMetrics;
-};
+  similarityMetrics: ISimilarityMetrics;
+}
 
 /**
  * Scored candidate for selection
  */
-export type TScoredCandidate = TCandidateWithSimilarity & {
+export interface IScoredCandidate extends ICandidateWithSimilarity {
   score: number;
-};
+}
 
 /**
  * LLM selector output
  */
-export type TSelectionCriteria = {
+export interface ISelectionCriteria {
   difficulty: EDifficulty;
   coding_mode: boolean;
   preferred_topic?: string;
   preferred_subtopic?: string;
   preferred_bloom_level: EBloomLevel;
-};
+}
 
 /**
  * Question assignment result
  */
-export type TQuestionAssignmentResult = {
+export interface IQuestionAssignmentResult {
   success: boolean;
   question_id: string;
   method: ESelectionMethod;
   error?: string;
-};
+}
+
+// Error handling types for evaluate operations
+export interface IAssignmentError {
+  code?: string;
+  message?: string;
+}
+
+export interface IAssignmentResult {
+  success: boolean;
+  assigned_question_id: string | null;
+  error?: IAssignmentError | string | null;
+}
+
+// Database row types for evaluate operations
+export interface IAskedQuestionRow {
+  mcq_items?:
+    | {
+        question?: string;
+        embedding?: unknown;
+      }
+    | Array<{
+        question?: string;
+        embedding?: unknown;
+      }>;
+}
+
+export interface IMcqRowWithDetails {
+  difficulty?: string;
+  bloom_level?: string;
+  topic?: string;
+  subtopic?: string | null;
+  code?: string | null;
+}

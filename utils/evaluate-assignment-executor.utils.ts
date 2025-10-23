@@ -1,6 +1,14 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { ESelectionMethod, ESimilarityGate } from "@/types/evaluate.types";
-import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
+import {
+  ESelectionMethod,
+  ESimilarityGate,
+  IAssignmentResult,
+  IAskedQuestionRow,
+  ISelectionCriteria,
+  IDistributions,
+  IAssignmentError,
+} from "@/types/evaluate.types";
+import { EDifficulty, EBloomLevel, IMcqItemView } from "@/types/mcq.types";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { getEmbeddings } from "@/services/ai/embedding.service";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
@@ -15,10 +23,10 @@ export async function assignQuestionWithRetry(
   questionOrder: number,
   supabase: SupabaseClient,
   attemptIdForLogging: string
-): Promise<{ success: boolean; assigned_question_id: string | null; error?: any }> {
+): Promise<IAssignmentResult> {
   const { MAX_RETRIES, EXPONENTIAL_BACKOFF_BASE_MS } = EVALUATE_SELECTION_CONFIG.ASSIGNMENT;
 
-  let lastError: any = null;
+  let lastError: IAssignmentError | null = null;
 
   for (let retry = 0; retry < MAX_RETRIES; retry++) {
     const { error: assignError } = await supabase.from("attempt_questions").insert({
@@ -60,12 +68,12 @@ export async function assignQuestionWithRetry(
 }
 
 export async function persistGeneratedMcq(
-  generatedMcq: any,
+  generatedMcq: IMcqItemView,
   mcqEmbedding: number[],
   userId: string,
   supabase: SupabaseClient,
   attemptIdForLogging: string
-): Promise<{ id: string | null; error?: any }> {
+): Promise<{ id: string | null; error?: IAssignmentError | null }> {
   const contentKey = computeMcqContentKey(generatedMcq);
 
   const { data: savedMcq, error: saveError } = await supabase
@@ -121,7 +129,7 @@ export async function ensureQuestionAssigned(
   questionOrder: number,
   supabase: SupabaseClient,
   attemptIdForLogging: string
-): Promise<{ question_id: string | null; error?: any }> {
+): Promise<{ question_id: string | null; error?: IAssignmentError | string | null }> {
   const { data: fallbackMcq } = await supabase
     .from("mcq_items")
     .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
@@ -162,13 +170,13 @@ export async function ensureQuestionAssigned(
 export async function generateMcqFallback(
   attemptId: string,
   userId: string,
-  criteria: any,
-  distributions: any,
-  askedQuestions: any[],
+  criteria: ISelectionCriteria,
+  distributions: IDistributions,
+  askedQuestions: IAskedQuestionRow[],
   askedContentKeySet: Set<string>,
   overrepresentedTopics: string[],
   supabase: SupabaseClient
-): Promise<{ questionId: string | null; generatedMcq?: any }> {
+): Promise<{ questionId: string | null; generatedMcq?: IMcqItemView }> {
   const { MAX_ATTEMPTS, NEGATIVE_EXAMPLES_LOOKAHEAD, NEGATIVE_EXAMPLES_LIMIT } = EVALUATE_SELECTION_CONFIG.GENERATION;
 
   let generationAttempts = 0;
@@ -178,8 +186,11 @@ export async function generateMcqFallback(
   const baseAvoidTopics = [...overrepresentedTopics];
   let negativeExamples: string[] = askedQuestions
     .slice(-NEGATIVE_EXAMPLES_LOOKAHEAD)
-    .map((q: any) => String(q?.mcq_items?.question || ""))
-    .filter((s: string) => s.length > 0);
+    .map((q) => {
+      const mcqItem = Array.isArray(q.mcq_items) ? q.mcq_items[0] : q.mcq_items;
+      return String(mcqItem?.question || "");
+    })
+    .filter((s) => s.length > 0);
 
   while (generationAttempts < MAX_ATTEMPTS) {
     generationAttempts++;
@@ -209,8 +220,8 @@ export async function generateMcqFallback(
         const match = Array.from(topicSubtopicsSet).find(
           (dbSubtopic) =>
             dbSubtopic === criteria.preferred_subtopic ||
-            dbSubtopic.toLowerCase().includes(criteria.preferred_subtopic.toLowerCase()) ||
-            criteria.preferred_subtopic.toLowerCase().includes(dbSubtopic.toLowerCase())
+            dbSubtopic.toLowerCase().includes(criteria.preferred_subtopic?.toLowerCase() || "") ||
+            criteria.preferred_subtopic?.toLowerCase().includes(dbSubtopic.toLowerCase())
         );
         if (match) contextSubtopic = match;
       }
@@ -244,11 +255,13 @@ export async function generateMcqFallback(
         throw new Error("No context items retrieved");
       }
 
-      const contextForGeneration = contextItems.map((item: any) => ({
-        title: item.title,
-        url: `${item.bucket}/${item.path}`,
-        content: item.content,
-      }));
+      const contextForGeneration = contextItems.map(
+        (item: { title?: string | null; bucket: string; path: string; content: string }) => ({
+          title: item.title,
+          url: `${item.bucket}/${item.path}`,
+          content: item.content,
+        })
+      );
 
       const relaxationLevel = Math.max(0, generationAttempts - 1);
       const avoidTopicsForAttempt =
@@ -288,7 +301,7 @@ export async function generateMcqFallback(
           p_topk: EVALUATE_SELECTION_CONFIG.GENERATION.NEIGHBOR_TOPK,
         });
 
-        const neighborScores: Array<{ score: number }> = (neighborRows ?? []).map((r: any) => ({
+        const neighborScores: Array<{ score: number }> = (neighborRows ?? []).map((r: { score?: number }) => ({
           score: Number(r?.score || 0),
         }));
 
@@ -304,8 +317,9 @@ export async function generateMcqFallback(
           negativeExamples = [...negativeExamples, generatedMcq.question].slice(-NEGATIVE_EXAMPLES_LIMIT);
           if (generationAttempts < MAX_ATTEMPTS) continue;
         }
-      } catch (neighborError: any) {
-        console.warn("neighbor_check_failed", { message: neighborError?.message });
+      } catch (neighborError) {
+        const message = neighborError instanceof Error ? neighborError.message : String(neighborError);
+        console.warn("neighbor_check_failed", { message });
       }
 
       try {
@@ -313,7 +327,7 @@ export async function generateMcqFallback(
         const askedQuestionTexts: string[] = [];
 
         for (const entry of askedQuestions) {
-          const mcqItem = Array.isArray(entry?.mcq_items) ? entry.mcq_items[0] : entry?.mcq_items;
+          const mcqItem = Array.isArray(entry.mcq_items) ? entry.mcq_items[0] : entry.mcq_items;
           const vector = toNumericVector(mcqItem?.embedding);
           if (vector) askedEmbeddings.push(vector);
           if (mcqItem?.question) askedQuestionTexts.push(mcqItem.question);
@@ -354,10 +368,10 @@ export async function generateMcqFallback(
           negativeExamples = [...negativeExamples, generatedMcq.question].slice(-NEGATIVE_EXAMPLES_LIMIT);
           if (generationAttempts < MAX_ATTEMPTS) continue;
         }
-      } catch (attemptSimilarityError: any) {
-        console.warn("attempt_similarity_check_failed", {
-          message: attemptSimilarityError?.message,
-        });
+      } catch (attemptSimilarityError) {
+        const message =
+          attemptSimilarityError instanceof Error ? attemptSimilarityError.message : String(attemptSimilarityError);
+        console.warn("attempt_similarity_check_failed", { message });
       }
 
       const [mcqEmbedding] = await getEmbeddings([buildMcqEmbeddingText(generatedMcq)]);
@@ -366,11 +380,11 @@ export async function generateMcqFallback(
       if (savedId) {
         return { questionId: savedId, generatedMcq };
       }
-    } catch (generationError: any) {
-      console.error(`Error generating MCQ (attempt ${generationAttempts}/${MAX_ATTEMPTS}):`, generationError);
+    } catch (generationError) {
+      const message = generationError instanceof Error ? generationError.message : String(generationError);
+      console.error(`Error generating MCQ (attempt ${generationAttempts}/${MAX_ATTEMPTS}):`, message);
     }
   }
 
   return { questionId: null };
 }
-

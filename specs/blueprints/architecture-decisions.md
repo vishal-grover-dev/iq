@@ -246,7 +246,11 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 - Components ~200 lines; decompose into subcomponents or extract logic to hooks/utils when larger.
 - Services = API-facing functions only (JSDoc required); helpers → utils.
-- Interfaces prefix `I`, types prefix `T`, enums prefix `E`.
+- **Type naming conventions:**
+  - **Interfaces (prefix `I`):** Use for object shapes with named properties (e.g., `IUser`, `IApiResponse`, `IDistributions`). Interfaces define the structure of concrete data.
+  - **Types (prefix `T`):** Use for unions, discriminated unions, generics, mapped types, or type aliases that combine multiple shapes (e.g., `TResult<T, E> = { ok: true; value: T } | { ok: false; error: E }`). Never use `type` for simple object shapes—use `interface` instead.
+  - **Enums (prefix `E`):** Use only as discriminators for unions or conditionals (e.g., `EAttemptStatus`, `EDifficulty`). Do not use for strings that belong in constants.
+  - **Avoid:** Single-property interfaces (use inline `{ prop: type }` in function signatures); mixing `type` and `interface` for the same concept; T-prefixed aliases for object shapes.
 
 **Trade-offs:**
 

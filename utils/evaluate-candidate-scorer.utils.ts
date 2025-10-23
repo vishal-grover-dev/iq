@@ -1,20 +1,26 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { TCandidateWithSimilarity, TScoredCandidate, TSelectionCriteria } from "@/types/evaluate.types";
+import {
+  ICandidateWithSimilarity,
+  IScoredCandidate,
+  ISelectionCriteria,
+  IDistributions,
+  IAttemptContext,
+} from "@/types/evaluate.types";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { weightedRandomIndex } from "@/utils/selection.utils";
 import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
 
 export async function applyNeighborSimilarityChecks(
-  candidates: any[],
+  candidates: ICandidateWithSimilarity[],
   askedEmbeddings: number[][],
   userId: string,
   supabase: SupabaseClient,
   attemptId: string
-): Promise<TCandidateWithSimilarity[]> {
+): Promise<ICandidateWithSimilarity[]> {
   return await Promise.all(
-    candidates.map(async (candidate: any) => {
+    candidates.map(async (candidate) => {
       let similarityPenalty = 0;
-      let similarityMetrics: any = {};
+      let similarityMetrics: Record<string, { scores: number[]; top_score: number }> = {};
 
       try {
         if (askedEmbeddings.length > 0) {
@@ -52,10 +58,12 @@ export async function applyNeighborSimilarityChecks(
               p_topk: 5,
             });
 
-            const neighborScores: Array<{ question: string; score: number }> = (neighborRows ?? []).map((r: any) => ({
-              question: String(r?.question || ""),
-              score: Number(r?.score || 0),
-            }));
+            const neighborScores: Array<{ question: string; score: number }> = (neighborRows ?? []).map(
+              (r: { question?: string; score?: number }) => ({
+                question: String(r?.question || ""),
+                score: Number(r?.score || 0),
+              })
+            );
 
             similarityMetrics.neighbor_similarity = {
               scores: neighborScores.slice(0, 3).map((n) => n.score),
@@ -72,15 +80,17 @@ export async function applyNeighborSimilarityChecks(
               similarityPenalty += BANK_NEIGHBOR_MEDIUM;
             }
           }
-        } catch (neighborError: any) {
+        } catch (neighborError) {
+          const message = neighborError instanceof Error ? neighborError.message : String(neighborError);
           console.warn("bank_neighbor_similarity_check_failed", {
-            message: neighborError?.message || String(neighborError),
+            message,
             candidate_id: candidate.id,
           });
         }
-      } catch (e: any) {
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
         console.warn("bank_similarity_check_failed", {
-          message: e?.message || String(e),
+          message,
           candidate_id: candidate.id,
         });
       }
@@ -95,10 +105,10 @@ export async function applyNeighborSimilarityChecks(
 }
 
 export function scoreCandidate(
-  candidate: TCandidateWithSimilarity,
-  criteria: TSelectionCriteria,
-  distributions: any,
-  attempt: any
+  candidate: ICandidateWithSimilarity,
+  criteria: ISelectionCriteria,
+  distributions: IDistributions,
+  attempt: IAttemptContext
 ): number {
   let score = 0;
 
@@ -127,7 +137,7 @@ export function scoreCandidate(
   return score;
 }
 
-export function selectTopKWithWeights(scoredCandidates: TScoredCandidate[]): TScoredCandidate[] {
+export function selectTopKWithWeights(scoredCandidates: IScoredCandidate[]): IScoredCandidate[] {
   const K = Math.min(EVALUATE_SELECTION_CONFIG.CANDIDATE_SCORING.TOPK_COUNT, scoredCandidates.length);
   const topK = scoredCandidates.slice(0, K);
   const weights = topK.map((c) => Math.max(1, c.score));

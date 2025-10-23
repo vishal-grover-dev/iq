@@ -1,3 +1,4 @@
+import { load } from "cheerio";
 
 /**
  * Intelligently extract main content from any HTML page
@@ -7,7 +8,6 @@ export function extractMainContent(html?: string | null): string | null {
   if (!html) return null;
 
   try {
-    const { load } = require("cheerio");
     const $ = load(html);
 
     // Remove noise elements universally
@@ -40,8 +40,9 @@ export function extractMainContent(html?: string | null): string | null {
     let bestElement = $("body");
     let maxTextLength = 0;
 
-    $("div, section, article").each((_: number, el: unknown) => {
-      const $el = $(el as any);
+    $("div, section, article").each(function (this) {
+      const el = this;
+      const $el = $(el);
       const textLength = $el.text().trim().length;
       if (textLength > maxTextLength && textLength > 200) {
         maxTextLength = textLength;

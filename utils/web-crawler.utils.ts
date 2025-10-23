@@ -1,5 +1,6 @@
+import { load } from "cheerio";
+import type { Robot } from "robots-parser";
 import robotsParser from "robots-parser";
-import * as cheerio from "cheerio";
 import { assessContentQuality, extractMainContent } from "@/utils/intelligent-web-adapter.utils";
 import { externalGetWithRetry } from "@/services/http.services";
 import { normalizeUrl } from "@/utils/url.utils";
@@ -32,10 +33,10 @@ export interface IWebPageItem {
 }
 
 // Simple in-memory cache for robots.txt
-const robotsCache = new Map<string, { robots: any | null; timestamp: number }>();
+const robotsCache = new Map<string, { robots: Robot | null; timestamp: number }>();
 const ROBOTS_CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
-export async function fetchRobots(base: string) {
+export async function fetchRobots(base: string): Promise<Robot | null> {
   const robotsUrl = new URL("/robots.txt", base).toString();
   const cacheKey = new URL(base).origin;
 
@@ -120,7 +121,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
     if (!html) continue;
 
     try {
-      const $ = cheerio.load(html);
+      const $ = load(html);
       const title = ($("title").first().text() || $("h1").first().text() || url).trim();
       const mainHtml = extractMainContent(html) ?? html;
       const content = mainHtml
@@ -145,7 +146,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
           const best = Object.keys(depthMap)
             .filter((k) => u.pathname.startsWith(k))
             .sort((a, b) => b.length - a.length)[0];
-          return typeof best === "string" ? (depthMap as any)[best] ?? depth : depth;
+          return typeof best === "string" ? depthMap[best] ?? depth : depth;
         } catch {
           return depth;
         }

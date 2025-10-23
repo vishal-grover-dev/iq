@@ -36,7 +36,8 @@ export function persistEmbeddedFlags(
     } else {
       logger.info("[ingest] catalog up-to-date", { path: catalogPath });
     }
-  } catch (e: any) {
-    logger.error("[ingest] failed to update catalog", { error: e?.message });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error("[ingest] failed to update catalog", { error: err.message });
   }
 }

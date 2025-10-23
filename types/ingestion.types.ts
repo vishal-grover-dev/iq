@@ -115,3 +115,13 @@ export interface IIngestionProgressInfo {
   topics?: string[];
   subtopics?: string[];
 }
+
+// GitHub API response types
+export interface IGitHubTreeItem {
+  type: "blob" | "tree" | "commit";
+  path: string;
+}
+
+export interface IGitHubTreeResponse {
+  tree: IGitHubTreeItem[];
+}

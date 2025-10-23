@@ -78,9 +78,7 @@ export interface IPaginated<T> {
   pageSize: number;
 }
 
-export type TResult<T, E extends Error = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type TResult<T, E extends Error = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 // Error Types
 export type TDomainError =
@@ -88,3 +86,22 @@ export type TDomainError =
   | { kind: "NotFound"; resource: string }
   | { kind: "ExternalServiceError"; service: string; message: string }
   | { kind: "Unknown"; message: string };
+
+// Database Response Row Types
+export interface IContextRow {
+  title: string | null;
+  path: string;
+  content: string;
+}
+
+export interface INeighborRow {
+  question: string;
+  options: string[];
+  score: number;
+}
+
+export interface IRecentQuestionRow {
+  question: string;
+  subtopic: string | null;
+  topic: string;
+}

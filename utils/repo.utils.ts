@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { IGitHubTreeResponse } from "@/types/ingestion.types";
 
 /**
  * parseRepoUrl
@@ -22,7 +23,7 @@ export function parseRepoUrl(repoUrl: string): { owner: string; repo: string } {
 export async function getDefaultBranch(owner: string, repo: string): Promise<string> {
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
   if (!res.ok) throw new Error(`Failed to resolve default branch: ${res.status}`);
-  const data = await res.json();
+  const data = (await res.json()) as { default_branch?: string };
   return data?.default_branch ?? "main";
 }
 
@@ -40,9 +41,9 @@ export async function listMarkdownPaths(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`
   );
   if (!treeRes.ok) throw new Error(`Failed to list repo tree: ${treeRes.status}`);
-  const tree = await treeRes.json();
+  const tree = (await treeRes.json()) as IGitHubTreeResponse;
   const allPaths: string[] = Array.isArray(tree?.tree)
-    ? tree.tree.filter((t: any) => t?.type === "blob").map((t: any) => String(t?.path))
+    ? tree.tree.filter((t) => t?.type === "blob").map((t) => String(t?.path))
     : [];
   const isMd = (p: string) => p.toLowerCase().endsWith(".md") || p.toLowerCase().endsWith(".mdx");
   const prefixFilter = (p: string) => prefixes.length === 0 || prefixes.some((pre) => p.startsWith(pre));

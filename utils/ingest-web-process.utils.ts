@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { IWebPageItem } from "@/utils/web-crawler.utils";
 import { extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
 import { resolveLabels } from "@/utils/label-resolver.utils";
@@ -13,7 +14,7 @@ export interface IPreparedBatchItem {
 }
 
 export async function prefilterExistingWebPages(
-  supabase: any,
+  supabase: SupabaseClient,
   pages: IWebPageItem[],
   maxPages?: number
 ): Promise<{ selectedPages: IWebPageItem[]; existingCount: number }> {
@@ -23,7 +24,7 @@ export async function prefilterExistingWebPages(
     .select("path")
     .eq("bucket", "web")
     .in("path", plannedUrls);
-  const existingSet = new Set<string>((existingDocs ?? []).map((d: any) => d.path));
+  const existingSet = new Set<string>((existingDocs ?? []).map((d: { path: string }) => d.path));
   const freshPages = pages.filter((p) => !existingSet.has(p.url));
   const selectedPages = freshPages.slice(0, maxPages ?? freshPages.length);
   return { selectedPages, existingCount: existingSet.size };
@@ -36,11 +37,11 @@ export interface IAssessContext {
 }
 
 export type TAssessResult =
-  | { kind: "skip"; reason: string; meta?: Record<string, any> }
+  | { kind: "skip"; reason: string; meta?: Record<string, number | string> }
   | { kind: "prepared"; item: IPreparedBatchItem };
 
 export async function assessAndPreparePage(
-  supabase: any,
+  supabase: SupabaseClient,
   ingestionId: string,
   page: IWebPageItem,
   ctx: IAssessContext,
@@ -114,7 +115,7 @@ export async function assessAndPreparePage(
     throw new Error(upsertRes.error.message);
   }
   if (upsertRes.data && upsertRes.data.length > 0) {
-    documentId = upsertRes.data[0].id as string;
+    documentId = (upsertRes.data[0] as { id: string }).id;
   } else {
     const { data: existingDoc, error: selErr } = await supabase
       .from("documents")
@@ -123,7 +124,7 @@ export async function assessAndPreparePage(
       .eq("path", page.url)
       .single();
     if (selErr || !existingDoc) throw new Error(selErr?.message ?? "Failed to get existing document id");
-    documentId = existingDoc.id as string;
+    documentId = (existingDoc as { id: string }).id;
   }
 
   // Extract main content and chunk
@@ -145,7 +146,7 @@ export async function assessAndPreparePage(
 }
 
 export async function insertChunksBatch(
-  supabase: any,
+  supabase: SupabaseClient,
   batch: IPreparedBatchItem[],
   ctx: IAssessContext,
   getEmbeddingsFn: (inputs: string[]) => Promise<number[][]>
@@ -168,7 +169,7 @@ export async function insertChunksBatch(
       chunk_index: c.index,
       content: c.content,
       tokens: c.tokens,
-      embedding: embeddings[offset + idx] as unknown as any,
+      embedding: embeddings[offset + idx] as number[],
       labels: { topic: resolved.topic, subtopic: resolved.subtopic, version: resolved.version },
     }));
     const { error: insertErr } = await supabase.from("document_chunks").insert(rows);

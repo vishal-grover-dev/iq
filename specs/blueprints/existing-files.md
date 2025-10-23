@@ -299,3 +299,7 @@ Updates:
 - `utils/mcq-prompts/reviser-prompt.utils.ts`: `buildReviserMessages()` for MCQ revision
 - `utils/mcq-prompts/judge-prompt.utils.ts`: `buildJudgeMessages()` for quality judgment
 - `utils/mcq-prompts/selector-prompt.utils.ts`: `generateQuestionPrompt()` for LLM-driven selection
+
+#### MCQ Orchestration (Phase 4 API Route Modularization)
+
+- `mcq-orchestration.service.ts`: **NEW** Orchestrator for SSE-based MCQ generation pipeline. Exports: `orchestrateMcqGenerationSSE()` implementing 6-stage pipeline (Initialize → Retrieve Context → Generate Draft → Fetch Neighbors → Judge Quality → Finalize). (~175 lines) Preserves identical SSE event order and payload shapes consumed by `app/generate/mcq/page.tsx`. **Phase 4: API route modularization.**

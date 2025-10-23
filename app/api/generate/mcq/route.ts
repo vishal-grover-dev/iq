@@ -4,9 +4,9 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
-import { judgeMcqQuality } from "@/services/ai/mcq-refinement.service";
 import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
-import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
+import { retrieveContextByLabels, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
+import { orchestrateMcqGenerationSSE } from "@/services/mcq-orchestration.service";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";
 
@@ -22,83 +22,14 @@ export async function GET(req: NextRequest) {
     const topic = url.searchParams.get("topic") || "React";
     const subtopic = url.searchParams.get("subtopic");
     const version = url.searchParams.get("version");
-    const q = [topic, subtopic ?? "", version ?? ""].filter(Boolean).join(" ") + " key concepts";
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        function send(event: string, data: unknown) {
-          const payload = typeof data === "string" ? data : JSON.stringify(data);
-          controller.enqueue(new TextEncoder().encode(`event: ${event}\n`));
-          controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
-        }
-        try {
-          send("generation_started", { topic, subtopic, version });
-          const context = await retrieveContextByLabels({ userId, topic, subtopic, version, query: q, topK: 8 });
-          const negativeExamples = await getRecentQuestions({ userId, topic, subtopic: subtopic ?? undefined });
-          let item = await generateMcqFromContext({
-            topic,
-            subtopic: subtopic ?? undefined,
-            version: version ?? undefined,
-            contextItems: context,
-            codingMode: true,
-            negativeExamples,
-          });
-          // Retry once if missing valid code block (3–50 lines). If still missing, fail-fast with structured reason.
-          if (!hasValidCodeBlock(item.code || "", { minLines: 3, maxLines: 50 })) {
-            const attempt = await generateMcqFromContext({
-              topic,
-              subtopic: subtopic ?? undefined,
-              version: version ?? undefined,
-              contextItems: context,
-              codingMode: true,
-              negativeExamples,
-            });
-            if (hasValidCodeBlock(attempt.code || "", { minLines: 3, maxLines: 50 })) {
-              item = attempt;
-            } else {
-              send("error", {
-                reason: "missing_code",
-                message: "Generated MCQ missing required js/tsx fenced code block (3–50 lines).",
-              });
-              controller.close();
-              return;
-            }
-          }
-          // Centralized validation including no-dup code-in-question
-          const validation = validateMcq(item as IMcqItemView, true);
-          if (!validation.ok) {
-            send("error", { reason: "validation_failed", errors: validation.reasons });
-            controller.close();
-            return;
-          }
-          send("generation_complete", { item });
-          const neighbors = await retrieveNeighbors({ userId, topic, subtopic, mcq: item, topK: 8 });
-          send("neighbors", {
-            count: neighbors.length,
-            top: neighbors.slice(0, 5).map((n) => ({ question: n.question, options: n.options, score: n.score })),
-          });
-          send("judge_started", {});
-          const verdict = await judgeMcqQuality({
-            mcq: item as IMcqItemView,
-            contextItems: context,
-            neighbors: neighbors.slice(0, 6),
-            codingMode: true,
-          });
-          send("judge_result", verdict);
-          send("finalized", { ok: true });
-        } catch (e: any) {
-          send("error", { message: e?.message ?? "Failed" });
-        } finally {
-          controller.close();
-        }
-      },
-    });
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-      },
+    return await orchestrateMcqGenerationSSE({
+      userId,
+      topic,
+      subtopic,
+      version,
+      codingMode: true,
+      maxNeighbors: 8,
     });
   } catch (err: any) {
     return NextResponse.json(

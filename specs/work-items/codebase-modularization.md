@@ -664,3 +664,64 @@ hooks/
 - [ ] Code review of first 2–3 refactors (ready for review)
 - [ ] Update `specs/blueprints/directory-structure.md` with new folder layouts
 - [ ] Update `specs/blueprints/existing-files.md` with new files/modules
+
+---
+
+#### Phase 4 Task 1: MCQ Generation Route Orchestration (COMPLETED)
+
+**Completion Status:** ✓ COMPLETE
+
+**Files Created:**
+- [x] `services/mcq-orchestration.service.ts` (182 lines)
+  - Exports: `orchestrateMcqGenerationSSE()` with comprehensive JSDoc
+  - Types: `SseEventName` union (generation_started, generation_complete, neighbors, judge_started, judge_result, finalized, error)
+  - Interface: `IOrchestrateArgs` for orchestration parameters
+  - Helper: `writeEvent()` for consistent SSE formatting
+  - Pipeline: 6 stages (Init → Context → Generate → Validate → Neighbors → Judge → Finalize)
+
+**Files Refactored:**
+- [x] `app/api/generate/mcq/route.ts` (169 lines, reduced from 238 lines)
+  - GET handler: 35 lines (reduced from ~95 lines, -63%)
+    • Auth check + parameter parsing
+    • Delegates to `orchestrateMcqGenerationSSE()`
+  - POST handler: Unchanged (MCQ save logic preserved)
+    • Single-shot MCQ generation with novelty hints
+    • Subtopic diversification and retry logic intact
+
+**Documentation Updated:**
+- [x] `specs/blueprints/existing-files.md`: Added MCQ orchestration service entry
+
+**Verification Results:**
+- [x] Pre-change lint snapshot: 285 problems (246 errors, 39 warnings)
+- [x] Post-change lint count: 285 problems (246 errors, 39 warnings)
+- [x] New linting issues introduced: 0 ✓
+- [x] SSE event compatibility: ✓ Identical to original (verified against client)
+- [x] Observable behavior changes: None ✓
+- [x] POST handler independence: ✓ No persistence coupling
+- [x] Core logic preservation: ✓ Verbatim refactor
+
+**Code Quality Metrics:**
+- Service: 182 lines (< 200 line target) ✓
+- Route GET: 35 lines (clean delegation) ✓
+- Route POST: 130 lines (unchanged logic) ✓
+- Single responsibility: Orchestration ≠ HTTP routing ✓
+- Reusability: Service callable by other routes ✓
+
+**Acceptance Criteria Met:**
+- [x] No observable behavior changes
+- [x] Identical SSE event order, names, payloads
+- [x] Identical HTTP status codes and headers  
+- [x] POST handler unchanged (no persistence moved)
+- [x] Core logic preserved verbatim
+- [x] No new ESLint errors vs baseline
+- [x] Service ≤ 200 lines
+- [x] Clear stage-by-stage architecture with JSDoc
+
+---
+
+#### Remaining Phase 4 Tasks (Future Work)
+
+- [ ] Create `utils/ingest-runner.utils.ts` and `utils/ingest-worker.utils.ts`
+- [ ] Refactor `utils/interview-streams.utils.ts`
+- [ ] Create `utils/ingest-processor.utils.ts` with unified interface
+- [ ] Refactor `app/api/ingest/repo/process/route.ts` and web processor

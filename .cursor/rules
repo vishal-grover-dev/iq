@@ -238,6 +238,11 @@ This allows gradual migration of existing code without breaking changes.
 - `types/ui.types.ts` → `EButtonVariants`, `EModalTypes`, `EToastTypes`
 - `constants/ui.constants.ts` → `COMMON_LABELS`, `FORM_LABELS`, `STATUS_LABELS`
 
+### File Length Targets
+
+- Keep JSX/TSX components near 200 lines; allow a 10% buffer (cap ~220 lines) before splitting into subcomponents or extracting logic.
+- Keep other TypeScript and source files near 500 lines with a 10% buffer (cap ~550 lines); refactor into modules or helpers when approaching the limit.
+
 ---
 
 ## Code Quality Checklist

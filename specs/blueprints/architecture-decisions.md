@@ -244,7 +244,8 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 **Guidelines:**
 
-- Components ~200 lines; decompose into subcomponents or extract logic to hooks/utils when larger.
+- JSX/TSX components target 200 lines with a 10% buffer (max ~220 lines); decompose into subcomponents or extract logic to hooks/utils when larger.
+- TypeScript and other source files target 500 lines with a 10% buffer (max ~550 lines); split files when approaching the cap.
 - Services = API-facing functions only (JSDoc required); helpers → utils.
 - **Type naming conventions:**
   - **Interfaces (prefix `I`):** Use for object shapes with named properties (e.g., `IUser`, `IApiResponse`, `IDistributions`). Interfaces define the structure of concrete data.

@@ -11,7 +11,7 @@ import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constan
 import { parseJsonObject } from "@/utils/json.utils";
 import { buildReviserMessages } from "@/utils/mcq-prompts/reviser-prompt.utils";
 import { buildJudgeMessages } from "@/utils/mcq-prompts/judge-prompt.utils";
-import { createOpenAIClient } from "@/services/openai.services";
+import { createOpenAIClient } from "@/config/openai.config";
 
 /**
  * reviseMcqWithContext

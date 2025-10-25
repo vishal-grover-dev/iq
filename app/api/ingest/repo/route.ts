@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { ingestRepoRequestSchema } from "@/schema/ingest.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";

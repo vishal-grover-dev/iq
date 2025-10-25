@@ -3,7 +3,7 @@ import { retrievalRequestSchema } from "@/schema/mcqRetrieval.schema";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
-import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { getEmbeddings, rerank } from "@/services/ai/embedding.service";
 import type { IRetrievalResult } from "@/types/generation.types";
 

@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { ingestResponseSchema, TIngestRepoOrWebRequest } from "@/schema/ingest.schema";
 import { apiClient } from "@/services/http.services";
-import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { useMutation } from "@tanstack/react-query";
 import type { IIngestionStatusResponse, IWebPlanResponse } from "@/types/ingestion.types";
 import { EIngestionMode } from "@/types/ingestion.types";

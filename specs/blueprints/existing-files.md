@@ -162,12 +162,17 @@
 - `judge-prompt.utils.ts`: MCQ quality judgment prompt builder.
 - `selector-prompt.utils.ts`: LLM-driven question selection prompt builder.
 
+### config
+
+- `supabase.config.ts`: Supabase client configuration and factory functions. Exports: `getSupabaseBrowserClient()`, `getSupabaseServiceRoleClient()`, `createSupabaseClientWithKey()`. Used by both client and server contexts. **Phase 1: Moved from services/supabase.services.ts.**
+- `openai.config.ts`: OpenAI client configuration and error utilities. Exports: `createOpenAIClient()`, `getErrorStatus()`, `getErrorMessage()`. Server-only configuration used by AI services. **Phase 1: Moved from services/openai.services.ts.**
+
 ### services
 
 #### Core Services & Shared Utilities
 
-- `supabase.services.ts`: Supabase client helpers (browser anon + server service role). **Moved from utils; Phase 2 architecture correction.**
-- `openai.services.ts`: Shared OpenAI client instantiation and error utilities (`createOpenAIClient`, `getErrorStatus`, `getErrorMessage`). Centralizes OpenAI setup for AI services. (~40 lines) **Phase 2: Moved outside ai/ as shared utility.**
+- `supabase.services.ts`: **DEPRECATED** - Moved to `config/supabase.config.ts` in Phase 1.
+- `openai.services.ts`: **DEPRECATED** - Moved to `config/openai.config.ts` in Phase 1.
 - `ingest.services.ts`: Client helper to call ingestion API.
 - `http.services.ts`: Axios clients with interceptors (API only).
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.

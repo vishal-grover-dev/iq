@@ -7,7 +7,7 @@ import { INTERVIEW_SUBTOPICS, INTERVIEW_TOPIC_OPTIONS } from "@/constants/interv
 import { AI_SERVICE_ERRORS, OPENAI_CONFIG, OPENAI_PROMPTS } from "@/constants/generation.constants";
 import { parseJsonObject } from "@/utils/json.utils";
 import { getStaticSubtopicMap } from "@/utils/static-ontology.utils";
-import { createOpenAIClient } from "@/services/openai.services";
+import { createOpenAIClient } from "@/config/openai.config";
 import { EIngestionMode } from "@/types/ingestion.types";
 
 interface IClassifyResponse extends Record<string, unknown> {

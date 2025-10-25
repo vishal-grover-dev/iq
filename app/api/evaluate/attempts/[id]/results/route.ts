@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
+import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import type { IAttemptResults, IWeakArea, IQuestionReview, IMcqWithExplanation } from "@/types/evaluate.types";
 import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";

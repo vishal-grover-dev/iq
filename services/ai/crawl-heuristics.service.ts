@@ -1,7 +1,7 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
 import { parseJsonObject } from "@/utils/json.utils";
-import { createOpenAIClient } from "@/services/openai.services";
+import { createOpenAIClient } from "@/config/openai.config";
 import type { ICrawlHeuristicsResponse } from "@/types/mcq.types";
 
 /**

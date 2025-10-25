@@ -1,7 +1,7 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, OPENAI_PROMPTS, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
 import { parseJsonObject } from "@/utils/json.utils";
-import { createOpenAIClient, getErrorStatus, getErrorMessage } from "@/services/openai.services";
+import { createOpenAIClient, getErrorStatus, getErrorMessage } from "@/config/openai.config";
 
 /**
  * getEmbeddings

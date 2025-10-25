@@ -6,7 +6,7 @@ import { parseJsonObject } from "@/utils/json.utils";
 import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
-import { createOpenAIClient } from "@/services/openai.services";
+import { createOpenAIClient } from "@/config/openai.config";
 import type { ResponseFormatJSONSchema, ResponseFormatJSONObject } from "openai/resources/shared";
 
 /**

@@ -3,7 +3,7 @@ import { config } from "dotenv";
 // Prefer .env.local for local CLI runs; fallback to .env
 config({ path: fs.existsSync(".env.local") ? ".env.local" : ".env" });
 
-import { runCatalogIngestion } from "@/utils/interview-streams.utils";
+import { runCatalogIngestion } from "@/services/ingest.services";
 import { ILogger } from "@/types/interview-streams.types";
 
 function parseArgs() {

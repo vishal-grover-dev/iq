@@ -1,19 +1,16 @@
 import { load } from "cheerio";
 
 /**
- * Intelligently extract main content from any HTML page
- * Uses universal content detection heuristics
+ * extractMainContent
+ * Shared helper for extracting the primary content area from HTML documents.
  */
 export function extractMainContent(html?: string | null): string | null {
   if (!html) return null;
 
   try {
     const $ = load(html);
-
-    // Remove noise elements universally
     $("script, style, nav, footer, header, aside, .sidebar, .navigation, .menu, .ads, .advertisement").remove();
 
-    // Priority order for content containers (universal patterns)
     const contentSelectors = [
       "main",
       "article",
@@ -28,7 +25,6 @@ export function extractMainContent(html?: string | null): string | null {
       ".entry-content",
     ];
 
-    // Try each selector in priority order
     for (const selector of contentSelectors) {
       const element = $(selector);
       if (element.length && element.text().trim().length > 200) {
@@ -36,7 +32,6 @@ export function extractMainContent(html?: string | null): string | null {
       }
     }
 
-    // Fallback: find the largest text container
     let bestElement = $("body");
     let maxTextLength = 0;
 
@@ -56,7 +51,8 @@ export function extractMainContent(html?: string | null): string | null {
 }
 
 /**
- * Assess content quality using universal heuristics
+ * assessContentQuality
+ * Shared heuristic scoring for crawled content.
  */
 export function assessContentQuality(
   content: string,
@@ -69,26 +65,21 @@ export function assessContentQuality(
   const reasons: string[] = [];
   let score = 100;
 
-  // Length check
   if (content.length < 100) {
     reasons.push("Content too short");
     score -= 30;
   }
 
-  // Content-to-noise ratio
   if (html) {
     const textLength = content.length;
     const htmlLength = html.length;
     const ratio = textLength / htmlLength;
-
-    // Be more permissive: documentation sites often have heavy markup/scripts.
     if (ratio < 0.03) {
       reasons.push("Low content-to-markup ratio");
       score -= 20;
     }
   }
 
-  // Error page detection
   const errorIndicators = [
     /404|not found|page not found/i,
     /error|something went wrong/i,
@@ -104,7 +95,6 @@ export function assessContentQuality(
     }
   }
 
-  // Language detection (simple heuristic)
   const englishWords = /\b(the|and|or|but|in|on|at|to|for|of|with|by)\b/gi;
   const englishMatches = content.match(englishWords)?.length || 0;
   const wordCount = content.split(/\s+/).length;
@@ -116,7 +106,6 @@ export function assessContentQuality(
   }
 
   return {
-    // Slightly relax acceptance threshold to reduce false negatives on docs pages
     isAcceptable: score >= 40,
     reasons,
     score,

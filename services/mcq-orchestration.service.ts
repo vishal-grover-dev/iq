@@ -1,5 +1,5 @@
 import type { IMcqItemView } from "@/types/mcq.types";
-import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
+import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/services/mcq.services";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { judgeMcqQuality } from "@/services/ai/mcq-refinement.service";
 import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";

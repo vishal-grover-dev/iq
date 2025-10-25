@@ -165,6 +165,14 @@ export interface IWebIngestionPlan {
   debug?: unknown;
 }
 
+export interface IWebPageItem {
+  url: string;
+  title: string;
+  content: string;
+  html?: string;
+  depth: number;
+}
+
 export interface IIngestionProgressInfo {
   ingestionId: string;
   inflightStep?: EIngestionStage | string;

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
-import { crawlWebsite } from "@/utils/web-crawler.utils";
-import { resolveLabels } from "@/utils/label-resolver.utils";
-import type { IWebPlanRequest } from "@/types/ingestion.types";
+import { crawlWebsite } from "@/services/source-fetcher.service";
+import { resolveLabels } from "@/services/ai/labeling.service";
+import { EIngestionMode, type IWebPlanRequest } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     let lowConfidence = 0;
     for (const p of sample) {
       const labeled = await resolveLabels({
-        source: "web",
+        source: EIngestionMode.WEB,
         url: p.url,
         title: p.title ?? undefined,
         topicHint: topic ?? undefined,

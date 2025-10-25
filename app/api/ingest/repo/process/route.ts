@@ -9,10 +9,11 @@ import {
   listMarkdownPaths,
   fetchRawFile,
   deriveTitleFromMarkdown,
-} from "@/utils/repo.utils";
+} from "@/services/source-fetcher.service";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai/embedding.service";
-import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
+import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/services/ai/labeling.service";
+import { EIngestionMode } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: API_ERROR_MESSAGES.FORBIDDEN }, { status: 403 });
 
     const meta = (ingestion.metadata as IIngestionMetadata) || {};
-    if (meta.mode !== "repo" || !meta.repoUrl)
+    if (meta.mode !== EIngestionMode.REPO || !meta.repoUrl)
       return NextResponse.json({ ok: false, message: "Ingestion is not a repo mode" }, { status: 400 });
 
     const topic: string = meta.topic;
@@ -196,7 +197,7 @@ export async function POST(req: NextRequest) {
       await writeEvent("fetch", `Fetched ${f.path}`);
 
       const resolved = await resolveLabels({
-        source: "repo",
+        source: EIngestionMode.REPO,
         path: f.path,
         title: f.title,
         topicHint: topic,

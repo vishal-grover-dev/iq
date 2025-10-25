@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { IWebPageItem } from "@/utils/web-crawler.utils";
-import { extractMainContent, assessContentQuality } from "@/utils/intelligent-web-adapter.utils";
-import { resolveLabels } from "@/utils/label-resolver.utils";
+import type { IWebPageItem } from "@/types/ingestion.types";
+import { extractMainContent, assessContentQuality } from "@/services/source-intelligence.service";
+import { resolveLabels } from "@/services/ai/labeling.service";
+import { EIngestionMode } from "@/types/ingestion.types";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { createHash } from "crypto";
 
@@ -97,7 +98,7 @@ export async function assessAndPreparePage(
           title: page.title,
           labels: await (async () => {
             const resolved = await resolveLabels({
-              source: "web",
+              source: EIngestionMode.WEB,
               url: page.url,
               title: page.title ?? undefined,
               topicHint: ctx.topic ?? undefined,
@@ -158,7 +159,7 @@ export async function insertChunksBatch(
   const perItem: number[] = [];
   for (const item of batch) {
     const resolved = await resolveLabels({
-      source: "web",
+      source: EIngestionMode.WEB,
       url: item.url,
       topicHint: ctx.topic ?? undefined,
       subtopicHint: ctx.subtopic ?? undefined,

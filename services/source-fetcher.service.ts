@@ -1,46 +1,112 @@
+import path from "node:path";
 import { load } from "cheerio";
-import type { Robot } from "robots-parser";
-import robotsParser from "robots-parser";
-import { assessContentQuality, extractMainContent } from "@/utils/intelligent-web-adapter.utils";
+import robotsParser, { type Robot } from "robots-parser";
+import type { IGitHubTreeResponse, IWebPageItem } from "@/types/ingestion.types";
+import { EIngestionMode } from "@/types/ingestion.types";
 import { externalGetWithRetry } from "@/services/http.services";
 import { normalizeUrl } from "@/utils/url.utils";
-function sleep(ms: number): Promise<void> {
-  return new Promise((res) => setTimeout(res, ms));
+import { extractMainContent, assessContentQuality } from "@/services/source-intelligence.service";
+
+/**
+ * Repo Utilities
+ */
+
+export function parseRepoUrl(repoUrl: string): { owner: string; repo: string } {
+  try {
+    const url = new URL(repoUrl);
+    const [, owner, repo] = url.pathname.replace(/\.git$/, "").split("/");
+    if (!owner || !repo) throw new Error("Invalid repo URL");
+    return { owner, repo };
+  } catch {
+    throw new Error("Invalid GitHub repository URL");
+  }
 }
 
-// normalizeUrl is centralized in utils/url.utils.ts
+export async function getDefaultBranch(owner: string, repo: string): Promise<string> {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+  if (!res.ok) throw new Error(`Failed to resolve default branch: ${res.status}`);
+  const data = (await res.json()) as { default_branch?: string };
+  return data?.default_branch ?? "main";
+}
 
-// Content quality is now centralized via assessContentQuality() in intelligent-web-adapter.utils
+export async function listMarkdownPaths(
+  owner: string,
+  repo: string,
+  branch: string,
+  prefixes: string[] = []
+): Promise<string[]> {
+  const treeRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`
+  );
+  if (!treeRes.ok) throw new Error(`Failed to list repo tree: ${treeRes.status}`);
+  const tree = (await treeRes.json()) as IGitHubTreeResponse;
+  const allPaths: string[] = Array.isArray(tree?.tree)
+    ? tree.tree.filter((t) => t?.type === "blob").map((t) => String(t?.path))
+    : [];
+  const isMd = (p: string) => p.toLowerCase().endsWith(".md") || p.toLowerCase().endsWith(".mdx");
+  const prefixFilter = (p: string) => prefixes.length === 0 || prefixes.some((pre) => p.startsWith(pre));
+  return allPaths.filter((p) => isMd(p) && prefixFilter(p));
+}
 
-export interface IWebCrawlConfig {
+export async function fetchRawFile(owner: string, repo: string, branch: string, filePath: string): Promise<string> {
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(branch)}/${filePath}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${filePath}: ${res.status}`);
+  return await res.text();
+}
+
+export function deriveTitleFromMarkdown(filePath: string, content: string): string {
+  const lines = content.split(/\r?\n/);
+  const h1 = lines.find((l) => /^#\s+/.test(l));
+  if (h1) return h1.replace(/^#\s+/, "").trim();
+  return path.basename(filePath).replace(/\.(md|mdx)$/i, "");
+}
+
+export interface IRepoMarkdownFile {
+  path: string;
+  content: string;
+  title: string;
+}
+
+export async function getRepoMarkdownFiles(
+  repoUrl: string,
+  paths: string[] = [],
+  maxFiles: number = 200
+): Promise<IRepoMarkdownFile[]> {
+  const { owner, repo } = parseRepoUrl(repoUrl);
+  const branch = await getDefaultBranch(owner, repo);
+  const mdPaths = (await listMarkdownPaths(owner, repo, branch, paths)).slice(0, maxFiles);
+  const results: IRepoMarkdownFile[] = [];
+  for (const p of mdPaths) {
+    const content = await fetchRawFile(owner, repo, branch, p);
+    const title = deriveTitleFromMarkdown(p, content);
+    results.push({ path: p, content, title });
+  }
+  return results;
+}
+
+/**
+ * Web Crawling Utilities
+ */
+
+interface IWebCrawlConfig {
   seeds?: string[];
-  domain: string; // e.g., developer.mozilla.org
-  prefix?: string; // e.g., /en-US/docs/Web/JavaScript/
-  depth: number; // default depth for unspecified paths
+  domain: string;
+  prefix?: string;
+  depth: number;
   maxPages: number;
   crawlDelayMs: number;
-  includePatterns?: string[]; // regex strings
-  excludePatterns?: string[]; // regex strings
-  depthMap?: Record<string, number>; // pathname prefix -> depth override
+  includePatterns?: string[];
+  excludePatterns?: string[];
+  depthMap?: Record<string, number>;
 }
 
-export interface IWebPageItem {
-  url: string;
-  title: string;
-  content: string;
-  html?: string;
-  depth: number;
-}
-
-// Simple in-memory cache for robots.txt
 const robotsCache = new Map<string, { robots: Robot | null; timestamp: number }>();
-const ROBOTS_CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const ROBOTS_CACHE_TTL = 1000 * 60 * 60;
 
 export async function fetchRobots(base: string): Promise<Robot | null> {
   const robotsUrl = new URL("/robots.txt", base).toString();
   const cacheKey = new URL(base).origin;
-
-  // Check cache first
   const cached = robotsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < ROBOTS_CACHE_TTL) {
     return cached.robots;
@@ -49,23 +115,21 @@ export async function fetchRobots(base: string): Promise<Robot | null> {
   try {
     const txt = await externalGetWithRetry(robotsUrl, { maxRetries: 2, delayMs: 500 });
     if (txt === null) {
-      // Cache negative result
       robotsCache.set(cacheKey, { robots: null, timestamp: Date.now() });
       return null;
     }
     const robots = robotsParser(robotsUrl, txt);
-
-    // Cache the result
     robotsCache.set(cacheKey, { robots, timestamp: Date.now() });
     return robots;
   } catch {
-    // Cache negative result on error
     robotsCache.set(cacheKey, { robots: null, timestamp: Date.now() });
     return null;
   }
 }
 
-// fetchWithRetry is centralized in utils/http.utils.ts
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageItem[]> {
   const { seeds, domain, prefix, depth, maxPages, crawlDelayMs, includePatterns, excludePatterns, depthMap } = config;
@@ -74,7 +138,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
   const origin = new URL(resolvedSeeds[0]).origin;
   const robots = await fetchRobots(origin);
 
-  const q: Array<{ url: string; d: number }> = resolvedSeeds.map((s) => ({ url: s, d: 0 }));
+  const queue: Array<{ url: string; d: number }> = resolvedSeeds.map((s) => ({ url: s, d: 0 }));
   const visited = new Set<string>();
   const out: IWebPageItem[] = [];
 
@@ -87,7 +151,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
       }
     })
     .filter(Boolean) as RegExp[];
-  // Default excludes to reduce noise (e.g., non-article assets)
+
   const defaultExcludeRegexes: RegExp[] = [/contributors\.txt$/i];
   const excludeRegexes = (excludePatterns ?? [])
     .map((p) => {
@@ -100,20 +164,19 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
     .filter(Boolean) as RegExp[];
   const combinedExcludeRegexes = [...defaultExcludeRegexes, ...excludeRegexes];
 
-  while (q.length > 0 && out.length < maxPages) {
-    const { url, d } = q.shift()!;
+  while (queue.length > 0 && out.length < maxPages) {
+    const { url, d } = queue.shift()!;
     const canonical = normalizeUrl(url);
     if (visited.has(canonical)) continue;
     visited.add(canonical);
 
     const u = new URL(url);
     if (u.hostname !== domain) continue;
-    // Exact URL mode: ignore prefix/include/exclude when depth === 0
     if (depth > 0) {
       if (prefix && !u.pathname.startsWith(prefix)) continue;
       const matchesInclude = includeRegexes.length === 0 || includeRegexes.some((re) => re.test(u.pathname));
       if (!matchesInclude && d > 0) continue;
-      if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(u.pathname))) continue;
+      if (combinedExcludeRegexes.some((re) => re.test(u.pathname))) continue;
     }
     if (robots && !robots.isAllowed(url, "*")) continue;
 
@@ -129,9 +192,7 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
         .replace(/\s+/g, " ")
         .trim();
 
-      // Apply content quality filters using centralized heuristic
       const quality = assessContentQuality(content, html);
-      // In exact-URL mode (depth===0), only seed (d===0) is eligible. Otherwise, honor include patterns.
       const allowThisPage =
         depth === 0
           ? d === 0
@@ -153,10 +214,6 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
       })();
 
       if (d < currentDepthLimit && depth > 0) {
-        // Discover links from the entire document instead of only the main/article root.
-        // Many documentation sites place navigational links (sidebars/menus) outside of main,
-        // which are essential for breadth-first traversal. Using the whole document here
-        // significantly improves coverage while content extraction above still prefers main/article.
         const links = $("a[href]")
           .map((_, el) => $(el).attr("href") || "")
           .get()
@@ -176,12 +233,11 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
             if (lnUrl.hostname !== domain) continue;
             if (prefix && !lnUrl.pathname.startsWith(prefix)) continue;
             if (includeRegexes.length > 0 && d >= 1 && !includeRegexes.some((re) => re.test(lnUrl.pathname))) continue;
-            if (combinedExcludeRegexes.length > 0 && combinedExcludeRegexes.some((re) => re.test(lnUrl.pathname)))
-              continue;
+            if (combinedExcludeRegexes.some((re) => re.test(lnUrl.pathname))) continue;
           } catch {
             // ignore invalid url
           }
-          if (!visited.has(ln)) q.push({ url: ln, d: d + 1 });
+          if (!visited.has(ln)) queue.push({ url: ln, d: d + 1 });
         }
       }
     } catch {
@@ -195,4 +251,10 @@ export async function crawlWebsite(config: IWebCrawlConfig): Promise<IWebPageIte
   return out.slice(0, maxPages);
 }
 
-// MDN-specific section helpers removed to keep the crawler source-agnostic
+export function isRepoMode(mode: EIngestionMode): boolean {
+  return mode === EIngestionMode.REPO;
+}
+
+export function isWebMode(mode: EIngestionMode): boolean {
+  return mode === EIngestionMode.WEB;
+}

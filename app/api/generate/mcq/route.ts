@@ -5,7 +5,7 @@ import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
-import { retrieveContextByLabels, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
+import { retrieveContextByLabels, getRecentQuestions } from "@/services/mcq.services";
 import { orchestrateMcqGenerationSSE } from "@/services/mcq-orchestration.service";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EBloomLevel, EDifficulty } from "@/types/mcq.types";

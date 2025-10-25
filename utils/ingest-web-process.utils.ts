@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IWebPageItem } from "@/types/ingestion.types";
-import { extractMainContent, assessContentQuality } from "@/services/source-intelligence.service";
-import { resolveLabels } from "@/services/ai/labeling.service";
+import { extractMainContent, assessContentQuality } from "@/services/server/source-intelligence.service";
+import { resolveLabels } from "@/services/server/labeling.service";
 import { EIngestionMode } from "@/types/ingestion.types";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { createHash } from "crypto";

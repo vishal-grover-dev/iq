@@ -15,9 +15,9 @@ import {
   IUserAttempt,
   TAttemptQuestion,
 } from "@/types/evaluate.types";
-import { selectNextQuestion as callLLMSelector } from "@/services/ai/question-selector.service";
-import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
-import { getEmbeddings } from "@/services/ai/embedding.service";
+import { selectNextQuestion as callLLMSelector } from "@/services/server/question-selector.service";
+import { generateMcqFromContext } from "@/services/server/mcq-generation.service";
+import { getEmbeddings } from "@/services/server/embedding.service";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
 import { getStaticTopicList, getStaticSubtopicMap } from "@/utils/static-ontology.utils";

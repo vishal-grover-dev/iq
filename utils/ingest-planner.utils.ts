@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { externalGetWithRetry } from "@/services/http.services";
-import { suggestCrawlHeuristics } from "@/services/ai/crawl-heuristics.service";
+import { suggestCrawlHeuristics } from "@/services/server/crawl-heuristics.service";
 
 export interface IPlannerBootstrapArgs {
   domain: string;
@@ -33,9 +33,7 @@ function normalizeDepthMap(depthMap?: Record<string, number> | null): Record<str
   return Object.fromEntries(entries);
 }
 
-export async function resolvePlannerBootstrap(
-  args: IPlannerBootstrapArgs
-): Promise<IPlannerBootstrapResult> {
+export async function resolvePlannerBootstrap(args: IPlannerBootstrapArgs): Promise<IPlannerBootstrapResult> {
   const includePatterns = normalizeArray(args.includePatterns);
   const excludePatterns = normalizeArray(args.excludePatterns);
   const depthMap = normalizeDepthMap(args.depthMap);

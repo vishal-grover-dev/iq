@@ -6,7 +6,7 @@ import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import type { IMcqItemView } from "@/types/mcq.types";
 import type { TMcqSaveRequest } from "@/types/generation.types";
 import { buildMcqEmbeddingText, computeMcqContentKey, validateMcq } from "@/utils/mcq.utils";
-import { getEmbeddings } from "@/services/ai/embedding.service";
+import { getEmbeddings } from "@/services/server/embedding.service";
 
 export const runtime = "nodejs";
 

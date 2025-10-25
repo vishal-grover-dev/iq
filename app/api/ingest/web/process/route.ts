@@ -3,10 +3,10 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
-import { crawlWebsite } from "@/services/source-fetcher.service";
-import { getEmbeddings } from "@/services/ai/embedding.service";
+import { crawlWebsite } from "@/services/server/source-fetcher.service";
+import { getEmbeddings } from "@/services/server/embedding.service";
 import { prefilterExistingWebPages, assessAndPreparePage, insertChunksBatch } from "@/utils/ingest-web-process.utils";
-import { getLabelResolverMetrics, resetLabelResolverMetrics } from "@/services/ai/labeling.service";
+import { getLabelResolverMetrics, resetLabelResolverMetrics } from "@/services/server/labeling.service";
 
 export const runtime = "nodejs";
 

@@ -3,7 +3,7 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
-import { reviseMcqWithContext } from "@/services/ai/mcq-refinement.service";
+import { reviseMcqWithContext } from "@/services/server/mcq-refinement.service";
 import type { TMcqRevisionRequest, TRpcContextResult } from "@/types/generation.types";
 import { logger } from "@/utils/logger.utils";
 

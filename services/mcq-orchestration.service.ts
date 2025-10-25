@@ -1,7 +1,7 @@
 import type { IMcqItemView } from "@/types/mcq.types";
 import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/services/mcq.services";
-import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
-import { judgeMcqQuality } from "@/services/ai/mcq-refinement.service";
+import { generateMcqFromContext } from "@/services/server/mcq-generation.service";
+import { judgeMcqQuality } from "@/services/server/mcq-refinement.service";
 import { hasValidCodeBlock, validateMcq } from "@/utils/mcq.utils";
 import type { TSseEventName, IOrchestrateArgs } from "@/types/generation.types";
 import { logger } from "@/utils/logger.utils";

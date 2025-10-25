@@ -632,25 +632,32 @@ Use `git revert` to revert specific commits or `git reset --hard` to reset to a 
 
 ## Notes & Lessons Learned
 
-_(To be filled in during/after implementation)_
+### Phase 2 Results (2025-01-27)
 
-### What Went Well
+**What Went Well:**
 
--
+- Successfully moved all 6 AI services and 2 additional server services to `services/server/` with flat structure
+- All import references updated across 13+ files using systematic search and replace
+- Zero lingering references to old `@/services/ai/` import patterns
+- Clean directory structure established with proper server-only organization
 
-### Challenges Encountered
+**Challenges Encountered:**
 
--
+- Import statement corruption during file moves caused build errors (resolved by user)
+- Mixed client/server code in `services/ingest.services.ts` and `utils/catalog.utils.ts` still causes build failures (expected - will be addressed in Phase 3/4)
+- Need to be more careful with file operations to avoid import statement corruption
 
-### Improvements for Future Refactors
+**Improvements for Future Refactors:**
 
-- ***
+- Use file move operations instead of copy-and-replace to preserve exact file content
+- Verify import statements immediately after file moves to catch corruption early
+- Consider using git operations for safer file moves in complex refactoring scenarios
 
 ## Timeline
 
 - **Phase 0:** ✅ COMPLETED (Architecture documentation)
 - **Phase 1:** ✅ COMPLETED (Config migration) - 2025-01-XX
-- **Phase 2:** PENDING (AI services migration)
+- **Phase 2:** ✅ COMPLETED (AI services migration) - 2025-01-27
 - **Phase 3:** PENDING (Client services migration)
 - **Phase 4:** PENDING (Server services migration)
 - **Phase 5:** PENDING (Cleanup)

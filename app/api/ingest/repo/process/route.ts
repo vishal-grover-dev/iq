@@ -9,10 +9,10 @@ import {
   listMarkdownPaths,
   fetchRawFile,
   deriveTitleFromMarkdown,
-} from "@/services/source-fetcher.service";
+} from "@/services/server/source-fetcher.service";
 import { chunkTextLC } from "@/utils/langchain.utils";
-import { getEmbeddings } from "@/services/ai/embedding.service";
-import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/services/ai/labeling.service";
+import { getEmbeddings } from "@/services/server/embedding.service";
+import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/services/server/labeling.service";
 import { EIngestionMode } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";

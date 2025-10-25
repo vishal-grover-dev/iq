@@ -1,6 +1,6 @@
 import { apiClient } from "@/services/http.services";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
-import { getEmbeddings } from "@/services/ai/embedding.service";
+import { getEmbeddings } from "@/services/server/embedding.service";
 import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
 import type { IMcqItemView } from "@/types/mcq.types";
 import type { IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/app.types";

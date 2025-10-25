@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
-import { crawlWebsite } from "@/services/source-fetcher.service";
-import { resolveLabels } from "@/services/ai/labeling.service";
+import { crawlWebsite } from "@/services/server/source-fetcher.service";
+import { resolveLabels } from "@/services/server/labeling.service";
 import { EIngestionMode, type IWebPlanRequest } from "@/types/ingestion.types";
 
 export const runtime = "nodejs";

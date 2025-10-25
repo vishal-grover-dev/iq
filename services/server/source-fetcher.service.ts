@@ -5,7 +5,7 @@ import type { IGitHubTreeResponse, IWebPageItem } from "@/types/ingestion.types"
 import { EIngestionMode } from "@/types/ingestion.types";
 import { externalGetWithRetry } from "@/services/http.services";
 import { normalizeUrl } from "@/utils/url.utils";
-import { extractMainContent, assessContentQuality } from "@/services/source-intelligence.service";
+import { extractMainContent, assessContentQuality } from "@/services/server/source-intelligence.service";
 
 /**
  * Repo Utilities

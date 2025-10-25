@@ -178,14 +178,16 @@
 - `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
 - `evaluate.services.ts`: Evaluation API client functions and TanStack Query hooks for attempts, questions, answers, and results.
 
-#### AI Services (Domain-Grouped Consolidation)
+#### Server Services (Phase 2 Migration)
 
-- `ai/embedding.service.ts`: **Consolidated** embeddings + reranking operations (~110 lines). Exports: `getEmbeddings()` (1536-d text-embedding-3-small with batching), `rerank()` (LLM-as-reranker). **Phase 2 consolidation.**
-- `ai/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes. Exports: `generateMcqFromContext()`. (~380 lines)
-- `ai/mcq-refinement.service.ts`: **Consolidated** post-generation refinement pipeline (~160 lines). Exports: `reviseMcqWithContext()` (user-guided revision), `judgeMcqQuality()` (quality verdict with suggestions). **Phase 2 consolidation.**
-- `ai/labeling.service.ts`: Label classification using OpenAI with whitelist ontology. Exports: `classifyLabels()`. (~70 lines)
-- `ai/question-selector.service.ts`: LLM-driven question selection for evaluations. Exports: `selectNextQuestion()`. (~130 lines)
-- `ai/crawl-heuristics.service.ts`: Web crawl heuristics and utilities.
+- `server/embedding.service.ts`: **Consolidated** embeddings + reranking operations (~110 lines). Exports: `getEmbeddings()` (1536-d text-embedding-3-small with batching), `rerank()` (LLM-as-reranker). **Phase 2: Moved from services/ai/.**
+- `server/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes. Exports: `generateMcqFromContext()`. (~380 lines) **Phase 2: Moved from services/ai/.**
+- `server/mcq-refinement.service.ts`: **Consolidated** post-generation refinement pipeline (~160 lines). Exports: `reviseMcqWithContext()` (user-guided revision), `judgeMcqQuality()` (quality verdict with suggestions). **Phase 2: Moved from services/ai/.**
+- `server/labeling.service.ts`: Label classification using OpenAI with whitelist ontology. Exports: `classifyLabels()`. (~70 lines) **Phase 2: Moved from services/ai/.**
+- `server/question-selector.service.ts`: LLM-driven question selection for evaluations. Exports: `selectNextQuestion()`. (~130 lines) **Phase 2: Moved from services/ai/.**
+- `server/crawl-heuristics.service.ts`: Web crawl heuristics and utilities. **Phase 2: Moved from services/ai/.**
+- `server/source-fetcher.service.ts`: GitHub repo utilities and web crawling functions. **Phase 2: Moved from services/root.**
+- `server/source-intelligence.service.ts`: Content extraction and quality assessment utilities. **Phase 2: Moved from services/root.**
 
 #### Evaluate Selection (Phase 4 Refactor)
 

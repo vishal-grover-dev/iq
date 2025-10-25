@@ -77,7 +77,8 @@ export default function UploadForm() {
       if (val === ContentCategory.INTERVIEW_STREAMS) {
         // initialize stream/items if switching from Academic
         setValue("stream", stream ?? INTERVIEW_DEFAULT_STREAM, { shouldValidate: true });
-        if (!items || items.length === 0) {
+        const currentItems = watch("items");
+        if (!currentItems || currentItems.length === 0) {
           setValue(
             "items",
             [
@@ -93,7 +94,7 @@ export default function UploadForm() {
         }
       }
     },
-    [setValue, stream, items]
+    [setValue, stream, watch]
   );
 
   const onSubmit: SubmitHandler<IInterviewStreamsFormValues> = async () => {

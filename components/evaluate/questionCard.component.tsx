@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import CodeBlock from "./codeBlock.component";
 import OptionButton from "./optionButton.component";
@@ -70,6 +70,13 @@ export default function QuestionCard({
     return question.replace(/\n\s*`([^`]+)`\s*\n/gm, " `$1` ");
   }, [question]);
 
+  // Submit handler memoized to avoid unnecessary re-renders
+  const handleSubmit = useCallback(() => {
+    if (selectedIndex !== null && onSubmit) {
+      onSubmit(selectedIndex);
+    }
+  }, [selectedIndex, onSubmit]);
+
   // Keyboard shortcuts for evaluation mode
   useEffect(() => {
     if (mode !== "evaluation" || isSubmitting) return;
@@ -94,13 +101,7 @@ export default function QuestionCard({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [mode, selectedIndex, options.length, isSubmitting]);
-
-  const handleSubmit = () => {
-    if (selectedIndex !== null && onSubmit) {
-      onSubmit(selectedIndex);
-    }
-  };
+  }, [mode, selectedIndex, options, isSubmitting, handleSubmit]);
 
   const handleOptionClick = (index: number) => {
     if (mode === "evaluation" && !isSubmitting) {

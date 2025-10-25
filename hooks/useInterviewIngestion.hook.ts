@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useIngestRepoWebMutations, getIngestionStatus, processIngestion } from "@/services/ingest.services";
+import { useIngestRepoWebMutations, getIngestionStatus, processIngestion } from "@/services/client/ingest.services";
 import { IInterviewIngestItem, EInterviewIngestType } from "@/types/upload.types";
 import { EIngestionMode, type IIngestionStatusResponse } from "@/types/ingestion.types";
 import { type TIngestRepoRequest, type TIngestWebRequest } from "@/schema/ingest.schema";

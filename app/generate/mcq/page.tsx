@@ -8,7 +8,7 @@ import RevisionBox from "@/components/generate/revisionBox.component";
 import AutomationModal from "@/components/generate/automationModal.component";
 import { EBloomLevel } from "@/types/mcq.types";
 import { EDifficulty, IMcqItemView } from "@/types/mcq.types";
-import { openMcqSse, useMcqMutations } from "@/services/mcq.services";
+import { openMcqSse, useMcqMutations } from "@/services/client/mcq.services";
 import { MCQ_PAGE_LABELS, MCQ_PAGE_TOAST_MESSAGES } from "@/constants/generation.constants";
 import { toast } from "sonner";
 

@@ -5,7 +5,7 @@
  * Run with: npx tsx scripts/fix-broken-attempts.ts
  */
 
-import { getSupabaseServiceRoleClient } from "../utils/supabase.utils";
+import { getSupabaseServiceRoleClient } from "../config/supabase.config";
 
 async function findAndFixBrokenAttempts() {
   const supabase = getSupabaseServiceRoleClient();

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useAttemptResultsQuery } from "@/services/evaluate.services";
+import { useAttemptResultsQuery } from "@/services/client/evaluate.services";
 import { ArrowLeftIcon, PlayIcon, WrenchIcon } from "@phosphor-icons/react/dist/ssr";
 import { toast } from "sonner";
 import ResultsHero from "@/components/evaluate/resultsHero.component";

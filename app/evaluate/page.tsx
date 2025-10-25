@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useAttemptsQuery, useCreateAttemptMutation } from "@/services/evaluate.services";
+import { useAttemptsQuery, useCreateAttemptMutation } from "@/services/client/evaluate.services";
 import { PlayIcon, ArrowRightIcon, ClockIcon } from "@phosphor-icons/react";
 import { EVALUATION_CONFIG, EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS } from "@/constants/evaluate.constants";
 

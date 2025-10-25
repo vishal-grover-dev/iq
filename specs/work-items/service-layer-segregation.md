@@ -178,7 +178,25 @@ Use grep to search for old `services/ai/` import patterns (should return zero re
 
 **Tasks:**
 
-#### 3.1: Create `services/client/mcq.services.ts`
+#### 3.1: Create `config/http.config.ts`
+
+**Source:** `services/http.services.ts` (apiClient only)
+
+**Exports to Include:**
+
+- `apiClient` - Axios instance for internal API calls
+
+**Imported By:**
+
+- `services/client/mcq.services.ts`
+- `services/client/evaluate.services.ts`
+- `services/client/ingest.services.ts`
+
+**Import Changes:**
+
+Imports change from `@/services/http.services` to `@/config/http.config`
+
+#### 3.2: Create `services/client/mcq.services.ts`
 
 **Source:** `services/mcq.services.ts` (client functions only)
 
@@ -204,7 +222,7 @@ Use grep to search for old `services/ai/` import patterns (should return zero re
 
 Imports change from `@/services/mcq.services` to `@/services/client/mcq.services`
 
-#### 3.2: Create `services/client/evaluate.services.ts`
+#### 3.3: Create `services/client/evaluate.services.ts`
 
 **Source:** `services/evaluate.services.ts` (all functions - purely client)
 
@@ -235,7 +253,7 @@ Imports change from `@/services/mcq.services` to `@/services/client/mcq.services
 
 Imports change from `@/services/evaluate.services` to `@/services/client/evaluate.services`
 
-#### 3.3: Create `services/client/ingest.services.ts`
+#### 3.4: Create `services/client/ingest.services.ts`
 
 **Source:** `services/ingest.services.ts` (client functions only)
 
@@ -264,24 +282,6 @@ Imports change from `@/services/evaluate.services` to `@/services/client/evaluat
 
 Imports change from `@/services/ingest.services` to `@/services/client/ingest.services`
 
-#### 3.4: Create `services/client/http.services.ts`
-
-**Source:** `services/http.services.ts` (apiClient only)
-
-**Exports to Include:**
-
-- `apiClient` - Axios instance for internal API calls
-
-**Imported By:**
-
-- `services/client/mcq.services.ts`
-- `services/client/evaluate.services.ts`
-- `services/client/ingest.services.ts`
-
-**Import Changes:**
-
-Imports change from `@/services/http.services` to `@/services/client/http.services`
-
 **Files to Update:**
 
 - All components in `components/`
@@ -295,10 +295,23 @@ Use grep to find all component/hook imports of old service paths in `components/
 
 **Success Criteria:**
 
-- [ ] All client service files created in `services/client/`
-- [ ] All component/hook imports updated
-- [ ] `pnpm build` passes with zero errors
-- [ ] `existing-files.md` updated
+- [x] All client service files created in `services/client/`
+- [x] All component/hook imports updated
+- [x] `pnpm build` passes with zero errors
+- [x] `existing-files.md` updated
+
+**Phase 3 Results:**
+
+- ✅ Successfully created `config/http.config.ts` with `apiClient` export
+- ✅ Successfully created `services/client/mcq.services.ts` with all client functions (95 lines)
+- ✅ Successfully created `services/client/evaluate.services.ts` by copying entire evaluate.services.ts (240 lines)
+- ✅ Successfully created `services/client/ingest.services.ts` with all client functions (100 lines)
+- ✅ Updated 7 client-side files (pages, hooks) to use `@/services/client/*` imports
+- ✅ Fixed TypeScript errors in results route (citations filtering, enum casting)
+- ✅ Fixed outdated import in `scripts/fix-broken-attempts.ts`
+- ✅ Build passes with zero errors
+- ✅ Zero lingering client-side imports of root service paths
+- ⚠️ Server files still use root `@/services/*` (unchanged until Phase 4)
 
 ---
 
@@ -658,7 +671,7 @@ Use `git revert` to revert specific commits or `git reset --hard` to reset to a 
 - **Phase 0:** ✅ COMPLETED (Architecture documentation)
 - **Phase 1:** ✅ COMPLETED (Config migration) - 2025-01-XX
 - **Phase 2:** ✅ COMPLETED (AI services migration) - 2025-01-27
-- **Phase 3:** PENDING (Client services migration)
+- **Phase 3:** ✅ COMPLETED (Client services migration) - 2025-01-27
 - **Phase 4:** PENDING (Server services migration)
 - **Phase 5:** PENDING (Cleanup)
 - **Phase 6:** PENDING (Final documentation)

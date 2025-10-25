@@ -5,7 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/evaluate/questionCard.component";
-import { useAttemptDetailsQuery, useSubmitAnswerMutation, usePauseAttemptMutation } from "@/services/evaluate.services";
+import {
+  useAttemptDetailsQuery,
+  useSubmitAnswerMutation,
+  usePauseAttemptMutation,
+} from "@/services/client/evaluate.services";
 import { PauseIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {

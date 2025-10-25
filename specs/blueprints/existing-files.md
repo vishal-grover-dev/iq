@@ -164,34 +164,40 @@
 
 ### config
 
-- `supabase.config.ts`: Supabase client configuration and factory functions. Exports: `getSupabaseBrowserClient()`, `getSupabaseServiceRoleClient()`, `createSupabaseClientWithKey()`. Used by both client and server contexts. **Phase 1: Moved from services/supabase.services.ts.**
-- `openai.config.ts`: OpenAI client configuration and error utilities. Exports: `createOpenAIClient()`, `getErrorStatus()`, `getErrorMessage()`. Server-only configuration used by AI services. **Phase 1: Moved from services/openai.services.ts.**
+- `supabase.config.ts`: Supabase client configuration and factory functions for browser and server contexts.
+- `openai.config.ts`: OpenAI client configuration and error utilities for AI services.
+- `http.config.ts`: HTTP client configuration for internal API calls with Axios interceptors.
 
 ### services
 
-#### Core Services & Shared Utilities
+#### Client Services
 
-- `supabase.services.ts`: **DEPRECATED** - Moved to `config/supabase.config.ts` in Phase 1.
-- `openai.services.ts`: **DEPRECATED** - Moved to `config/openai.config.ts` in Phase 1.
-- `ingest.services.ts`: Client helper to call ingestion API.
-- `http.services.ts`: Axios clients with interceptors (API only).
-- `mcq.services.ts`: MCQ API client functions, retrieval client functions, and hooks.
-- `evaluate.services.ts`: Evaluation API client functions and TanStack Query hooks for attempts, questions, answers, and results.
+- `client/mcq.services.ts`: MCQ API client functions and TanStack Query hooks for browser components.
+- `client/evaluate.services.ts`: Evaluation API client functions and TanStack Query hooks for assessment features.
+- `client/ingest.services.ts`: Ingestion API client functions and TanStack Query hooks for upload workflows.
 
-#### Server Services (Phase 2 Migration)
+#### Server Services
 
-- `server/embedding.service.ts`: **Consolidated** embeddings + reranking operations (~110 lines). Exports: `getEmbeddings()` (1536-d text-embedding-3-small with batching), `rerank()` (LLM-as-reranker). **Phase 2: Moved from services/ai/.**
-- `server/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes. Exports: `generateMcqFromContext()`. (~380 lines) **Phase 2: Moved from services/ai/.**
-- `server/mcq-refinement.service.ts`: **Consolidated** post-generation refinement pipeline (~160 lines). Exports: `reviseMcqWithContext()` (user-guided revision), `judgeMcqQuality()` (quality verdict with suggestions). **Phase 2: Moved from services/ai/.**
-- `server/labeling.service.ts`: Label classification using OpenAI with whitelist ontology. Exports: `classifyLabels()`. (~70 lines) **Phase 2: Moved from services/ai/.**
-- `server/question-selector.service.ts`: LLM-driven question selection for evaluations. Exports: `selectNextQuestion()`. (~130 lines) **Phase 2: Moved from services/ai/.**
-- `server/crawl-heuristics.service.ts`: Web crawl heuristics and utilities. **Phase 2: Moved from services/ai/.**
-- `server/source-fetcher.service.ts`: GitHub repo utilities and web crawling functions. **Phase 2: Moved from services/root.**
-- `server/source-intelligence.service.ts`: Content extraction and quality assessment utilities. **Phase 2: Moved from services/root.**
+- `server/embedding.service.ts`: Embeddings and reranking operations using OpenAI text-embedding-3-small.
+- `server/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes.
+- `server/mcq-refinement.service.ts`: Post-generation refinement pipeline with user-guided revision and quality judgment.
+- `server/labeling.service.ts`: Label classification using OpenAI with whitelist ontology.
+- `server/question-selector.service.ts`: LLM-driven question selection for evaluations.
+- `server/crawl-heuristics.service.ts`: Web crawl heuristics and utilities.
+- `server/source-fetcher.service.ts`: GitHub repo utilities and web crawling functions.
+- `server/source-intelligence.service.ts`: Content extraction and quality assessment utilities.
 
-#### Evaluate Selection (Phase 4 Refactor)
+#### Mixed Services
 
-- `evaluate-selection.service.ts`: Orchestrator service for question selection pipeline. Exports: `selectNextQuestionForAttempt()` with comprehensive JSDoc and 5-stage pipeline (Guard → Context → Bank Query → Scoring → Assignment) handling race conditions, generation fallback, and emergency fallback assignment. (~445 lines)
+- `mcq.services.ts`: Server-side MCQ retrieval functions (database access, embeddings).
+- `ingest.services.ts`: Server-side ingestion functions (catalog processing, file system access).
+- `http.services.ts`: External HTTP client for crawling with retry logic.
+- `evaluate.services.ts`: **DEPRECATED** - Use `services/client/evaluate.services.ts` instead.
+
+#### Orchestration Services
+
+- `mcq-orchestration.service.ts`: SSE-based MCQ generation pipeline orchestrator.
+- `evaluate-selection.service.ts`: Question selection pipeline orchestrator with 5-stage workflow.
 
 ### constants
 
@@ -306,6 +312,6 @@ Updates:
 - `utils/mcq-prompts/judge-prompt.utils.ts`: `buildJudgeMessages()` for quality judgment
 - `utils/mcq-prompts/selector-prompt.utils.ts`: `generateQuestionPrompt()` for LLM-driven selection
 
-#### MCQ Orchestration (Phase 4 API Route Modularization)
+#### Orchestration Services
 
-- `mcq-orchestration.service.ts`: **NEW** Orchestrator for SSE-based MCQ generation pipeline. Exports: `orchestrateMcqGenerationSSE()` implementing 6-stage pipeline (Initialize → Retrieve Context → Generate Draft → Fetch Neighbors → Judge Quality → Finalize). (~175 lines) Preserves identical SSE event order and payload shapes consumed by `app/generate/mcq/page.tsx`. **Phase 4: API route modularization.**
+- `mcq-orchestration.service.ts`: SSE-based MCQ generation pipeline orchestrator with 6-stage workflow.

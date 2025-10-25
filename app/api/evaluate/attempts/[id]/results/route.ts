@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
-import type { IAttemptResults, IWeakArea, IQuestionReview, IMcqWithExplanation } from "@/types/evaluate.types";
+import type {
+  IAttemptResults,
+  IWeakArea,
+  IQuestionReview,
+  IMcqWithExplanation,
+  ICitation,
+} from "@/types/evaluate.types";
+import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
 import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";
 
@@ -217,12 +224,14 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
         correct_index: mcq?.correct_index ?? 0,
         is_correct: aq.is_correct ?? false,
         explanation: explanation,
-        citations: Array.isArray(mcq?.citations) ? mcq.citations : [],
+        citations: Array.isArray(mcq?.citations)
+          ? (mcq.citations.filter((c: { url?: string; title?: string }) => c.url && c.title) as ICitation[])
+          : [],
         metadata: {
           topic: mcq?.topic || "",
           subtopic: mcq?.subtopic || "",
-          difficulty: mcq?.difficulty || "",
-          bloom_level: mcq?.bloom_level || "",
+          difficulty: (mcq?.difficulty as EDifficulty) || EDifficulty.MEDIUM,
+          bloom_level: (mcq?.bloom_level as EBloomLevel) || EBloomLevel.UNDERSTAND,
         },
       };
     });

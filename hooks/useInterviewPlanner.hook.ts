@@ -6,7 +6,7 @@ import {
   resumeIngestion,
   retryIngestion,
   downloadRunReport,
-} from "@/services/ingest.services";
+} from "@/services/client/ingest.services";
 import {
   EInterviewIngestType,
   type IInterviewIngestItem,

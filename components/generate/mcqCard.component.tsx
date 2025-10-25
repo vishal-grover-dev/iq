@@ -89,7 +89,7 @@ export default function McqCard({ item }: { item: IMcqItemView }) {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              code({ className, children, ...props }) {
+              code({ className, children }) {
                 const hasLanguage = typeof className === "string" && className.includes("language-");
                 const language = hasLanguage ? className.replace("language-", "") : "tsx";
                 return (

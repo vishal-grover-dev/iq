@@ -24,7 +24,8 @@ function loadOntology(): IStaticOntology {
   try {
     const raw = fs.readFileSync(filePath, "utf-8");
     cachedOntology = JSON.parse(raw) as IStaticOntology;
-  } catch (error) {
+  } catch (err) {
+    console.error("🚀 ~ loadOntology ~ err:", err);
     cachedOntology = { topics: {} };
   }
   return cachedOntology;

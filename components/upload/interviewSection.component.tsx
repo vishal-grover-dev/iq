@@ -1,30 +1,18 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
-import { EInterviewStream, type IInterviewIngestItem } from "@/types/upload.types";
-import { INTERVIEW_TOPIC_OPTIONS } from "@/constants/interview-streams.constants";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { EInterviewStream, type IInterviewIngestItem, type IInterviewStreamsFormValues } from "@/types/upload.types";
 import { FormLabel } from "@/components/ui/form-label";
 import InterviewRow from "./interviewRow.component";
 import { PlanModal, CustomSubtopicModal } from "./interviewModals.component";
 import { useInterviewPlanner } from "@/hooks/useInterviewPlanner.hook";
+import { type UseFormSetValue } from "react-hook-form";
 
 interface IInterviewSectionProps {
   items: IInterviewIngestItem[];
   stream?: EInterviewStream;
   disabled?: boolean;
-  setValue: (
-    name:
-      | "contentCategory"
-      | "stream"
-      | "items"
-      | `items.${number}`
-      | `items.${number}.topic`
-      | `items.${number}.subtopic`
-      | `items.${number}.ingestType`
-      | `items.${number}.url`,
-    value: unknown,
-    options?: { shouldValidate?: boolean; shouldTouch?: boolean }
-  ) => void;
+  setValue: UseFormSetValue<IInterviewStreamsFormValues>;
 }
 
 export default function InterviewSection({ items, stream, disabled, setValue }: IInterviewSectionProps) {
@@ -44,15 +32,19 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
     handleReport,
   } = useInterviewPlanner(items);
 
+  const streamOptions: ComboboxOption<EInterviewStream>[] = [
+    { label: EInterviewStream.FRONTEND_REACT, value: EInterviewStream.FRONTEND_REACT },
+  ];
+
   return (
     <div className='rounded-lg border p-4 shadow-sm bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40'>
       <div className='flex items-center justify-between mb-2'>
         <div className='grid gap-2 sm:max-w-sm'>
           <FormLabel>Interview Streams</FormLabel>
           <Combobox
-            value={stream as any}
-            onChange={(val) => setValue("stream", val as any, { shouldValidate: true })}
-            options={[{ label: EInterviewStream.FRONTEND_REACT, value: EInterviewStream.FRONTEND_REACT }] as any}
+            value={stream}
+            onChange={(val) => setValue("stream", val, { shouldValidate: true })}
+            options={streamOptions}
             placeholder='Select stream'
             disabled={disabled}
           />
@@ -96,8 +88,8 @@ export default function InterviewSection({ items, stream, disabled, setValue }: 
         onSave={() => {
           if (openModalIndex === null) return;
           const next = items.slice();
-          next[openModalIndex] = { ...next[openModalIndex], subtopic: customSubtopic.trim() } as any;
-          setValue("items", next as any, { shouldValidate: true });
+          next[openModalIndex] = { ...next[openModalIndex], subtopic: customSubtopic.trim() };
+          setValue("items", next, { shouldValidate: true });
           setCustomSubtopic("");
           setOpenModalIndex(null);
         }}

@@ -65,7 +65,7 @@ export default function ResultsHero({
   className,
 }: IResultsHeroProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { tier, tierConfig, showConfetti } = useResultsTier(score);
+  const { tierConfig, showConfetti } = useResultsTier(score);
 
   const statCards = useMemo<IStatCard[]>(() => {
     const cards: Array<IStatCard | null> = [
@@ -174,7 +174,7 @@ export default function ResultsHero({
           </div>
 
           <motion.div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3' initial='hidden' animate='visible'>
-            {statCards.map((stat, index) => (
+            {statCards.map((stat) => (
               <ResultStatCard
                 key={stat.label}
                 label={stat.label}

@@ -6,6 +6,8 @@ import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { loadIngestCatalog } from "@/utils/catalog.utils";
 import { persistEmbeddedFlags } from "@/utils/ingest-preflight.utils";
 import { normalizeUrl as normalizeUrlShared } from "@/utils/url.utils";
+import { type IIngestionStatusResponse, EIngestionMode } from "@/types/ingestion.types";
+import { TIngestRepoOrWebRequest } from "@/schema/ingest.schema";
 
 // Predefined subtopics per topic; UI will also allow "Other" which opens a modal
 
@@ -88,7 +90,7 @@ export async function runCatalogIngestion(params?: {
     if (existingErr) {
       logger.warn("[ingest] preflight check failed", { error: existingErr.message });
     }
-    const existingSet = new Set<string>((existingDocs ?? []).map((d: any) => d.path as string));
+    const existingSet = new Set<string>((existingDocs ?? []).map(({ path }) => path as string));
     for (const q of webCandidates) {
       if (existingSet.has(q.normalizedUrl)) {
         preflightEmbedded.add(q.item.url);
@@ -100,8 +102,9 @@ export async function runCatalogIngestion(params?: {
     if (preflightEmbedded.size > 0) {
       try {
         persistEmbeddedFlags(new Set<string>(), logger, preflightEmbedded);
-      } catch (e: any) {
-        logger.warn("[ingest] preflight catalog persist failed", { error: e?.message });
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        logger.warn("[ingest] preflight catalog persist failed", { error: errMsg });
       }
     }
   }
@@ -121,13 +124,13 @@ export async function runCatalogIngestion(params?: {
   async function pollUntilDone(mode: "repo" | "web", id: string) {
     const start = Date.now();
     while (true) {
-      const st = await getIngestionStatus(id);
-      const step = (st as any)?.inflight?.step ?? st?.status;
-      const processed = (st as any)?.inflight?.processed ?? 0;
-      const total = (st as any)?.inflight?.totalPlanned ?? undefined;
+      const st = (await getIngestionStatus(id)) as IIngestionStatusResponse;
+      const step = (st.inflight as Record<string, unknown>)?.step ?? st.status;
+      const processed = (st.inflight as Record<string, unknown>)?.processed ?? 0;
+      const total = (st.inflight as Record<string, unknown>)?.totalPlanned as number | undefined;
       logger.debug?.("[ingest] poll", { id, step, processed, total });
-      if (st?.status === "completed" || step === "completed") return;
-      if (st?.status === "failed") throw new Error(st?.error ?? "ingestion failed");
+      if (st.status === "completed" || step === "completed") return;
+      if (st.status === "failed") throw new Error(st.error ?? "ingestion failed");
       if (Date.now() - start > timeoutMs) throw new Error("timeout waiting for ingestion completion");
       await sleep(pollMs);
     }
@@ -181,31 +184,30 @@ export async function runCatalogIngestion(params?: {
           normalized: next.normalizedUrl,
           baseURL: mode === "web" ? new URL(next.normalizedUrl).origin : undefined,
         });
-        const result = await ingestRepoOrWeb(
-          mode === "web"
-            ? ({
-                mode: "web",
-                seeds: [next.normalizedUrl],
-                domain: new URL(next.normalizedUrl).hostname,
-                prefix: undefined,
-                topic: topic as EInterviewTopic,
-                subtopic: item.subtopic,
-                depth: 1,
-                maxPages: 10,
-                crawlDelayMs: 500,
-                includePatterns: [],
-                excludePatterns: [],
-                autoPlan: true,
-              } as any)
-            : ({
-                mode: "repo",
-                repoUrl: item.url,
-                paths: [],
-                topic: topic as EInterviewTopic,
-                subtopic: item.subtopic,
-                maxFiles: 200,
-              } as any)
-        );
+        let payload: TIngestRepoOrWebRequest;
+        if (mode === EIngestionMode.WEB) {
+          payload = {
+            mode: EIngestionMode.WEB,
+            seeds: [next.normalizedUrl],
+            domain: new URL(next.normalizedUrl).hostname,
+            topic: topic as EInterviewTopic,
+            subtopic: item.subtopic,
+            depth: 1,
+            maxPages: 10,
+            crawlDelayMs: 500,
+          };
+        } else {
+          payload = {
+            mode: EIngestionMode.REPO,
+            repoUrl: item.url,
+            paths: [],
+            topic: topic as EInterviewTopic,
+            subtopic: item.subtopic,
+            maxFiles: 200,
+          };
+        }
+        const result = await ingestRepoOrWeb(payload);
+
         const id = result.ingestionId;
         logger.info("[ingest] enqueued", { workerId, mode, id });
         ids.push(id);
@@ -222,24 +224,21 @@ export async function runCatalogIngestion(params?: {
             let hasCoverage = !!(docs && docs.length > 0);
             if (!hasCoverage) {
               // Retry once with longer crawl delay for web
-              if (mode === "web") {
+              if (mode === EIngestionMode.WEB) {
                 logger.warn("[ingest] zero coverage; retrying with longer delay", { url: next.normalizedUrl });
-                const retry = await ingestRepoOrWeb({
-                  mode: "web",
+                payload = {
+                  mode: EIngestionMode.WEB,
                   seeds: [next.normalizedUrl],
                   domain: new URL(next.normalizedUrl).hostname,
-                  prefix: undefined,
                   topic: topic as EInterviewTopic,
                   subtopic: item.subtopic,
                   depth: 2,
                   maxPages: 10,
                   crawlDelayMs: 1000,
-                  includePatterns: [],
-                  excludePatterns: [],
-                  autoPlan: true,
-                } as any);
-                await processIngestion("web", retry.ingestionId);
-                await pollUntilDone("web", retry.ingestionId);
+                };
+                const retry = await ingestRepoOrWeb(payload);
+                await processIngestion(EIngestionMode.WEB, retry.ingestionId);
+                await pollUntilDone(EIngestionMode.WEB, retry.ingestionId);
                 const { data: docs2 } = await supabase
                   .from("documents")
                   .select("id")
@@ -267,19 +266,21 @@ export async function runCatalogIngestion(params?: {
               try {
                 const also = normalizedToRaws.get(next.normalizedUrl) ?? new Set<string>();
                 persistEmbeddedFlags(new Set<string>([item.url]), logger, also);
-              } catch (e: any) {
-                logger.warn("[ingest] catalog persist failed", { error: e?.message, url: item.url });
+              } catch (e) {
+                const errMsg = e instanceof Error ? e.message : String(e);
+                logger.warn("[ingest] catalog persist failed", { error: errMsg, url: item.url });
               }
             } else {
               logger.warn("[ingest] completed but no coverage", { workerId, id });
             }
-          } catch (verr: any) {
-            logger.warn("[ingest] verification failed", { error: verr?.message });
+          } catch (verr) {
+            const errMsg = verr instanceof Error ? verr.message : String(verr);
+            logger.warn("[ingest] verification failed", { error: errMsg });
           }
         }
         started++;
-      } catch (e: any) {
-        const errMsg = e?.message ?? String(e);
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
         logger.error("[ingest] failed", { workerId, topic, url: item.url, error: errMsg });
         errors.push({ topic, subtopic: item.subtopic, url: item.url, error: errMsg });
       } finally {

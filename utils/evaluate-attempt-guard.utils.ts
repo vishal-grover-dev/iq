@@ -1,6 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { EAttemptStatus, IUserAttempt } from "@/types/evaluate.types";
-import { EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { EAttemptStatus, IUserAttempt, TAttemptQuestion } from "@/types/evaluate.types";
 
 /**
  * Fetch attempt with error handling; returns null if not found or user unauthorized
@@ -42,8 +41,12 @@ export function checkCompletionStatus(attempt: IUserAttempt): { status: EAttempt
  * Find existing pending question for the next order
  * Returns the pending MCQ or null if none exists
  */
-export function findExistingPendingQuestion(askedQuestions: any[], nextQuestionOrder: number): any | null {
-  const pending = askedQuestions.find((q: any) => {
+
+export function findExistingPendingQuestion(
+  askedQuestions: TAttemptQuestion[],
+  nextQuestionOrder: number
+): TAttemptQuestion | null {
+  const pending = askedQuestions.find((q) => {
     const answeredAt = q?.answered_at;
     const userAnswer = q?.user_answer_index;
     const orderMatches = Number(q?.question_order ?? 0) === nextQuestionOrder;
@@ -60,7 +63,7 @@ export function findExistingPendingQuestion(askedQuestions: any[], nextQuestionO
 export async function validateAttemptQuestions(
   attemptId: string,
   supabase: SupabaseClient
-): Promise<{ questions: any[] | null; error: any }> {
+): Promise<{ questions: TAttemptQuestion[]; error: Error }> {
   const { data: askedQuestions, error: questionsError } = await supabase
     .from("attempt_questions")
     .select(
@@ -87,8 +90,7 @@ export async function validateAttemptQuestions(
     .order("question_order", { ascending: true });
 
   return {
-    questions: askedQuestions,
-    error: questionsError,
+    questions: askedQuestions as unknown as TAttemptQuestion[],
+    error: questionsError as unknown as Error,
   };
 }
-

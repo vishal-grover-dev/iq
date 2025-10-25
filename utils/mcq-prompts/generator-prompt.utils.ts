@@ -1,8 +1,14 @@
-import type { TGeneratorBuildArgs, EBloomLevel } from "@/types/mcq.types";
+import type { TGeneratorBuildArgs } from "@/types/mcq.types";
 import { EPromptMode } from "@/types/mcq.types";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";
 import { pickExamples } from "../../data/mcq-examples";
-import { formatContextLines, formatExamplesBlock, formatNegativeExamplesBlock, formatLabels, formatAvailableSubtopicsHint } from "./shared.utils";
+import {
+  formatContextLines,
+  formatExamplesBlock,
+  formatNegativeExamplesBlock,
+  formatLabels,
+  formatAvailableSubtopicsHint,
+} from "./shared.utils";
 
 /**
  * Builds system and user prompts for MCQ generation.

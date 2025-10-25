@@ -3,13 +3,13 @@ import { EContentCategory, EInterviewStream, EInterviewTopic, EInterviewIngestTy
 export const formSchema = z.discriminatedUnion("contentCategory", [
   z.object({
     contentCategory: z.literal(EContentCategory.INTERVIEW_STREAMS),
-    stream: z.nativeEnum(EInterviewStream).default(EInterviewStream.FRONTEND_REACT),
+    stream: z.enum(Object.values(EInterviewStream)),
     items: z
       .array(
         z.object({
-          topic: z.nativeEnum(EInterviewTopic),
+          topic: z.enum(Object.values(EInterviewTopic)),
           subtopic: z.string().optional(),
-          ingestType: z.nativeEnum(EInterviewIngestType),
+          ingestType: z.enum(Object.values(EInterviewIngestType)),
           url: z.string().url("Enter a valid URL"),
         })
       )

@@ -13,7 +13,6 @@ import {
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { getEmbeddings } from "@/services/ai/embedding.service";
 import { resolveLabels, getLabelResolverMetrics, resetLabelResolverMetrics } from "@/utils/label-resolver.utils";
-import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 

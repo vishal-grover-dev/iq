@@ -14,13 +14,12 @@ export async function applyNeighborSimilarityChecks(
   candidates: ICandidateWithSimilarity[],
   askedEmbeddings: number[][],
   userId: string,
-  supabase: SupabaseClient,
-  attemptId: string
+  supabase: SupabaseClient
 ): Promise<ICandidateWithSimilarity[]> {
   return await Promise.all(
     candidates.map(async (candidate) => {
       let similarityPenalty = 0;
-      let similarityMetrics: Record<string, { scores: number[]; top_score: number }> = {};
+      const similarityMetrics: Record<string, { scores: number[]; top_score: number }> = {};
 
       try {
         if (askedEmbeddings.length > 0) {
@@ -53,7 +52,7 @@ export async function applyNeighborSimilarityChecks(
             const { data: neighborRows } = await supabase.rpc("retrieval_mcq_neighbors", {
               p_user_id: userId,
               p_topic: candidate.topic,
-              p_embedding: candidateEmbedding as unknown as any,
+              p_embedding: candidateEmbedding as unknown as number[],
               p_subtopic: candidate.subtopic,
               p_topk: 5,
             });

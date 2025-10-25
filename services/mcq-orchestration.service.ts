@@ -1,5 +1,4 @@
 import type { IMcqItemView } from "@/types/mcq.types";
-import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { retrieveContextByLabels, retrieveNeighbors, getRecentQuestions } from "@/utils/mcq-retrieval.utils";
 import { generateMcqFromContext } from "@/services/ai/mcq-generation.service";
 import { judgeMcqQuality } from "@/services/ai/mcq-refinement.service";

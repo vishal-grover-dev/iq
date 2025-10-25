@@ -43,8 +43,8 @@ export default function McqGenerationPage() {
             toast.error(MCQ_PAGE_TOAST_MESSAGES.REVISION_FAILED);
           }
         },
-        onError: (error: any) => {
-          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.REVISION_FAILED);
+        onError: (error: Error) => {
+          toast.error(error instanceof Error ? error.message : MCQ_PAGE_TOAST_MESSAGES.REVISION_FAILED);
         },
       }
     );
@@ -101,20 +101,6 @@ export default function McqGenerationPage() {
     setOpenAutomation(false);
   }
 
-  const handleSubmit = () => {
-    saveMutation.mutate(
-      { item: current },
-      {
-        onSuccess: () => {
-          toast.success(MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVED);
-        },
-        onError: (error: any) => {
-          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVE_FAILED);
-        },
-      }
-    );
-  };
-
   const handleSubmitAndNext = () => {
     if (generateMutation.isPending || saveMutation.isPending) return;
 
@@ -126,8 +112,8 @@ export default function McqGenerationPage() {
           toast.success(MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVED);
           handleNext();
         },
-        onError: (error: any) => {
-          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVE_FAILED);
+        onError: (error: Error) => {
+          toast.error(error instanceof Error ? error.message : MCQ_PAGE_TOAST_MESSAGES.QUESTION_SAVE_FAILED);
         },
       }
     );
@@ -150,8 +136,8 @@ export default function McqGenerationPage() {
             toast.message(MCQ_PAGE_TOAST_MESSAGES.PLACEHOLDER_GENERATED);
           }
         },
-        onError: (error: any) => {
-          toast.error(error?.message || MCQ_PAGE_TOAST_MESSAGES.NEXT_FAILED);
+        onError: (error: Error) => {
+          toast.error(error instanceof Error ? error.message : MCQ_PAGE_TOAST_MESSAGES.NEXT_FAILED);
         },
       }
     );

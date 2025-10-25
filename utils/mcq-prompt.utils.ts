@@ -1,11 +1,4 @@
-import type {
-  EBloomLevel,
-  EDifficulty,
-  TGeneratorBuildArgs,
-  TJudgeBuildArgs,
-  TNeighborMcq,
-  TReviserBuildArgs,
-} from "@/types/mcq.types";
+import type { TGeneratorBuildArgs, TJudgeBuildArgs, TNeighborMcq, TReviserBuildArgs } from "@/types/mcq.types";
 import { EPromptMode, EBloomLevel as BloomLevel } from "@/types/mcq.types";
 import type { TExample } from "../data/mcq-examples";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";

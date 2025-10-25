@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
 
 export default function Loader() {
-  const [lottieData, setLottieData] = useState<any | null>(null);
+  const [lottieData, setLottieData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     let isMounted = true;

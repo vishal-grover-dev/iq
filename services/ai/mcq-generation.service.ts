@@ -7,6 +7,7 @@ import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.uti
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
 import { createOpenAIClient } from "@/services/openai.services";
+import type { ResponseFormatJSONSchema, ResponseFormatJSONObject } from "openai/resources/shared";
 
 /**
  * generateMcqFromContext
@@ -65,8 +66,8 @@ export async function generateMcqFromContext(args: {
       question_style_requested: args.questionStyle ?? null,
       question_style_applied: styleInfo?.style ?? null,
     });
-  } catch (_) {
-    // no-op
+  } catch (err) {
+    console.error("🚀 ~ generateMcqFromContext ~ err:", err);
   }
 
   if (styleInfo?.style) {
@@ -77,11 +78,11 @@ export async function generateMcqFromContext(args: {
         coding_mode: !!args.codingMode,
         bloom_level: args.bloomLevel ?? null,
       });
-    } catch (_) {
-      // ignore
+    } catch (err) {
+      console.error("🚀 ~ generateMcqFromContext ~ err:", err);
     }
   }
-  const buildSchema = () => ({
+  const buildSchema = (): ResponseFormatJSONSchema["json_schema"] => ({
     name: "mcq_item",
     strict: true,
     schema: (() => {
@@ -92,7 +93,7 @@ export async function generateMcqFromContext(args: {
         required: ["title", "url"],
       } as const;
 
-      const props: Record<string, any> = {
+      const props: Record<string, Record<string, unknown>> = {
         topic: { type: "string" },
         subtopic: { type: "string" },
         version: { type: ["string", "null"] },
@@ -119,7 +120,8 @@ export async function generateMcqFromContext(args: {
     })(),
   });
 
-  const responseFormat: any = args.codingMode
+  type ResponseFormat = ResponseFormatJSONSchema | ResponseFormatJSONObject;
+  const responseFormat: ResponseFormat = args.codingMode
     ? { type: "json_schema", json_schema: buildSchema() }
     : { type: "json_object" };
 
@@ -314,8 +316,8 @@ export async function generateMcqFromContext(args: {
       has_code: !!out.code,
       citations_count: Array.isArray(out.citations) ? out.citations.length : 0,
     });
-  } catch (_) {
-    // no-op
+  } catch (err) {
+    console.error("🚀 ~ generateMcqFromContext ~ err:", err);
   }
 
   if (styleInfo?.style) {

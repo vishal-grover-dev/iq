@@ -13,6 +13,7 @@ import {
   type TPlanData,
   type TWebPlanData,
 } from "@/types/upload.types";
+import { type IRepoIngestionPlan, type IWebIngestionPlan } from "@/types/ingestion.types";
 
 export function useInterviewPlanner(items: IInterviewIngestItem[]) {
   const [openModalIndex, setOpenModalIndex] = useState<number | null>(null);
@@ -37,7 +38,9 @@ export function useInterviewPlanner(items: IInterviewIngestItem[]) {
 
       for (const item of validItems) {
         if (item.ingestType === EInterviewIngestType.REPO) {
-          const res = await planRepoIngestion({ repoUrl: item.url, batchSize: 200 });
+          const res = (await planRepoIngestion({ repoUrl: item.url, batchSize: 200 })) as
+            | IRepoIngestionPlan
+            | undefined;
           repoAgg.total += res?.total ?? 0;
           repoAgg.batchSize = res?.batchSize ?? repoAgg.batchSize;
           const repoId = (() => {
@@ -48,7 +51,7 @@ export function useInterviewPlanner(items: IInterviewIngestItem[]) {
               return item.url;
             }
           })();
-          (res?.slices ?? []).forEach((s: any) => {
+          (res?.slices ?? []).forEach((s) => {
             repoAgg.slices.push({ ...s, name: `${repoId} — ${s.name}` });
           });
           Object.entries(res?.categories ?? {}).forEach(([k, v]) => {
@@ -56,7 +59,7 @@ export function useInterviewPlanner(items: IInterviewIngestItem[]) {
           });
         } else {
           const u = new URL(item.url);
-          const res = await planWebIngestion({
+          const res = (await planWebIngestion({
             seeds: [item.url],
             domain: u.hostname,
             depth: (item.depth ?? 2) as number,
@@ -66,9 +69,9 @@ export function useInterviewPlanner(items: IInterviewIngestItem[]) {
             topic: item.topic,
             returnAllPages: false,
             applyQuotas: false,
-          });
+          })) as IWebIngestionPlan | undefined;
           webCount += res?.count ?? 0;
-          (res?.pages ?? []).forEach((p: any) => {
+          (res?.pages ?? []).forEach((p) => {
             if (!webPagesMap.has(p.url)) webPagesMap.set(p.url, p);
           });
           const label = `${item.topic}${item.subtopic ? ` • ${item.subtopic}` : ""} — ${u.hostname}${u.pathname}`;

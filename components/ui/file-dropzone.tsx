@@ -4,7 +4,7 @@ import { cn } from "@/utils/tailwind.utils";
 
 type TFileDropzoneProps = {
   onDrop: (acceptedFiles: File[]) => void;
-  accept?: Accept | Record<string, string[]>;
+  accept?: Accept;
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
@@ -23,7 +23,7 @@ export default function FileDropzone({
 }: TFileDropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: accept as any,
+    accept,
     multiple,
     disabled,
   });

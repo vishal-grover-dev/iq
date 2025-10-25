@@ -10,7 +10,7 @@ let cachedServiceRoleClient: SupabaseClient | undefined;
  * Returns a singleton Supabase client for browser usage (anon key).
  * Persists session and auto-refreshes tokens by default.
  */
-export function getSupabaseBrowserClient(options?: SupabaseClientOptions<any>): SupabaseClient {
+export function getSupabaseBrowserClient(options?: SupabaseClientOptions<"public">): SupabaseClient {
   if (!cachedBrowserClient) {
     const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ||
       process.env.SUPABASE_URL ||
@@ -42,7 +42,7 @@ export function getSupabaseBrowserClient(options?: SupabaseClientOptions<any>): 
  * Returns a singleton Supabase client using the service role key.
  * Server-only. Throws if called in the browser.
  */
-export function getSupabaseServiceRoleClient(options?: SupabaseClientOptions<any>): SupabaseClient {
+export function getSupabaseServiceRoleClient(options?: SupabaseClientOptions<"public">): SupabaseClient {
   if (isBrowser) {
     throw new Error("getSupabaseServiceRoleClient must not be called in the browser");
   }
@@ -73,6 +73,9 @@ export function getSupabaseServiceRoleClient(options?: SupabaseClientOptions<any
  * Creates a new Supabase client instance with a provided key.
  * Useful for ephemeral clients or custom headers.
  */
-export function createSupabaseClientWithKey(supabaseKey: string, options?: SupabaseClientOptions<any>): SupabaseClient {
+export function createSupabaseClientWithKey(
+  supabaseKey: string,
+  options?: SupabaseClientOptions<"public">
+): SupabaseClient {
   return createClient(NEXT_PUBLIC_SUPABASE_URL, supabaseKey, options);
 }

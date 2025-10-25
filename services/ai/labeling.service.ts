@@ -10,6 +10,13 @@ import { createOpenAIClient } from "@/services/openai.services";
  * Server-only: Compact classifier that maps a URL/path and optional title to { topic, subtopic, version, confidence }.
  * Accepts a whitelist of topics and per-topic subtopics; returns JSON strictly from the model.
  */
+interface IClassifyResponse extends Record<string, unknown> {
+  topic?: string;
+  subtopic?: string;
+  version?: string;
+  confidence?: number;
+}
+
 export async function classifyLabels(args: {
   urlOrPath: string;
   siteOrRepo: string;
@@ -58,7 +65,8 @@ export async function classifyLabels(args: {
     response_format: { type: "json_object" },
   });
   const content = res.choices[0]?.message?.content ?? "{}";
-  const parsed = parseJsonObject<any>(content, {});
+
+  const parsed = parseJsonObject<IClassifyResponse>(content, {});
   const topic: string = typeof parsed.topic === "string" ? parsed.topic : args.topicHint || "Unknown";
   const subtopic: string | null = typeof parsed.subtopic === "string" ? parsed.subtopic : null;
   const version: string | null = typeof parsed.version === "string" ? parsed.version : null;

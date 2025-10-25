@@ -27,7 +27,6 @@ export async function getEmbeddings(
     const slice = prepared.slice(i, i + batchSize);
     let attempt = 0;
     // simple retry with exponential backoff for 429/5xx
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const res = await client.embeddings.create({ model: OPENAI_CONFIG.EMBEDDING_MODEL, input: slice });
@@ -56,6 +55,7 @@ export async function getEmbeddings(
  * rerank
  * Server-only LLM-as-reranker using `gpt-4o-mini`. Returns one score per input text, same order.
  */
+
 export async function rerank(query: string, texts: string[]): Promise<number[]> {
   if (!query || texts.length === 0) return [];
   if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
@@ -77,7 +77,8 @@ export async function rerank(query: string, texts: string[]): Promise<number[]> 
     response_format: { type: "json_object" },
   });
   const content = res.choices[0]?.message?.content ?? "{}";
-  const parsed = parseJsonObject<any>(content, { items: [] });
+
+  const parsed = parseJsonObject(content, { items: [] });
   const scores: number[] = Array(texts.length).fill(0);
   const items: Array<{ index: number; score: number }> = Array.isArray(parsed.items) ? parsed.items : [];
   for (const it of items) {

@@ -40,9 +40,8 @@ export function extractMainContent(html?: string | null): string | null {
     let bestElement = $("body");
     let maxTextLength = 0;
 
-    $("div, section, article").each(function (this) {
-      const el = this;
-      const $el = $(el);
+    $("div, section, article").each(function () {
+      const $el = $(this);
       const textLength = $el.text().trim().length;
       if (textLength > maxTextLength && textLength > 200) {
         maxTextLength = textLength;

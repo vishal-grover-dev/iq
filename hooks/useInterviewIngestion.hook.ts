@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useIngestRepoWebMutations, getIngestionStatus, processIngestion } from "@/services/ingest.services";
 import { IInterviewIngestItem, EInterviewIngestType } from "@/types/upload.types";
+import { EIngestionMode, type IIngestionStatusResponse } from "@/types/ingestion.types";
+import { type TIngestRepoRequest, type TIngestWebRequest } from "@/schema/ingest.schema";
 
 export interface IIngestionProgressInfo {
   ingestionId: string;
@@ -43,34 +45,35 @@ export function useInterviewIngestion() {
             if (url.hostname !== "github.com") {
               throw new Error("For 'Docs Repo (GitHub)', use a github.com repository URL");
             }
-            const { ingestionId } = await ingestRepoWeb({
-              mode: "repo",
+            const payload: TIngestRepoRequest = {
+              mode: EIngestionMode.REPO,
               repoUrl: row.url,
               paths: [],
-              topic: row.topic as any,
-              subtopic: row.subtopic,
+              topic: row.topic,
+              subtopic: row.subtopic ?? undefined,
               maxFiles: 200,
-            } as any);
+            };
+            const { ingestionId } = await ingestRepoWeb(payload);
             createdIds.push(ingestionId);
           } else {
             const u = new URL(row.url);
             // Smart, generic defaults derived from the provided URL (no hardcoded domains)
-            const payload: any = {
-              mode: "web",
+            const payload: TIngestWebRequest = {
+              mode: EIngestionMode.WEB,
               seeds: [row.url],
               domain: u.hostname,
               depth: (row.depth ?? 2) as number,
               maxPages: 50,
               crawlDelayMs: 300,
-              topic: row.topic as any,
-              subtopic: row.subtopic,
+              topic: row.topic,
+              subtopic: row.subtopic ?? undefined,
             };
 
-            const { ingestionId } = await ingestRepoWeb(payload as any);
+            const { ingestionId } = await ingestRepoWeb(payload);
             createdIds.push(ingestionId);
           }
         } catch (err) {
-          failures.push((err as any)?.message ?? "Failed to create ingestion");
+          failures.push(err instanceof Error ? err.message : "Failed to create ingestion");
         }
       }
 
@@ -98,19 +101,20 @@ export function useInterviewIngestion() {
         await new Promise((r) => setTimeout(r, 2000));
         for (const id of [...pending]) {
           try {
-            const s = await getIngestionStatus(id);
-            const inflightStep = (s as any)?.inflight?.step as string | undefined;
-            const processed = (s as any)?.inflight?.processed as number | undefined;
-            const totalPlanned = (s as any)?.inflight?.totalPlanned as number | undefined;
-            const currentPathOrUrl = (s as any)?.inflight?.currentPathOrUrl as string | undefined;
-            const topics = (s as any)?.progress?.coverage?.topics as string[] | undefined;
-            const subtopics = (s as any)?.progress?.coverage?.subtopics as string[] | undefined;
-            const recentItems = (s as any)?.progress?.recent as
+            const s = (await getIngestionStatus(id)) as IIngestionStatusResponse;
+            const inflightStep = (s.inflight as Record<string, unknown>)?.step as string | undefined;
+            const processed = (s.inflight as Record<string, unknown>)?.processed as number | undefined;
+            const totalPlanned = (s.inflight as Record<string, unknown>)?.totalPlanned as number | undefined;
+            const currentPathOrUrl = (s.inflight as Record<string, unknown>)?.currentPathOrUrl as string | undefined;
+            const topics = (s.progress as Record<string, unknown>)?.coverage as Record<string, unknown> | undefined;
+            const topicsList = (topics?.topics as string[]) || undefined;
+            const subtopicsList = (topics?.subtopics as string[]) || undefined;
+            const recentItems = (s.progress as Record<string, unknown>)?.recent as
               | Array<{ title: string | null; path: string }>
               | undefined;
 
-            topics?.forEach((t) => coverage.topics.add(t));
-            subtopics?.forEach((t) => coverage.subtopics.add(t));
+            topicsList?.forEach((t) => coverage.topics.add(t));
+            subtopicsList?.forEach((t) => coverage.subtopics.add(t));
             if (Array.isArray(recentItems)) recent = recentItems;
 
             onProgress?.({
@@ -119,14 +123,16 @@ export function useInterviewIngestion() {
               processed,
               totalPlanned,
               currentPathOrUrl,
-              topics,
-              subtopics,
+              topics: topicsList,
+              subtopics: subtopicsList,
             });
 
             // For repo mode with cursor batching, trigger next batch if awaiting_next_batch
-            const isCompleted = (s as any).status === "completed";
-            const isFailed = (s as any).status === "failed";
-            const awaitingNext = ((s as any)?.inflight?.step ?? (s as any)?.progress?.step) === "awaiting_next_batch";
+            const isCompleted = s.status === "completed";
+            const isFailed = s.status === "failed";
+            const inflight = (s.inflight as Record<string, unknown>) || {};
+            const progress = (s.progress as Record<string, unknown>) || {};
+            const awaitingNext = (inflight.step ?? progress.step) === "awaiting_next_batch";
             if (awaitingNext) {
               await processIngestion("repo", id);
             }

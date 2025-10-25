@@ -1,4 +1,4 @@
-import type { IMcqItemView, TJudgeBuildArgs, TNeighborMcq } from "@/types/mcq.types";
+import type { TJudgeBuildArgs, TNeighborMcq } from "@/types/mcq.types";
 import { formatContextLines, formatNeighborsBlock } from "./shared.utils";
 
 /**

@@ -52,7 +52,6 @@ export async function selectNextQuestion(context: {
   } = context;
 
   const total_target = 60;
-  const remaining = total_target - questions_answered;
   const easy_target = 30;
   const medium_target = 20;
   const hard_target = 10;
@@ -124,7 +123,7 @@ export async function selectNextQuestion(context: {
     });
 
     const content = res.choices[0]?.message?.content ?? "{}";
-    const parsed = parseJsonObject<any>(content, {
+    const parsed = parseJsonObject(content, {
       difficulty: "Easy",
       coding_mode: false,
       preferred_topic: "React",
@@ -146,8 +145,8 @@ export async function selectNextQuestion(context: {
           preferred_bloom_level: parsed.preferred_bloom_level || "Understand",
         },
       });
-    } catch (_) {
-      // no-op
+    } catch (err) {
+      console.error("🚀 ~ selectNextQuestion ~ err:", err);
     }
 
     // Validate and normalize
@@ -221,8 +220,6 @@ export async function selectNextQuestion(context: {
     const topicWeights = topics.map((t) => topicWeightsMap[t] || 1);
     const topicIdx = weightedRandomIndex(topicWeights);
     const topic = topics[topicIdx] || "React";
-
-    const subtopicCandidates = getStaticSubtopicsForTopic(topic);
 
     // Subtopic: prefer dynamic ontology for chosen topic, pick 1 underrepresented
     let preferred_subtopic: string = "";

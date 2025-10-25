@@ -54,7 +54,7 @@ export default function EvaluateAttemptPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [data?.next_question?.id]);
+  }, [data?.next_question?.id, startTime]);
 
   // Show delayed loading message if loading takes >500ms (Task 6: Loading States)
   useEffect(() => {
@@ -269,9 +269,9 @@ export default function EvaluateAttemptPage() {
       {/* Info box: no feedback during evaluation */}
       <div className='bg-muted/30 mt-6 rounded-lg border border-dashed p-4 text-center'>
         <p className='text-muted-foreground text-sm'>
-          <span className='font-medium'>Note:</span> Your answers are being saved, but you won't see if they're correct
-          or incorrect until you complete all {attempt.total_questions} questions. This maintains authentic evaluation
-          conditions.
+          <span className='font-medium'>Note:</span> Your answers are being saved, but you won&apos;t see if
+          they&apos;re correct or incorrect until you complete all {attempt.total_questions} questions. This maintains
+          authentic evaluation conditions.
         </p>
       </div>
 
@@ -279,8 +279,8 @@ export default function EvaluateAttemptPage() {
       {timeSpent > 1800 && (
         <div className='bg-amber-50 dark:bg-amber-950/20 mt-4 rounded-lg border border-amber-200 p-4 text-center dark:border-amber-800'>
           <p className='text-amber-900 dark:text-amber-200 text-sm'>
-            You've been on this question for {Math.floor(timeSpent / 60)} minutes. Take your time, or use "Pause & Save"
-            if you need a break.
+            You&apos;ve been on this question for {Math.floor(timeSpent / 60)} minutes. Take your time, or use
+            &quot;Pause &amp; Save&quot; if you need a break.
           </p>
         </div>
       )}

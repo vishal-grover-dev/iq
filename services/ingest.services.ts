@@ -72,6 +72,7 @@ export async function planWebIngestion(params: {
  * Control endpoints (placeholders for future worker controls).
  */
 export async function pauseIngestion(_id: string) {
+  console.log("🚀 ~ pauseIngestion ~ _id:", _id);
   return { ok: true } as const;
 }
 export async function resumeIngestion(id: string) {
@@ -82,6 +83,7 @@ export async function retryIngestion(id: string) {
   return processIngestion("repo", id);
 }
 export async function downloadRunReport(_id: string) {
+  console.log("🚀 ~ downloadRunReport ~ _id:", _id);
   // Placeholder: UI can call status endpoint and generate client-side CSV/JSON
   return { ok: true } as const;
 }

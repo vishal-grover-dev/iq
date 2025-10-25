@@ -1,4 +1,4 @@
-import type { IMcqItemView, TReviserBuildArgs } from "@/types/mcq.types";
+import type { TReviserBuildArgs } from "@/types/mcq.types";
 import { formatContextLines } from "./shared.utils";
 
 /**

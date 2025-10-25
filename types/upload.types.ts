@@ -29,7 +29,7 @@ export enum EInterviewIngestType {
 
 export interface IInterviewIngestItem {
   topic: EInterviewTopic;
-  subtopic: string;
+  subtopic?: string;
   ingestType: EInterviewIngestType;
   url: string;
   depth?: 0 | 1 | 2 | 3 | 4;

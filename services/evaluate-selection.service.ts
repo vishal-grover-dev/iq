@@ -1,11 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  ESelectionMethod,
-  EAttemptStatus,
-  IBankCandidate,
-  IBankCandidateWithMetadata,
-  IAttemptQuestion,
-} from "@/types/evaluate.types";
+import { ESelectionMethod, EAttemptStatus, IBankCandidate } from "@/types/evaluate.types";
 import { selectNextQuestion as callLLMSelector } from "@/services/ai/question-selector.service";
 import {
   fetchAttemptOrFail,
@@ -192,12 +186,10 @@ export async function selectNextQuestionForAttempt(
 
   // Build asked content keys for similarity checks
   const askedContentKeySet = new Set<string>(
-    asked.map((q: IAttemptQuestion) => String(q?.mcq_items?.content_key || "")).filter((s: string) => s.length > 0)
+    asked.map((q) => String(q?.mcq_items?.content_key || "")).filter((s: string) => s.length > 0)
   );
 
-  const askedIdSet = new Set<string>(
-    asked.map((q: IAttemptQuestion) => q.question_id).filter((id: string) => typeof id === "string")
-  );
+  const askedIdSet = new Set<string>(asked.map((q) => q.question_id).filter((id: string) => typeof id === "string"));
 
   // Fetch recent questions for cross-attempt freshness
   const recentIdSet = await fetchRecentAttemptQuestions(userId, supabase);
@@ -366,8 +358,7 @@ export async function selectNextQuestionForAttempt(
     filteredPrimary.map((c) => ({ ...c, similarityPenalty: 0, similarityMetrics: {} })) as ICandidateWithSimilarity[],
     askedEmbeddings,
     userId,
-    supabase,
-    attemptId
+    supabase
   );
 
   const scoredCandidates = candidatesWithSimilarity.map((candidate) => ({

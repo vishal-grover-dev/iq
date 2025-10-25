@@ -90,7 +90,7 @@ export async function persistGeneratedMcq(
       citations: generatedMcq.citations,
       code: generatedMcq.code || null,
       content_key: contentKey,
-      embedding: mcqEmbedding as unknown as any,
+      embedding: mcqEmbedding as unknown as number[],
       user_id: userId,
     })
     .select("id")
@@ -199,7 +199,8 @@ export async function generateMcqFallback(
       let topicsUniverse: string[] = [];
       try {
         topicsUniverse = getStaticTopicList();
-      } catch (_) {
+      } catch (err) {
+        console.error("🚀 ~ generateMcqFallback ~ err:", err);
         topicsUniverse = [];
       }
 
@@ -243,7 +244,7 @@ export async function generateMcqFallback(
       const { data: contextItems, error: contextError } = await supabase.rpc("retrieval_hybrid_by_labels", {
         p_user_id: userId,
         p_topic: contextTopic,
-        p_query_embedding: queryEmbedding as unknown as any,
+        p_query_embedding: queryEmbedding as unknown as number[],
         p_query_text: queryText,
         p_subtopic: contextSubtopic,
         p_version: null,
@@ -269,7 +270,7 @@ export async function generateMcqFallback(
           ? []
           : baseAvoidTopics.slice(0, baseAvoidTopics.length - relaxationLevel);
 
-      let generatedMcq = await generateMcqFromContext({
+      const generatedMcq = await generateMcqFromContext({
         topic: contextTopic,
         subtopic: contextSubtopic,
         difficulty: criteria.difficulty as EDifficulty,
@@ -296,7 +297,7 @@ export async function generateMcqFallback(
         const { data: neighborRows } = await supabase.rpc("retrieval_mcq_neighbors", {
           p_user_id: userId,
           p_topic: contextTopic,
-          p_embedding: mcqEmbedding as unknown as any,
+          p_embedding: mcqEmbedding as unknown as number[],
           p_subtopic: contextSubtopic,
           p_topk: EVALUATE_SELECTION_CONFIG.GENERATION.NEIGHBOR_TOPK,
         });

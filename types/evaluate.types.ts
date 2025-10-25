@@ -3,7 +3,7 @@
  * Defines interfaces for attempts, questions, results, and analytics
  */
 
-import { EDifficulty, EBloomLevel, IMcqItemView } from "./mcq.types";
+import { EDifficulty, EBloomLevel } from "./mcq.types";
 
 /**
  * MCQ item with explanation, joined from mcq_items + mcq_explanations
@@ -20,6 +20,7 @@ export interface IMcqWithExplanation {
   citations: Array<{ title?: string; url?: string }>;
   code: string | null;
   mcq_explanations: Array<{ explanation: string }>;
+  content_key?: string;
 }
 
 /**
@@ -35,6 +36,10 @@ export interface IAttemptQuestionWithMcq {
   time_spent_seconds: number | null;
   mcq_items: IMcqWithExplanation;
 }
+
+export type TAttemptQuestion = Omit<IAttemptQuestionWithMcq, "mcq_items"> & {
+  mcq_items?: IAttemptQuestionWithMcq["mcq_items"];
+};
 
 /**
  * Evaluate page labels
@@ -227,6 +232,31 @@ export interface IAttemptQuestion {
   assigned_at: string;
   created_at: string;
   updated_at: string;
+  mcq_items?:
+    | {
+        id?: string;
+        topic?: string;
+        subtopic?: string | null;
+        difficulty?: string;
+        bloom_level?: string;
+        question?: string;
+        options?: string[];
+        code?: string | null;
+        content_key?: string;
+        embedding?: unknown;
+      }
+    | Array<{
+        id?: string;
+        topic?: string;
+        subtopic?: string | null;
+        difficulty?: string;
+        bloom_level?: string;
+        question?: string;
+        options?: string[];
+        code?: string | null;
+        content_key?: string;
+        embedding?: unknown;
+      }>;
 }
 
 /**
@@ -547,12 +577,4 @@ export interface IBankCandidate {
 
 export interface IBankCandidateWithMetadata extends IBankCandidate {
   _seenRecently?: boolean;
-}
-
-// Database row types for asked questions
-export interface IAttemptQuestion {
-  question_id: string;
-  mcq_items?: {
-    content_key?: string;
-  };
 }

@@ -48,7 +48,7 @@ export default function UploadForm() {
         depth: 3,
       },
     ],
-  } as const;
+  } as IInterviewStreamsFormValues;
 
   const {
     handleSubmit,
@@ -56,7 +56,7 @@ export default function UploadForm() {
     setValue,
     watch,
   } = useForm<IInterviewStreamsFormValues>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues,
     mode: "onBlur",
   });
@@ -96,7 +96,7 @@ export default function UploadForm() {
     [setValue, stream, items]
   );
 
-  const onSubmit: SubmitHandler<IInterviewStreamsFormValues> = async (_data) => {
+  const onSubmit: SubmitHandler<IInterviewStreamsFormValues> = async () => {
     try {
       setUploadState("processing");
       if (isInterview) {
@@ -134,7 +134,8 @@ export default function UploadForm() {
         }
       }
       setUploadState("completed");
-    } catch (e) {
+    } catch (err) {
+      console.error("🚀 ~ onSubmit ~ err:", err);
       setUploadState("failed");
     }
   };
@@ -163,28 +164,7 @@ export default function UploadForm() {
           {errors?.contentCategory && <ErrorMessage message={errors.contentCategory.message as unknown as string} />}
         </div>
 
-        {isInterview && (
-          <InterviewSection
-            items={items}
-            stream={stream}
-            disabled={disabled}
-            setValue={
-              setValue as unknown as (
-                name:
-                  | "contentCategory"
-                  | "stream"
-                  | "items"
-                  | `items.${number}`
-                  | `items.${number}.url`
-                  | `items.${number}.topic`
-                  | `items.${number}.subtopic`
-                  | `items.${number}.ingestType`,
-                value: unknown,
-                options?: { shouldValidate?: boolean; shouldTouch?: boolean }
-              ) => void
-            }
-          />
-        )}
+        {isInterview && <InterviewSection items={items} stream={stream} disabled={disabled} setValue={setValue} />}
       </div>
 
       <div className='flex items-center gap-3 justify-end'>

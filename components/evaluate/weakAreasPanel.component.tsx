@@ -7,8 +7,7 @@ import { motion } from "framer-motion";
 import { usePrefersReducedMotion, ANIMATION_EASING } from "@/utils/animation.utils";
 import { cn } from "@/utils/tailwind.utils";
 import { TrendDownIcon, WarningCircleIcon, ArrowSquareOutIcon, LightningIcon } from "@phosphor-icons/react/dist/ssr";
-import { WEAK_AREA_ACCURACY_TIERS, WEAK_AREA_STYLES } from "@/constants/evaluate.constants";
-import { EWeakAreaLabels } from "@/types/evaluate.types";
+import { WEAK_AREA_ACCURACY_TIERS, WEAK_AREA_STYLES, WEAK_AREA_LABELS } from "@/constants/evaluate.constants";
 
 /**
  * Weak Areas Panel Component
@@ -67,7 +66,7 @@ const TONE_STYLES: Record<string, { badge: string; glow: string; border: string 
 function getTone(accuracy: number) {
   const tier = WEAK_AREA_ACCURACY_TIERS.find((t) => accuracy <= t.THRESHOLD);
   if (!tier) {
-    return { tone: "watch", label: EWeakAreaLabels.MONITOR_LEVEL };
+    return { tone: "watch", label: WEAK_AREA_LABELS.MONITOR_LEVEL };
   }
   return { tone: tier.TONE, label: tier.LABEL };
 }
@@ -124,7 +123,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.05 }}
           >
-            <WarningCircleIcon className='h-5 w-5 text-amber-500' weight='fill' /> {EWeakAreaLabels.AREAS_TO_IMPROVE}
+            <WarningCircleIcon className='h-5 w-5 text-amber-500' weight='fill' /> {WEAK_AREA_LABELS.AREAS_TO_IMPROVE}
           </motion.h2>
           <motion.p
             className='text-muted-foreground mt-1 text-sm'
@@ -132,7 +131,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.12 }}
           >
-            {EWeakAreaLabels.FOCUS_ESSENTIALS}
+            {WEAK_AREA_LABELS.FOCUS_ESSENTIALS}
           </motion.p>
         </div>
 
@@ -142,7 +141,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: ANIMATION_EASING.easeOut, delay: 0.2 }}
         >
-          <LightningIcon className='h-4 w-4' weight='fill' /> {EWeakAreaLabels.TOP_OPPORTUNITIES}
+          <LightningIcon className='h-4 w-4' weight='fill' /> {WEAK_AREA_LABELS.TOP_OPPORTUNITIES}
         </motion.div>
       </div>
 
@@ -179,7 +178,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
                     <div className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
                       {area.topic}
                     </div>
-                    <h3 className='text-base font-semibold'>{area.subtopic ?? EWeakAreaLabels.GENERAL_MASTERY}</h3>
+                    <h3 className='text-base font-semibold'>{area.subtopic ?? WEAK_AREA_LABELS.GENERAL_MASTERY}</h3>
                   </div>
                   <span
                     className={cn(
@@ -195,13 +194,13 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
                 <div className='flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-50/70 px-3 py-2 text-sm dark:border-amber-500/30 dark:bg-amber-900/30'>
                   <div className='flex flex-col'>
                     <span className='text-xs uppercase tracking-wide text-amber-600 dark:text-amber-200'>
-                      {EWeakAreaLabels.ACCURACY_LABEL}
+                      {WEAK_AREA_LABELS.ACCURACY_LABEL}
                     </span>
                     <span className='text-lg font-semibold text-amber-700 dark:text-amber-100'>
                       {formatAccuracy(area.accuracy)}
                     </span>
                   </div>
-                  <div className='text-muted-foreground text-xs'>{EWeakAreaLabels.GOAL_REACH_80}</div>
+                  <div className='text-muted-foreground text-xs'>{WEAK_AREA_LABELS.GOAL_REACH_80}</div>
                 </div>
 
                 <div className='rounded-xl bg-background/70 p-3 text-sm shadow-sm'>
@@ -216,7 +215,7 @@ export default function WeakAreasPanel({ weakAreas }: IWeakAreasPanelProps) {
                     className='inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80'
                     whileHover={{ x: prefersReducedMotion ? 0 : 4 }}
                   >
-                    {EWeakAreaLabels.DEEP_DIVE_GUIDANCE} <ArrowSquareOutIcon className='h-4 w-4' weight='fill' />
+                    {WEAK_AREA_LABELS.DEEP_DIVE_GUIDANCE} <ArrowSquareOutIcon className='h-4 w-4' weight='fill' />
                   </motion.a>
                 )}
               </div>

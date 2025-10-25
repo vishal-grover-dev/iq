@@ -4,7 +4,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/ssr";
-import { EQuestionReviewLabels } from "@/types/evaluate.types";
+import { QUESTION_REVIEW_LABELS } from "@/constants/evaluate.constants";
 
 interface IReviewFilterBarProps {
   searchQuery: string;
@@ -42,7 +42,7 @@ export default function ReviewFilterBar({
           <Input
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={EQuestionReviewLabels.SEARCH_PLACEHOLDER}
+            placeholder={QUESTION_REVIEW_LABELS.SEARCH_PLACEHOLDER}
             className='pl-9'
           />
         </div>
@@ -53,7 +53,7 @@ export default function ReviewFilterBar({
             onChange={(e) => onTopicChange(e.target.value)}
             className='border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-40'
           >
-            <option value='all'>{EQuestionReviewLabels.ALL_TOPICS_OPTION}</option>
+            <option value='all'>{QUESTION_REVIEW_LABELS.ALL_TOPICS_OPTION}</option>
             {uniqueTopics.map((topic) => (
               <option key={topic} value={topic}>
                 {topic}
@@ -64,7 +64,7 @@ export default function ReviewFilterBar({
 
         <div className='flex items-center gap-2'>
           <Label htmlFor='show-incorrect-only' className='text-sm font-medium cursor-pointer whitespace-nowrap'>
-            {EQuestionReviewLabels.SHOW_ONLY_INCORRECT}
+            {QUESTION_REVIEW_LABELS.SHOW_ONLY_INCORRECT}
           </Label>
           <Switch id='show-incorrect-only' checked={showOnlyIncorrect} onCheckedChange={onShowOnlyIncorrectChange} />
         </div>
@@ -73,39 +73,39 @@ export default function ReviewFilterBar({
       {/* Sort and Group Controls - Combined Row */}
       <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
         <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.SORT_LABEL}</span>
+          <span className='text-sm font-medium text-muted-foreground'>{QUESTION_REVIEW_LABELS.SORT_LABEL}</span>
           <ToggleGroup
             type='single'
             value={sortMode}
             onValueChange={(value) => value && onSortModeChange(value as typeof sortMode)}
           >
             <ToggleGroupItem value='order' className='h-7 text-xs'>
-              {EQuestionReviewLabels.ORDER_OPTION}
+              {QUESTION_REVIEW_LABELS.ORDER_OPTION}
             </ToggleGroupItem>
             <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-              {EQuestionReviewLabels.DIFFICULTY_OPTION}
+              {QUESTION_REVIEW_LABELS.DIFFICULTY_OPTION}
             </ToggleGroupItem>
             <ToggleGroupItem value='topic' className='h-7 text-xs'>
-              {EQuestionReviewLabels.TOPIC_OPTION}
+              {QUESTION_REVIEW_LABELS.TOPIC_OPTION}
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
 
         <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium text-muted-foreground'>{EQuestionReviewLabels.GROUP_LABEL}</span>
+          <span className='text-sm font-medium text-muted-foreground'>{QUESTION_REVIEW_LABELS.GROUP_LABEL}</span>
           <ToggleGroup
             type='single'
             value={groupMode}
             onValueChange={(value) => value && onGroupModeChange(value as typeof groupMode)}
           >
             <ToggleGroupItem value='none' className='h-7 text-xs'>
-              {EQuestionReviewLabels.NONE_OPTION}
+              {QUESTION_REVIEW_LABELS.NONE_OPTION}
             </ToggleGroupItem>
             <ToggleGroupItem value='topic' className='h-7 text-xs'>
-              {EQuestionReviewLabels.TOPIC_OPTION}
+              {QUESTION_REVIEW_LABELS.TOPIC_OPTION}
             </ToggleGroupItem>
             <ToggleGroupItem value='difficulty' className='h-7 text-xs'>
-              {EQuestionReviewLabels.DIFFICULTY_OPTION}
+              {QUESTION_REVIEW_LABELS.DIFFICULTY_OPTION}
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

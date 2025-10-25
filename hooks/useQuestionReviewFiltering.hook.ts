@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IQuestionReview } from "@/types/evaluate.types";
-import { EQuestionReviewLabels } from "@/types/evaluate.types";
+import { QUESTION_REVIEW_LABELS } from "@/constants/evaluate.constants";
 
 export function useQuestionReviewFiltering(questions: IQuestionReview[]) {
   const [showOnlyIncorrect, setShowOnlyIncorrect] = useState(false);
@@ -46,7 +46,7 @@ export function useQuestionReviewFiltering(questions: IQuestionReview[]) {
 
   const groupedQuestions = useMemo(() => {
     if (groupMode === "none") {
-      return [{ groupKey: EQuestionReviewLabels.ALL_QUESTIONS_GROUP, items: filteredQuestions }];
+      return [{ groupKey: QUESTION_REVIEW_LABELS.ALL_QUESTIONS_GROUP, items: filteredQuestions }];
     }
 
     const map = new Map<string, IQuestionReview[]>();

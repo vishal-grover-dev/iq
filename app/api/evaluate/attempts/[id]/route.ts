@@ -3,7 +3,8 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { selectNextQuestionForAttempt } from "@/services/evaluate-selection.service";
-import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { EAttemptStatus } from "@/types/evaluate.types";
+import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
@@ -17,10 +18,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     const attemptId = resolvedParams.id;
-    if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
+    if (!attemptId)
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_ID_REQUIRED }, { status: 400 });
 
     const supabase = getSupabaseServiceRoleClient();
 
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     logger.error("Error in GET /api/evaluate/attempts/:id:", error);
     return NextResponse.json(
       {
-        error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR,
+        error: EVALUATE_API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         message: error.message,
       },
       { status: 500 }
@@ -49,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const resolvedParams = await params;
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     const attemptId = resolvedParams.id;
     if (!attemptId) return NextResponse.json({ error: "Attempt ID required" }, { status: 400 });
@@ -72,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     // Update metadata
@@ -93,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (updateError) {
       logger.error("Error pausing attempt:", updateError);
-      return NextResponse.json({ error: "Failed to pause attempt" }, { status: 500 });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_PAUSE_ATTEMPT }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -104,7 +106,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const error = err instanceof Error ? err : new Error(String(err));
     logger.error("Unexpected error in PATCH /api/evaluate/attempts/:id:", error);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: error.message },
+      { error: EVALUATE_API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR, message: error.message },
       { status: 500 }
     );
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import type { IAttemptResults, IWeakArea, IQuestionReview, IMcqWithExplanation } from "@/types/evaluate.types";
-import { EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";
 
 /**
@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const attemptId = params?.id as string;
 
   if (!attemptId) {
-    return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_ID_REQUIRED }, { status: 400 });
+    return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_ID_REQUIRED }, { status: 400 });
   }
 
   const supabase = getSupabaseServiceRoleClient();
@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const userId = DEV_DEFAULT_USER_ID || null;
 
   if (!userId && !DEV_DEFAULT_USER_ID) {
-    return NextResponse.json({ error: EEvaluateApiErrorMessages.AUTHENTICATION_REQUIRED }, { status: 401 });
+    return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.AUTHENTICATION_REQUIRED }, { status: 401 });
   }
 
   try {
@@ -45,11 +45,11 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
       .single();
 
     if (attemptError || !attempt) {
-      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_FOUND }, { status: 404 });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_NOT_FOUND }, { status: 404 });
     }
 
     if (attempt.status !== "completed") {
-      return NextResponse.json({ error: EEvaluateApiErrorMessages.ATTEMPT_NOT_COMPLETED }, { status: 400 });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_NOT_COMPLETED }, { status: 400 });
     }
 
     // 2. Fetch all attempt_questions with joined mcq_items and mcq_explanations
@@ -86,7 +86,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 
     if (questionsError || !attemptQuestions) {
       logger.error("Error fetching attempt questions:", questionsError);
-      return NextResponse.json({ error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_QUESTIONS }, { status: 500 });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_FETCH_QUESTIONS }, { status: 500 });
     }
 
     // 3. Compute summary
@@ -238,6 +238,6 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     });
   } catch (error) {
     logger.error("Error fetching attempt results:", error);
-    return NextResponse.json({ error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR }, { status: 500 });
+    return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR }, { status: 500 });
   }
 }

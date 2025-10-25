@@ -8,8 +8,7 @@ import ResultStatCard from "@/components/evaluate/resultStatCard.component";
 import { usePrefersReducedMotion, ANIMATION_EASING } from "@/utils/animation.utils";
 import { cn } from "@/utils/tailwind.utils";
 import { SparkleIcon } from "@phosphor-icons/react/dist/ssr";
-import { STAT_CARD_LABELS } from "@/constants/evaluate.constants";
-import { EResultsHeroLabels, EResultsPageLabels } from "@/types/evaluate.types";
+import { RESULTS_HERO_LABELS, RESULTS_PAGE_LABELS, STAT_CARD_LABELS } from "@/constants/evaluate.constants";
 import { useResultsTier } from "@/hooks/useResultsTier.hook";
 
 interface IResultsHeroProps {
@@ -150,7 +149,7 @@ export default function ResultsHero({
                 <span>{tierConfig.title}</span>
               </div>
               <div className='w-full flex justify-center md:justify-start'>
-                <ScoreGauge score={score} label={EResultsHeroLabels.OVERALL_SCORE} />
+                <ScoreGauge score={score} label={RESULTS_HERO_LABELS.OVERALL_SCORE} />
               </div>
             </div>
           </motion.div>
@@ -168,7 +167,7 @@ export default function ResultsHero({
               {tierConfig.headline}
             </p>
             <h2 className='text-2xl font-semibold md:text-3xl'>
-              {EResultsPageLabels.YOU_SCORED.replace("{score}", String(score))}
+              {RESULTS_PAGE_LABELS.YOU_SCORED.replace("{score}", String(score))}
             </h2>
             <p className='text-muted-foreground mt-2 text-sm md:text-base'>{tierConfig.description}</p>
           </div>

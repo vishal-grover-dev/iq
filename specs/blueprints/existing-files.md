@@ -67,9 +67,9 @@
 ### components/upload
 
 - `uploadForm.component.tsx`: Upload form component using shadcn/ui inputs and validation.
-- `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls. **Refactored Phase 3: Uses `useInterviewPlanner` hook, `InterviewRow` component, and consolidated modals.**
-- `interviewRow.component.tsx`: Single row form (topic, subtopic, ingest type, depth, URL). **Phase 3: Component extraction.**
-- `interviewModals.component.tsx`: Consolidated modal subcomponents (PlanModal for planning summary, CustomSubtopicModal for custom subtopic input). **Phase 3: Component extraction.**
+- `interviewSection.component.tsx`: Subcomponent rendering Interview Streams rows and modal. Depth selector supports 0-4 for web crawls and leverages `useInterviewPlanner`, `InterviewRow`, and shared modals.
+- `interviewRow.component.tsx`: Single row form (topic, subtopic, ingest type, depth, URL).
+- `interviewModals.component.tsx`: Consolidated modal subcomponents (PlanModal for planning summary, CustomSubtopicModal for custom subtopic input).
   - `completionModal.component.tsx`: Reusable modal displayed after indexing completes with coverage summary (no generation action).
 
 ### components/evaluate
@@ -80,20 +80,20 @@
 - `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines. (Replaced by PerformanceBarChart for main results display)
 - `scoreGauge.component.tsx`: Radial gauge chart showing overall score (0-100%) with color-coded tiers using Recharts RadialBarChart. Mobile-responsive with centered score display. ~55 lines.
 - `performanceBarChart.component.tsx`: Animated horizontal bar chart for topic/Bloom/difficulty breakdowns using Recharts with motion-aware container.
-- `resultsHero.component.tsx`: Animated hero section for the results page. **Refactored Phase 3: Uses `useResultsTier` hook, `ConfettiOverlay` component, and `ResultStatCard` component.**
-- `confettiOverlay.component.tsx`: Reusable confetti animation subcomponent with reduced-motion support. **Phase 3: Component extraction.**
-- `resultStatCard.component.tsx`: Individual stat card for results with tone-based styling (positive, neutral, attention). **Phase 3: Component extraction.**
+- `resultsHero.component.tsx`: Animated hero section for the results page using `useResultsTier`, `ConfettiOverlay`, and `ResultStatCard` components.
+- `confettiOverlay.component.tsx`: Reusable confetti animation subcomponent with reduced-motion support.
+- `resultStatCard.component.tsx`: Individual stat card for results with tone-based styling (positive, neutral, attention).
 - `weakAreasPanel.component.tsx`: Animated card grid highlighting prioritized weak areas with tone badges, accuracy metrics, and deep-dive links.
-- `questionReviewList.component.tsx`: Enhanced review list with search, grouping, sorting toggles, and animated question cards. **Refactored Phase 3: Uses `useQuestionReviewFiltering` hook and `ReviewFilterBar` component.**
-- `reviewFilterBar.component.tsx`: Consolidated filter UI component with search, topic select, incorrect-only toggle, sort, and group controls. **Phase 3: Component extraction.**
+- `questionReviewList.component.tsx`: Enhanced review list with search, grouping, sorting toggles, and animated question cards using `useQuestionReviewFiltering` and `ReviewFilterBar`.
+- `reviewFilterBar.component.tsx`: Consolidated filter UI component with search, topic select, incorrect-only toggle, sort, and group controls.
 
 ### hooks
 
 - `useTheme.hook.ts`: Custom hook for accessing theme context and state management.
 - `useInterviewIngestion.hook.ts`: Hook to create, process, and poll repo/web ingestions and return coverage.
-- `useInterviewPlanner.hook.ts`: Hook consolidating interview planning state (planning, modals, async handlers). **Phase 3: Component refactoring.**
-- `useResultsTier.hook.ts`: Hook extracting tier detection logic for results hero (getTierFromScore, tierConfig, showConfetti). **Phase 3: Component refactoring.**
-- `useQuestionReviewFiltering.hook.ts`: Hook consolidating question review filtering state (filter, sort, group, lazy-load). **Phase 3: Component refactoring.**
+- `useInterviewPlanner.hook.ts`: Hook consolidating interview planning state (planning, modals, async handlers).
+- `useResultsTier.hook.ts`: Hook extracting tier detection logic for results hero (getTierFromScore, tierConfig, showConfetti).
+- `useQuestionReviewFiltering.hook.ts`: Hook consolidating question review filtering state (filter, sort, group, lazy-load).
 
 ### public
 
@@ -184,16 +184,15 @@
 
 #### Evaluate Selection (Phase 4 Refactor)
 
-- `evaluate-selection.service.ts`: **NEW** Orchestrator service for question selection pipeline. Exports: `selectNextQuestionForAttempt()` with comprehensive JSDoc. Implements 5-stage pipeline (Guard → Context → Bank Query → Scoring → Assignment) with race condition handling, generation fallback, and emergency fallback assignment. (~445 lines) **Phase 4: Evaluate route modularization.**
+- `evaluate-selection.service.ts`: Orchestrator service for question selection pipeline. Exports: `selectNextQuestionForAttempt()` with comprehensive JSDoc and 5-stage pipeline (Guard → Context → Bank Query → Scoring → Assignment) handling race conditions, generation fallback, and emergency fallback assignment. (~445 lines)
 
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
 - `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
 - `ui.constants.ts`: Consolidated UI-related constants including theme labels/config (THEME_CONFIG), footer content (FOOTER_CONFIG), and common UI labels (COMMON_LABELS, FORM_LABELS, STATUS_LABELS, ACCESSIBILITY_LABELS). Replaces separate theme.constants.ts and footer.constants.ts.
-- `app.constants.ts`: Feature flags for label resolver and confidence threshold.
 - `api.constants.ts`: Centralized API infrastructure constants including HTTP_STATUS_CODES, API_ERROR_MESSAGES, API_RESPONSE_KEYS, CONTENT_TYPES, and VALIDATION_ERRORS. Shared across all API routes and services.
-- `evaluate.constants.ts`: Question selection configuration with similarity thresholds, penalties, topic balance limits, candidate scoring boosts, generation retry config, and assignment retry settings. **Phase 4: Consolidated from evaluate route.**
+- `evaluate.constants.ts`: Question selection configuration with similarity thresholds, penalties, topic balance limits, candidate scoring boosts, generation retry config, and assignment retry settings.
 
 ### data
 
@@ -229,11 +228,6 @@
 
 ### app/api
 
-### tests (Playwright)
-
-- `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
-- `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
-
 - `api/ingest/repo/route.ts`: Ingestion API route (POST) for repo-based docs (React/JS/TS/HTML/CSS).
 - `api/ingest/web/route.ts`: Ingestion API route (POST) for web crawling (sitemap-limited, small scale).
 - `api/ingest/web/plan/route.ts`: Dry-run planning endpoint to preview crawl scope.
@@ -250,6 +244,11 @@
 - `api/evaluate/attempts/[id]/results/route.ts`: Results route (GET) provides post-attempt analytics, breakdowns, weak areas, and complete question review with feedback.
 - `api/ontology/status/route.ts`: Admin endpoint returning ontology cache source, age, staleness, and topic/subtopic counts.
 - `api/ontology/route.ts`: Provides ontology cache payload (topics, subtopics, chunk counts, optional archetypes, target weights) with cache metadata.
+
+### tests (Playwright)
+
+- `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
+- `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
 - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
 - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
 - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/services/supabase.services";
-import { EAttemptStatus, EEvaluateApiErrorMessages } from "@/types/evaluate.types";
+import { EAttemptStatus } from "@/types/evaluate.types";
+import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export async function POST() {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     const supabase = getSupabaseServiceRoleClient();
 
@@ -41,7 +42,7 @@ export async function POST() {
     if (error) {
       logger.error("Error creating attempt:", error);
       return NextResponse.json(
-        { error: EEvaluateApiErrorMessages.FAILED_TO_CREATE_ATTEMPT, details: error.message },
+        { error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_CREATE_ATTEMPT, details: error.message },
         { status: 500 }
       );
     }
@@ -54,7 +55,7 @@ export async function POST() {
   } catch (err: unknown) {
     logger.error("Unexpected error creating attempt:", err);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
+      { error: EVALUATE_API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
       { status: 500 }
     );
   }
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
   try {
     let userId = await getAuthenticatedUserId();
     if (!userId) userId = DEV_DEFAULT_USER_ID || "";
-    if (!userId) return NextResponse.json({ error: EEvaluateApiErrorMessages.UNAUTHORIZED }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
     if (error) {
       logger.error("Error fetching attempts:", error);
       return NextResponse.json(
-        { error: EEvaluateApiErrorMessages.FAILED_TO_FETCH_ATTEMPTS, details: error.message },
+        { error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_FETCH_ATTEMPTS, details: error.message },
         { status: 500 }
       );
     }
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     logger.error("Unexpected error fetching attempts:", err);
     return NextResponse.json(
-      { error: EEvaluateApiErrorMessages.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
+      { error: EVALUATE_API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR, message: (err as Error)?.message },
       { status: 500 }
     );
   }

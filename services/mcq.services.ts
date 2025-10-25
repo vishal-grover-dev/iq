@@ -1,4 +1,4 @@
-import { apiClient } from "@/services/http.services";
+import { apiClient } from "@/config/http.config";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { getEmbeddings } from "@/services/server/embedding.service";
 import { buildMcqEmbeddingText } from "@/utils/mcq.utils";

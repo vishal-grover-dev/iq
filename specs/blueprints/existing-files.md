@@ -179,25 +179,22 @@
 #### Server Services
 
 - `server/embedding.service.ts`: Embeddings and reranking operations using OpenAI text-embedding-3-small.
-- `server/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes.
+- `server/mcq-generation.service.ts`: MCQ generation from context with schema validation and repair passes. Includes retrieval functions (retrieveContextByLabels, retrieveNeighbors, getRecentQuestions).
 - `server/mcq-refinement.service.ts`: Post-generation refinement pipeline with user-guided revision and quality judgment.
 - `server/labeling.service.ts`: Label classification using OpenAI with whitelist ontology.
 - `server/question-selector.service.ts`: LLM-driven question selection for evaluations.
 - `server/crawl-heuristics.service.ts`: Web crawl heuristics and utilities.
-- `server/source-fetcher.service.ts`: GitHub repo utilities and web crawling functions.
+- `server/source-fetcher.service.ts`: GitHub repo utilities, web crawling functions, and HTTP utilities (externalClient, externalGetWithRetry).
 - `server/source-intelligence.service.ts`: Content extraction and quality assessment utilities.
+- `server/ingest.services.ts`: Server-side ingestion functions (catalog processing, file system access).
+- `server/mcq-orchestration.service.ts`: SSE-based MCQ generation pipeline orchestrator.
+- `server/evaluate-selection.service.ts`: Question selection pipeline orchestrator with 5-stage workflow.
 
 #### Mixed Services
 
-- `mcq.services.ts`: Server-side MCQ retrieval functions (database access, embeddings).
-- `ingest.services.ts`: Server-side ingestion functions (catalog processing, file system access).
-- `http.services.ts`: External HTTP client for crawling with retry logic.
-- `evaluate.services.ts`: **DEPRECATED** - Use `services/client/evaluate.services.ts` instead.
-
-#### Orchestration Services
-
-- `mcq-orchestration.service.ts`: SSE-based MCQ generation pipeline orchestrator.
-- `evaluate-selection.service.ts`: Question selection pipeline orchestrator with 5-stage workflow.
+- `mcq.services.ts`: Client-side MCQ API functions and TanStack Query hooks.
+- `ingest.services.ts`: Client-side ingestion API functions and TanStack Query hooks.
+- `http.services.ts`: Client-side HTTP client for internal API calls.
 
 ### constants
 

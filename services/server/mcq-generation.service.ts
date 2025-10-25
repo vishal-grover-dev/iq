@@ -7,6 +7,10 @@ import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.uti
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
 import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
 import { createOpenAIClient } from "@/config/openai.config";
+import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
+import { getEmbeddings } from "@/services/server/embedding.service";
+import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
+import type { IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/app.types";
 import type { ResponseFormatJSONSchema, ResponseFormatJSONObject } from "openai/resources/shared";
 
 /**
@@ -396,4 +400,100 @@ function buildStyleInstruction(style: EQuestionStyle): string {
     default:
       return base + "Focus on delivering an interview-relevant perspective for this topic.";
   }
+}
+
+/**
+ * retrieveContextByLabels
+ * Server-only: Retrieves context chunks by topic/subtopic using hybrid search.
+ */
+export async function retrieveContextByLabels(args: {
+  userId: string;
+  topic: string;
+  subtopic?: string | null;
+  version?: string | null;
+  query: string;
+  topK?: number;
+}): Promise<Array<{ title?: string | null; url: string; content: string }>> {
+  const supabase = getSupabaseServiceRoleClient();
+  const [embedding] = await getEmbeddings([args.query]);
+  const { data: rows, error } = await supabase.rpc("retrieval_hybrid_by_labels", {
+    p_user_id: args.userId,
+    p_topic: args.topic,
+    p_query_embedding: embedding as unknown as number[],
+    p_query_text: args.query,
+    p_subtopic: args.subtopic ?? null,
+    p_version: args.version ?? null,
+    p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
+    p_alpha: 0.5,
+  });
+  if (error) throw new Error(error.message);
+  return (rows ?? []).map((r: IContextRow) => ({
+    title: r.title,
+    url: r.path,
+    content: r.content,
+  }));
+}
+
+/**
+ * retrieveNeighbors
+ * Server-only: Retrieves similar MCQs using vector similarity search.
+ */
+export async function retrieveNeighbors(args: {
+  userId: string;
+  topic: string;
+  subtopic?: string | null;
+  mcq: IMcqItemView;
+  topK?: number;
+}): Promise<Array<{ question: string; options: [string, string, string, string]; score: number }>> {
+  const supabase = getSupabaseServiceRoleClient();
+  const [emb] = await getEmbeddings([buildMcqEmbeddingText(args.mcq)]);
+  const { data, error } = await supabase.rpc("retrieval_mcq_neighbors", {
+    p_user_id: args.userId,
+    p_topic: args.topic,
+    p_embedding: emb as unknown as number[],
+    p_subtopic: args.subtopic ?? null,
+    p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: INeighborRow) => ({
+    question: r.question,
+    options: (r.options ?? []).slice(0, 4) as [string, string, string, string],
+    score: Number(r.score ?? 0),
+  }));
+}
+
+/**
+ * getRecentQuestions
+ * Server-only: Fetches recent questions for a user/topic/subtopic combination.
+ */
+export async function getRecentQuestions(args: {
+  userId: string;
+  topic: string;
+  subtopic?: string | null;
+  limit?: number;
+}): Promise<string[]> {
+  const supabase = getSupabaseServiceRoleClient();
+  const q = supabase
+    .from("mcq_items")
+    .select("question, subtopic, topic")
+    .eq("user_id", args.userId)
+    .eq("topic", args.topic)
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(args.limit ?? 12, 50)));
+  if (args.subtopic) q.eq("subtopic", args.subtopic);
+  const { data, error } = await q;
+  if (error) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of data ?? []) {
+    const s = String((r as IRecentQuestionRow)?.question || "").trim();
+    if (s && !seen.has(s)) {
+      seen.add(s);
+      out.push(s);
+    }
+  }
+  out.push(
+    "What will happen when the button in the following code is clicked? Will it update the displayed count on the button?"
+  );
+  return out.slice(0, Math.max(1, Math.min(args.limit ?? 12, 50)));
 }

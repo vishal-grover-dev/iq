@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { externalGetWithRetry } from "@/services/http.services";
+import { externalGetWithRetry } from "@/services/server/source-fetcher.service";
 import { suggestCrawlHeuristics } from "@/services/server/crawl-heuristics.service";
 
 export interface IPlannerBootstrapArgs {

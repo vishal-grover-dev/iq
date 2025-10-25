@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
-import { selectNextQuestionForAttempt } from "@/services/evaluate-selection.service";
+import { selectNextQuestionForAttempt } from "@/services/server/evaluate-selection.service";
 import { EAttemptStatus } from "@/types/evaluate.types";
 import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";

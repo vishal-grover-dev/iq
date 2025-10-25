@@ -3,7 +3,7 @@ import { load } from "cheerio";
 import robotsParser, { type Robot } from "robots-parser";
 import type { IGitHubTreeResponse, IWebPageItem } from "@/types/ingestion.types";
 import { EIngestionMode } from "@/types/ingestion.types";
-import { externalGetWithRetry } from "@/services/http.services";
+import axios, { AxiosError } from "axios";
 import { normalizeUrl } from "@/utils/url.utils";
 import { extractMainContent, assessContentQuality } from "@/services/server/source-intelligence.service";
 
@@ -257,4 +257,47 @@ export function isRepoMode(mode: EIngestionMode): boolean {
 
 export function isWebMode(mode: EIngestionMode): boolean {
   return mode === EIngestionMode.WEB;
+}
+
+/**
+ * External HTTP Utilities
+ */
+
+// External crawler client (no base URL, no cookies)
+const externalClient = axios.create({
+  timeout: 10000,
+  withCredentials: false,
+  headers: { "User-Agent": "iq-crawler" },
+});
+
+/**
+ * externalGetWithRetry
+ * Server-only: Lightweight GET with retry/backoff tailored for crawling external domains.
+ * Returns response text on success, otherwise null.
+ */
+export async function externalGetWithRetry(
+  url: string,
+  opts?: { maxRetries?: number; delayMs?: number }
+): Promise<string | null> {
+  const maxRetries = Math.max(0, opts?.maxRetries ?? 3);
+  const delayMs = Math.max(0, opts?.delayMs ?? 1000);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await externalClient.get(url, { responseType: "text", transformResponse: [(d) => d] });
+      return typeof res.data === "string" ? res.data : String(res.data ?? "");
+    } catch (err) {
+      const error = err as AxiosError;
+      const status: number | undefined = error?.response?.status;
+      if (typeof status === "number") {
+        if (status === 429) {
+          await new Promise((r) => setTimeout(r, delayMs * attempt * 2));
+          continue;
+        }
+        if (status >= 400 && status < 500) return null;
+      }
+      if (attempt === maxRetries) return null;
+      await new Promise((r) => setTimeout(r, delayMs * attempt));
+    }
+  }
+  return null;
 }

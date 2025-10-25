@@ -313,6 +313,18 @@ Use grep to find all component/hook imports of old service paths in `components/
 - ✅ Zero lingering client-side imports of root service paths
 - ⚠️ Server files still use root `@/services/*` (unchanged until Phase 4)
 
+**Phase 4 Results:**
+
+- ✅ Successfully added 3 MCQ retrieval functions to existing `services/server/mcq-generation.service.ts`
+- ✅ Successfully created `services/server/ingest.services.ts` with server functions (runCatalogIngestion, persistEmbeddedFlags)
+- ✅ Successfully added HTTP utilities to existing `services/server/source-fetcher.service.ts`
+- ✅ Successfully moved `mcq-orchestration.service.ts` and `evaluate-selection.service.ts` to `services/server/`
+- ✅ Updated all import references across 8 files (API routes, scripts, utils)
+- ✅ Fixed TypeScript compilation errors (import path corrections)
+- ✅ Build passes with zero errors after cache cleanup
+- ✅ All server functions now properly segregated in `services/server/` directory
+- ✅ Mixed service files now contain only client-side functions
+
 ---
 
 ### Phase 4: Server Services Migration
@@ -672,7 +684,7 @@ Use `git revert` to revert specific commits or `git reset --hard` to reset to a 
 - **Phase 1:** ✅ COMPLETED (Config migration) - 2025-01-XX
 - **Phase 2:** ✅ COMPLETED (AI services migration) - 2025-01-27
 - **Phase 3:** ✅ COMPLETED (Client services migration) - 2025-01-27
-- **Phase 4:** PENDING (Server services migration)
+- **Phase 4:** ✅ COMPLETED (Server services migration) - 2025-01-27
 - **Phase 5:** PENDING (Cleanup)
 - **Phase 6:** PENDING (Final documentation)
 

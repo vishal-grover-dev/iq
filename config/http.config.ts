@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { NEXT_PUBLIC_APP_URL } from "@/constants/app.constants";
 
 function createBaseClient(baseURL: string): AxiosInstance {

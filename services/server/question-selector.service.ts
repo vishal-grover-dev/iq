@@ -3,7 +3,7 @@ import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constan
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
 import { parseJsonObject } from "@/utils/json.utils";
 import { generateQuestionPrompt } from "@/utils/mcq-prompts/selector-prompt.utils";
-import { getStaticTopicList, getStaticSubtopicMap, getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
+import { getStaticTopicList, getStaticSubtopicMap } from "@/utils/static-ontology.utils";
 import { calculateCoverageWeights, weightedRandomIndex } from "@/utils/selection.utils";
 import { createOpenAIClient, getErrorMessage } from "@/config/openai.config";
 

@@ -2,7 +2,6 @@ import { ingestResponseSchema, TIngestRepoOrWebRequest } from "@/schema/ingest.s
 import { apiClient } from "@/config/http.config";
 import { useMutation } from "@tanstack/react-query";
 import type { IIngestionStatusResponse, IWebPlanResponse } from "@/types/ingestion.types";
-import { EIngestionMode } from "@/types/ingestion.types";
 
 /**
  * Client helper for repo/web ingestion (server performs fetch/parse/chunk/embed).

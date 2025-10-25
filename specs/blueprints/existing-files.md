@@ -190,11 +190,11 @@
 - `server/mcq-orchestration.service.ts`: SSE-based MCQ generation pipeline orchestrator.
 - `server/evaluate-selection.service.ts`: Question selection pipeline orchestrator with 5-stage workflow.
 
-#### Mixed Services
+**Service Layer Organization (Phase 5 Complete):**
 
-- `mcq.services.ts`: Client-side MCQ API functions and TanStack Query hooks.
-- `ingest.services.ts`: Client-side ingestion API functions and TanStack Query hooks.
-- `http.services.ts`: Client-side HTTP client for internal API calls.
+- All services now properly segregated into three tiers: `config/` (shared), `services/client/` (browser-only), `services/server/` (Node.js-only)
+- Original mixed service files have been deleted after successful migration
+- Clear separation of concerns: client code uses TanStack Query hooks and API calls, server code uses Supabase service role and OpenAI APIs
 
 ### constants
 

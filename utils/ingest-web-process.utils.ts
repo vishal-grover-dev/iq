@@ -1,16 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { IWebPageItem } from "@/types/ingestion.types";
+import type { IWebPageItem, IChunk } from "@/types/ingestion.types";
 import { extractMainContent, assessContentQuality } from "@/services/server/source-intelligence.service";
 import { resolveLabels } from "@/services/server/labeling.service";
 import { EIngestionMode } from "@/types/ingestion.types";
 import { chunkTextLC } from "@/utils/langchain.utils";
 import { createHash } from "crypto";
 
-export type TChunk = { index: number; content: string; tokens: number };
-
 export interface IPreparedBatchItem {
   documentId: string;
-  chunks: TChunk[];
+  chunks: IChunk[];
   url: string;
 }
 

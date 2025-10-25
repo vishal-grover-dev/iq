@@ -1,3 +1,5 @@
+import type { ICitation } from "./evaluate.types";
+
 export enum EBloomLevel {
   REMEMBER = "Remember",
   UNDERSTAND = "Understand",
@@ -21,11 +23,6 @@ export enum EQuestionStyle {
   TRADEOFF = "tradeoff",
 }
 
-export type TCitation = {
-  title?: string;
-  url: string;
-};
-
 export interface IMcqItemView {
   topic: string;
   subtopic: string;
@@ -38,7 +35,7 @@ export interface IMcqItemView {
   correctIndex: number;
   explanation?: string;
   explanationBullets?: string[];
-  citations: TCitation[];
+  citations: ICitation[];
   questionStyle?: EQuestionStyle;
 }
 

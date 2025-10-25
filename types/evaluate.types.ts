@@ -1,9 +1,45 @@
 /**
  * TypeScript types for the evaluation feature
  * Defines interfaces for attempts, questions, results, and analytics
+ * Also contains cross-domain types used across multiple domains
  */
 
 import { EDifficulty, EBloomLevel } from "./mcq.types";
+
+/**
+ * Citation object with URL and title
+ */
+export interface ICitation {
+  url: string;
+  title?: string;
+}
+
+/**
+ * Context row from retrieval RPC
+ */
+export interface IContextRow {
+  title: string | null;
+  path: string;
+  content: string;
+}
+
+/**
+ * Neighbor MCQ row from retrieval
+ */
+export interface INeighborRow {
+  question: string;
+  options: string[];
+  score: number;
+}
+
+/**
+ * Recent question row
+ */
+export interface IRecentQuestionRow {
+  question: string;
+  subtopic: string | null;
+  topic: string;
+}
 
 /**
  * MCQ item with explanation, joined from mcq_items + mcq_explanations
@@ -208,14 +244,6 @@ export interface IWeakArea {
   accuracy: number;
   recommendation: string;
   citation: string;
-}
-
-/**
- * Citation object with URL and title
- */
-export interface ICitation {
-  url: string;
-  title: string;
 }
 
 /**

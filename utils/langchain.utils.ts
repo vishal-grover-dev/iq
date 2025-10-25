@@ -1,11 +1,6 @@
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-
-interface ILangchainChunk {
-  index: number;
-  content: string;
-  tokens: number;
-}
+import type { IChunk } from "@/types/ingestion.types";
 
 export async function extractTextFromPdfBufferLC(
   buffer: ArrayBuffer | Uint8Array | Buffer
@@ -19,10 +14,7 @@ export async function extractTextFromPdfBufferLC(
   return { text, numPages };
 }
 
-export async function chunkTextLC(
-  text: string,
-  options?: { chunkSize?: number; overlap?: number }
-): Promise<ILangchainChunk[]> {
+export async function chunkTextLC(text: string, options?: { chunkSize?: number; overlap?: number }): Promise<IChunk[]> {
   const chunkSize = options?.chunkSize ?? 1800;
   const overlap = options?.overlap ?? 200;
   const splitter = new RecursiveCharacterTextSplitter({ chunkSize, chunkOverlap: overlap });

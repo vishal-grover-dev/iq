@@ -34,15 +34,6 @@ export type TMcqRevisionRequest = {
 };
 
 /**
- * RPC context result from retrieval
- */
-export type TRpcContextResult = {
-  title: string | null;
-  path: string;
-  content: string;
-};
-
-/**
  * MCQ save request - accepts either wrapped item or direct MCQItemView
  */
 export type TMcqSaveRequest = {

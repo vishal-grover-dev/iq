@@ -86,22 +86,3 @@ export type TDomainError =
   | { kind: "NotFound"; resource: string }
   | { kind: "ExternalServiceError"; service: string; message: string }
   | { kind: "Unknown"; message: string };
-
-// Database Response Row Types
-export interface IContextRow {
-  title: string | null;
-  path: string;
-  content: string;
-}
-
-export interface INeighborRow {
-  question: string;
-  options: string[];
-  score: number;
-}
-
-export interface IRecentQuestionRow {
-  question: string;
-  subtopic: string | null;
-  topic: string;
-}

@@ -31,6 +31,15 @@ export enum EIngestionStage {
 }
 
 /**
+ * Shared chunk type for text processing
+ */
+export interface IChunk {
+  index: number;
+  content: string;
+  tokens: number;
+}
+
+/**
  * Database row for documents table
  */
 export interface IDocumentRow {

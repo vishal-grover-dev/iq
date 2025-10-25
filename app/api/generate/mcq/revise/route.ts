@@ -4,7 +4,8 @@ import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { API_ERROR_MESSAGES } from "@/constants/api.constants";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { reviseMcqWithContext } from "@/services/server/mcq-refinement.service";
-import type { TMcqRevisionRequest, TRpcContextResult } from "@/types/generation.types";
+import type { TMcqRevisionRequest } from "@/types/generation.types";
+import type { IContextRow } from "@/types/evaluate.types";
 import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
       p_alpha: 0.5,
     });
 
-    const contextItems = (context.data ?? ([] as TRpcContextResult[])).slice(0, 8).map((r: TRpcContextResult) => ({
+    const contextItems = (context.data ?? ([] as IContextRow[])).slice(0, 8).map((r: IContextRow) => ({
       title: r.title as string | null,
       url: r.path as string,
       content: r.content as string,

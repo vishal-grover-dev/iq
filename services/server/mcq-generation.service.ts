@@ -1,7 +1,8 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
-import type { IMcqItemView, IMcqGenerationRawResponse, TCitation } from "@/types/mcq.types";
+import type { IMcqItemView, IMcqGenerationRawResponse } from "@/types/mcq.types";
 import { EDifficulty, EBloomLevel, EPromptMode, EQuestionStyle } from "@/types/mcq.types";
+import type { ICitation, IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/evaluate.types";
 import { parseJsonObject } from "@/utils/json.utils";
 import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
@@ -10,7 +11,6 @@ import { createOpenAIClient } from "@/config/openai.config";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { getEmbeddings } from "@/services/server/embedding.service";
 import { buildMcqEmbeddingText } from "@/utils/mcq.utils";
-import type { IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/app.types";
 import type { ResponseFormatJSONSchema, ResponseFormatJSONObject } from "openai/resources/shared";
 
 /**
@@ -150,11 +150,11 @@ export async function generateMcqFromContext(args: {
   const question: string = String(raw.question || "");
   const optionsArr: string[] = Array.isArray(raw.options) ? raw.options.map((o) => String(o)).slice(0, 4) : [];
   const correctIndexNum: number = typeof raw.correctIndex === "number" ? raw.correctIndex : 0;
-  const citationsArr: TCitation[] = Array.isArray(raw.citations)
+  const citationsArr: ICitation[] = Array.isArray(raw.citations)
     ? (
         (raw.citations as Array<{ title?: string; url?: string }>)
-          .map((c) => ({ title: c?.title, url: String(c?.url || "") }))
-          .filter((c) => !!c.url) as TCitation[]
+          .map((c) => ({ url: String(c?.url || ""), title: c?.title }))
+          .filter((c) => !!c.url) as ICitation[]
       ).slice(0, 3)
     : [];
   const explanation: string | undefined = typeof raw.explanation === "string" ? raw.explanation : undefined;

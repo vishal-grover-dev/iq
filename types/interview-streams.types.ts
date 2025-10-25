@@ -1,10 +1,9 @@
 import { EInterviewTopic } from "@/types/upload.types";
-
-export type TIngestMode = "web" | "repo";
+import { EIngestionMode } from "@/types/ingestion.types";
 
 export interface IIngestCatalogItem {
   subtopic: string;
-  ingestType: TIngestMode;
+  ingestType: EIngestionMode;
   url: string;
   embedded: boolean;
 }

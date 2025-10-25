@@ -4,8 +4,8 @@ import type {
   EBloomLevel,
   IMcqGenerationRawResponse,
   IMcqJudgeResponse,
-  TCitation,
 } from "@/types/mcq.types";
+import type { ICitation } from "@/types/evaluate.types";
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
 import { parseJsonObject } from "@/utils/json.utils";
@@ -58,10 +58,10 @@ export async function reviseMcqWithContext(args: {
     ? (raw.explanationBullets as string[]).map((s) => s).slice(0, 5)
     : args.currentMcq.explanationBullets;
   const citationsArr = Array.isArray(raw.citations)
-    ? ((raw.citations as Array<TCitation>).map((c) => ({
-        title: c.title ?? undefined,
+    ? ((raw.citations as Array<{ title?: string; url?: string }>).map((c) => ({
         url: c.url ?? "",
-      })) as Array<TCitation>)
+        title: c.title,
+      })) as Array<ICitation>)
     : args.currentMcq.citations;
 
   // Normalize code for revisions (keep prose-only question)

@@ -1,18 +1,8 @@
 import { useState } from "react";
 import { useIngestRepoWebMutations, getIngestionStatus, processIngestion } from "@/services/client/ingest.services";
 import { IInterviewIngestItem, EInterviewIngestType } from "@/types/upload.types";
-import { EIngestionMode, type IIngestionStatusResponse } from "@/types/ingestion.types";
+import { EIngestionMode, type IIngestionStatusResponse, type IIngestionProgressInfo } from "@/types/ingestion.types";
 import { type TIngestRepoRequest, type TIngestWebRequest } from "@/schema/ingest.schema";
-
-export interface IIngestionProgressInfo {
-  ingestionId: string;
-  inflightStep?: string;
-  processed?: number;
-  totalPlanned?: number;
-  currentPathOrUrl?: string;
-  topics?: string[];
-  subtopics?: string[];
-}
 
 /**
  * useInterviewIngestion

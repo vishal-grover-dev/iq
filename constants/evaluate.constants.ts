@@ -319,23 +319,8 @@ export const EVALUATE_SELECTION_CONFIG = {
     CROSS_ATTEMPT_FRESHNESS: 15, // Penalty for questions seen recently in other attempts
   },
 
-  // Topic balance configuration
-  TOPIC_BALANCE: {
-    LIMIT: 24, // Maximum questions from a single topic (40% of 60)
-    EARLY_STAGE_CAP: 18, // Early attempt cap (≤20 questions): 30% of 60
-    MID_STAGE_CAP: 24, // Mid attempt cap (21-40 questions): 40% of 60
-    EARLY_STAGE_THRESHOLD: 20, // Number of questions to consider "early stage"
-    MID_STAGE_THRESHOLD: 40, // Number of questions to consider "mid stage"
-    EARLY_PENALTY: 40, // Penalty for exceeding early stage cap
-    MID_PENALTY: 25, // Penalty for exceeding mid stage cap
-  },
-
-  // Scoring boosts for candidate preferences
+  // Scoring configuration for exact match candidates
   CANDIDATE_SCORING: {
-    TOPIC_BOOST: 50, // Boost for preferred topic match
-    SUBTOPIC_BOOST: 30, // Boost for preferred subtopic match
-    BLOOM_BOOST: 20, // Boost for preferred Bloom level match
-    CODING_BOOST: 40, // Boost for coding mode match when requested
     TOPK_COUNT: 8, // Number of top candidates for stochastic selection
   },
 
@@ -359,7 +344,7 @@ export const EVALUATE_SELECTION_CONFIG = {
 
   // Bank query configuration
   BANK_QUERY: {
-    LIMIT: 20, // Candidate pool size to query from bank
+    LIMIT: 10, // Candidate pool size for exact match queries (reduced since we're doing exact matching)
   },
 
   // Recent questions tracking for cross-attempt freshness

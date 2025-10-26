@@ -16,8 +16,20 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     "- Always return STRICT JSON with fields: topic, subtopic, version, difficulty, bloomLevel, question, options (array of 4 strings), correctIndex (0-3), explanation (string), explanationBullets (array of 2-3 strings), citations (array of {title?, url}).",
     "- Use exactly four plausible options and exactly one correct answer.",
     "- Ground content in the provided context and cite 1–2 most relevant sources.",
+    "- Frame questions in interview-relevant contexts when appropriate. Vary the phrasing: 'In a technical interview...', 'During code review...', 'In a whiteboard session...', 'You're debugging...', 'A colleague asks...', or simply present the scenario directly without explicit interview framing.",
+    "- Focus on practical debugging, problem-solving scenarios, and real-world application contexts. Not every question needs explicit interview framing - vary the approach naturally.",
     args.codingMode
       ? "- Coding mode is ON: Return a fenced js/tsx code block (3–50 lines) in the dedicated 'code' field. Do NOT include this fenced block inside the question text; reference it in prose (e.g., 'Given the code snippet below...'). The 'code' field is REQUIRED."
+      : undefined,
+    // Event loop emphasis for JavaScript async topics
+    args.topic === "JavaScript" &&
+    args.subtopic &&
+    ["Event Loop & Task/Microtask Queue", "Promises", "Async/Await"].includes(args.subtopic)
+      ? "- For event loop questions, provide code snippets with setTimeout, Promise, and console.log to test understanding of microtask/macrotask execution order. Focus on practical timing scenarios."
+      : undefined,
+    // React fundamentals emphasis
+    args.topic === "React"
+      ? "- Focus on fundamental concepts that apply across React versions rather than version-specific APIs. Prioritize hooks lifecycle, state management, and component patterns over latest features."
       : undefined,
     mode === EPromptMode.CHAIN_OF_THOUGHT
       ? "- Think step by step internally, but output ONLY the final JSON response."
@@ -151,6 +163,7 @@ export function buildJudgeMessages(args: TJudgeBuildArgs & { neighbors?: TNeighb
   const system = [
     "You are an MCQ quality judge. Evaluate clarity, correctness, option plausibility, single correct answer, appropriate difficulty and Bloom level, presence of citations grounded in context, and DUPLICATE RISK.",
     "Duplicate risk: If the MCQ is semantically similar to any provided neighbor items, mark verdict = 'revise' and explain.",
+    "AGGRESSIVE DEDUPLICATION: Mark as 'revise' if question structure, code pattern, or options are >85% similar to neighbors. Reject if question differs only by variable names, minor wording, or trivial option changes. Ensure code snippets vary significantly (different patterns, not just renamed variables).",
     args.codingMode
       ? "Coding mode is ON: Ensure the MCQ includes a js/tsx fenced block between 3 and 50 lines. If none is present, if the block falls outside that range, or if the options do not reflect the code's behavior, mark 'revise' with reasons. Also, reject if the question body simply repeats the entire fenced snippet instead of referencing it in prose."
       : undefined,
@@ -278,6 +291,12 @@ BALANCE REQUIREMENTS:
 5. Subtopic distribution: Avoid clustering (no >5 consecutive from same subtopic)
 6. Weight-aware selection: Consider topic importance based on available content
 
+INTERVIEW FOCUS GUIDELINES:
+- Prioritize timeless React fundamentals (hooks lifecycle, state management, component patterns) over version-specific features
+- Interviewers typically assess core concepts rather than latest version features
+- Focus on practical debugging, problem-solving scenarios, and real-world application contexts
+- For JavaScript: Emphasize event loop, closures, prototypes, and async behavior over latest syntax features
+
 TOPIC WEIGHTS & SUBTOPIC AVAILABILITY:
 The following topics are available with their relative importance (weights) and subtopic breakdown:
 
@@ -289,6 +308,7 @@ SELECTION GUIDELINES:
 - Ensure coding questions cover practical implementation scenarios
 - Maintain Bloom taxonomy progression: Remember → Understand → Apply → Analyze → Evaluate → Create
 - Only select topics and subtopics that exist in the provided ontology data
+- For React: Favor fundamental subtopics (useState, useEffect, Components & Props, State & Lifecycle) over version-specific features
 
 AVAILABLE BLOOM LEVELS:
 ${availableBloomLevels}

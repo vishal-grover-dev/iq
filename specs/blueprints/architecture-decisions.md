@@ -362,6 +362,32 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 ---
 
+### Exact Match Question Selection Strategy
+
+**Decision:** Use exact 5-dimension matching (topic, subtopic, difficulty, bloom_level, coding_mode) for question selection instead of preference-based scoring.
+
+**Why:**
+
+- **Deterministic selection:** Exact matching ensures questions match the LLM-selected criteria precisely, eliminating ambiguity in selection.
+- **Simplified scoring:** Removes complex preference scoring logic since all candidates are exact matches by definition.
+- **On-demand generation:** Questions are generated only when no exact match exists or all matches were already asked in the current attempt.
+- **Organic database growth:** Database grows based on actual evaluation needs rather than pre-seeding targets.
+
+**Implementation:**
+
+- **Exact match query:** Database query filters on all 5 dimensions simultaneously.
+- **Null handling:** Proper handling of null subtopics and empty code fields.
+- **Generation fallback:** Uses exact LLM criteria without topic randomization when no matches exist.
+- **Similarity checking:** Maintains neighbor similarity checks to prevent near-duplicate selection.
+
+**Trade-offs:**
+
+- **Reduced flexibility:** Cannot select "close enough" matches when exact matches don't exist.
+- **Higher generation frequency:** More questions may need to be generated initially until database coverage improves.
+- **Improved quality:** Ensures questions precisely match evaluation criteria and user needs.
+
+---
+
 ### Bank Selection with Neighbor Similarity
 
 **Decision:** Apply neighbor similarity checking to bank question selection to prevent similar questions from being selected in the same attempt.
@@ -387,6 +413,32 @@ This document captures the "why" behind key technical choices in the IQ project.
 - **Latency increase:** Each candidate requires embedding comparison and neighbor retrieval (~100-200ms per candidate).
 - **Database load:** Additional RPC calls to `retrieval_mcq_neighbors` for each candidate.
 - **Complexity:** More sophisticated scoring logic with multiple similarity dimensions.
+
+---
+
+### Aggressive Deduplication (Interview-Focused Enhancement)
+
+**Decision:** Implement stricter similarity thresholds and enhanced judge prompts to prevent 85%+ similar questions based on user feedback.
+
+**Why:**
+
+- **User feedback:** Users reported 85% of questions being repeated with only minor wording/variable changes.
+- **Interview relevance:** Interview preparation requires diverse question patterns, not variations of the same concept.
+- **Quality improvement:** Aggressive deduplication ensures each question tests different aspects or scenarios.
+
+**Implementation:**
+
+- **Enhanced similarity thresholds:** `MCQ_SIMILARITY_THRESHOLDS.GENERATION_HIGH` (0.88), `GENERATION_MEDIUM` (0.80) - stricter than previous implicit thresholds.
+- **Increased neighbor retrieval:** Fetch 15 neighbors (up from 8) for more comprehensive similarity checking.
+- **Filtered neighbor results:** Exclude neighbors with similarity score ≥ 0.88 before passing to judge.
+- **Enhanced judge prompts:** Explicit guidance to reject questions differing only by variable names, minor wording, or trivial option changes.
+- **Code pattern diversity:** Judge ensures code snippets vary significantly (different patterns, not just renamed variables).
+
+**Trade-offs:**
+
+- **Increased generation retries:** Stricter thresholds may require more regeneration attempts.
+- **Higher computational cost:** More neighbors fetched and filtered per generation.
+- **Improved user experience:** Significantly reduced question repetition and increased diversity.
 
 ---
 

@@ -63,7 +63,8 @@ export const OPENAI_PROMPTS = {
  * MCQ prompt templates
  */
 export const MCQ_PROMPTS = {
-  GENERATOR_SYSTEM_INTRO: "You generate high-quality multiple-choice questions (MCQs) with citations.",
+  GENERATOR_SYSTEM_INTRO:
+    "You generate high-quality multiple-choice questions (MCQs) with citations for technical interviews.",
   RULES_HEADER: "Rules:",
   NEGATIVE_EXAMPLES_INTRO: "Avoid generating MCQs similar to the following question gists:",
   CONTEXT_HEADER: "Context (use for grounding and citations):",
@@ -76,6 +77,16 @@ export const MCQ_PROMPTS = {
     "You are an MCQ quality judge. Evaluate clarity, correctness, option plausibility, single correct answer, appropriate difficulty and Bloom level, presence of citations grounded in context, and DUPLICATE RISK.",
   JUDGE_VERDICT_FORMAT:
     "Return STRICT JSON: { verdict: 'approve' | 'revise', reasons: string[], suggestions?: string[] }",
+} as const;
+
+/**
+ * MCQ similarity thresholds for deduplication
+ */
+export const MCQ_SIMILARITY_THRESHOLDS = {
+  GENERATION_HIGH: 0.88, // Increased from implicit ~0.92
+  GENERATION_MEDIUM: 0.8, // Increased from implicit ~0.85
+  BANK_SELECTION_HIGH: 0.92,
+  BANK_SELECTION_MEDIUM: 0.85,
 } as const;
 
 /**

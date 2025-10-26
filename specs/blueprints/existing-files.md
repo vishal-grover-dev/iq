@@ -259,6 +259,11 @@
 
 - `tests/visual.spec.ts`: Visual regression tests for `/` and `/upload` across desktop/mobile.
 - `tests/a11y.spec.ts`: Non-blocking axe-core accessibility smoke checks for key routes.
+- `tests/README.md`: Comprehensive documentation for test structure, execution, fixtures, and debugging.
+- `tests/evaluate/`: Complete test infrastructure for evaluate page feature.
+  - `integrity/`: P0 integrity tests (no-mid-attempt-feedback, intra-attempt-uniqueness, progress-visibility).
+  - `fixtures/`: Mock data for attempts, questions, and results.
+  - `utils/`: Test helpers and custom matchers for evaluate feature.
 - `components/generate/mcqCard.component.tsx`: MCQ card component (question, options, citations, metadata chips).
 - `components/generate/personaPanel.component.tsx`: Persona progress panel component.
 - `components/generate/revisionBox.component.tsx`: Revision chat input component with loading states and revision history integration.

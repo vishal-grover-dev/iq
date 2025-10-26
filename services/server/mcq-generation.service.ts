@@ -1,5 +1,5 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
-import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
+import { OPENAI_CONFIG, AI_SERVICE_ERRORS, MCQ_SIMILARITY_THRESHOLDS } from "@/constants/generation.constants";
 import type { IMcqItemView, IMcqGenerationRawResponse } from "@/types/mcq.types";
 import { EDifficulty, EBloomLevel, EPromptMode, EQuestionStyle } from "@/types/mcq.types";
 import type { ICitation, IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/evaluate.types";
@@ -452,14 +452,23 @@ export async function retrieveNeighbors(args: {
     p_topic: args.topic,
     p_embedding: emb as unknown as number[],
     p_subtopic: args.subtopic ?? null,
-    p_topk: Math.min(Math.max(args.topK ?? 8, 1), 20),
+    p_topk: Math.min(Math.max(args.topK ?? 15, 1), 25),
   });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: INeighborRow) => ({
-    question: r.question,
-    options: (r.options ?? []).slice(0, 4) as [string, string, string, string],
-    score: Number(r.score ?? 0),
-  }));
+
+  // Filter out neighbors with similarity score above the generation threshold
+  const filteredNeighbors = (data ?? [])
+    .filter((r: INeighborRow) => {
+      const score = Number(r.score ?? 0);
+      return score < MCQ_SIMILARITY_THRESHOLDS.GENERATION_HIGH;
+    })
+    .map((r: INeighborRow) => ({
+      question: r.question,
+      options: (r.options ?? []).slice(0, 4) as [string, string, string, string],
+      score: Number(r.score ?? 0),
+    }));
+
+  return filteredNeighbors;
 }
 
 /**

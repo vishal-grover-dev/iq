@@ -236,3 +236,30 @@ export function usePauseAttemptMutation(attemptId: string) {
     },
   });
 }
+
+/**
+ * resetAttempts
+ * Resets all attempts for DEV_DEFAULT_USER_ID.
+ * Only available in development for testing purposes.
+ */
+export async function resetAttempts(): Promise<{ success: boolean; deleted_count: number }> {
+  const response = await apiClient.delete("/api/evaluate/attempts/reset");
+  return response.data;
+}
+
+/**
+ * useResetAttemptsMutation
+ * TanStack Query mutation hook for resetting attempts.
+ * Invalidates attempts query to refresh the UI.
+ */
+export function useResetAttemptsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: resetAttempts,
+    onSuccess: () => {
+      // Invalidate attempts query to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ["evaluate", "attempts"] });
+    },
+  });
+}

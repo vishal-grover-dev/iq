@@ -20,8 +20,8 @@ import { generateMcqFromContext } from "@/services/server/mcq-generation.service
 import { getEmbeddings } from "@/services/server/embedding.service";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
-import { getStaticTopicList, getStaticSubtopicMap } from "@/utils/static-ontology.utils";
-import { weightedRandomIndex, calculateCoverageWeights } from "@/utils/selection.utils";
+import { getStaticSubtopicMap } from "@/utils/static-ontology.utils";
+import { weightedRandomIndex } from "@/utils/selection.utils";
 import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
 import { EDifficulty, EBloomLevel, IMcqItemView } from "@/types/mcq.types";
 
@@ -50,6 +50,15 @@ async function fetchAttemptOrFail(
 
 function checkCompletionStatus(attempt: IUserAttempt): { status: EAttemptStatus; completed: boolean } | null {
   if (attempt.status === EAttemptStatus.Completed) {
+    return {
+      status: attempt.status,
+      completed: true,
+    };
+  }
+
+  // Also check if user has answered the target number of questions
+  // This prevents assigning a 61st question when 60 have been answered
+  if ((attempt.questions_answered || 0) >= attempt.total_questions) {
     return {
       status: attempt.status,
       completed: true,
@@ -171,21 +180,6 @@ function buildSelectionContext(
     recent_subtopics: Object.keys(distributions.subtopic_distribution).slice(0, 5),
     asked_question_ids: [],
   };
-}
-
-function identifyOverrepresentedTopics(distributions: IDistributions, questionsAnswered: number): string[] {
-  const { EARLY_STAGE_THRESHOLD, MID_STAGE_THRESHOLD, EARLY_STAGE_CAP, MID_STAGE_CAP, LIMIT } =
-    EVALUATE_SELECTION_CONFIG.TOPIC_BALANCE;
-
-  let cap: number = LIMIT;
-
-  if (questionsAnswered <= EARLY_STAGE_THRESHOLD) {
-    cap = EARLY_STAGE_CAP;
-  } else if (questionsAnswered <= MID_STAGE_THRESHOLD) {
-    cap = MID_STAGE_CAP;
-  }
-
-  return Object.keys(distributions.topic_distribution).filter((t) => (distributions.topic_distribution[t] || 0) >= cap);
 }
 
 async function fetchRecentAttemptQuestions(userId: string, supabase: SupabaseClient): Promise<Set<string>> {
@@ -314,27 +308,9 @@ function scoreCandidate(
   distributions: IDistributions,
   attempt: IAttemptContext
 ): number {
-  let score = 0;
+  let score = 100; // Base score for exact matches
 
-  const { TOPIC_BOOST, SUBTOPIC_BOOST, BLOOM_BOOST, CODING_BOOST } = EVALUATE_SELECTION_CONFIG.CANDIDATE_SCORING;
-
-  if (criteria.preferred_topic === candidate.topic) score += TOPIC_BOOST;
-  if (criteria.preferred_subtopic === candidate.subtopic) score += SUBTOPIC_BOOST;
-  if (criteria.preferred_bloom_level.toString() === candidate.bloom_level) score += BLOOM_BOOST;
-  if (criteria.coding_mode && candidate.code) score += CODING_BOOST;
-
-  const answered = attempt.questions_answered;
-  const { EARLY_STAGE_THRESHOLD, MID_STAGE_THRESHOLD, EARLY_STAGE_CAP, MID_STAGE_CAP } =
-    EVALUATE_SELECTION_CONFIG.TOPIC_BALANCE;
-  const { EARLY_PENALTY, MID_PENALTY } = EVALUATE_SELECTION_CONFIG.TOPIC_BALANCE;
-
-  const topicCount = distributions.topic_distribution[candidate.topic] || 0;
-  if (answered <= EARLY_STAGE_THRESHOLD && topicCount >= EARLY_STAGE_CAP) {
-    score -= EARLY_PENALTY;
-  } else if (answered <= MID_STAGE_THRESHOLD && topicCount >= MID_STAGE_CAP) {
-    score -= MID_PENALTY;
-  }
-
+  // Apply penalties for similarity and freshness
   if (candidate._seenRecently) score -= EVALUATE_SELECTION_CONFIG.PENALTIES.CROSS_ATTEMPT_FRESHNESS;
   score -= candidate.similarityPenalty || 0;
 
@@ -511,16 +487,16 @@ async function generateMcqFallback(
   distributions: IDistributions,
   askedQuestions: IAskedQuestionRow[],
   askedContentKeySet: Set<string>,
-  overrepresentedTopics: string[],
   supabase: SupabaseClient
 ): Promise<{ questionId: string | null; generatedMcq?: IMcqItemView }> {
   const { MAX_ATTEMPTS, NEGATIVE_EXAMPLES_LOOKAHEAD, NEGATIVE_EXAMPLES_LIMIT } = EVALUATE_SELECTION_CONFIG.GENERATION;
 
   let generationAttempts = 0;
-  let contextTopic = criteria.preferred_topic;
-  let contextSubtopic: string | null = null;
 
-  const baseAvoidTopics = [...overrepresentedTopics];
+  // Use exact criteria from LLM selector (no randomization)
+  const contextTopic = criteria.preferred_topic || "React";
+  const contextSubtopic = criteria.preferred_subtopic;
+
   let negativeExamples: string[] = askedQuestions
     .slice(-NEGATIVE_EXAMPLES_LOOKAHEAD)
     .map((q) => {
@@ -533,43 +509,6 @@ async function generateMcqFallback(
     generationAttempts++;
 
     try {
-      let topicsUniverse: string[] = [];
-      try {
-        topicsUniverse = getStaticTopicList();
-      } catch (err) {
-        console.error("generateMcqFallback topic list error", err);
-        topicsUniverse = [];
-      }
-
-      if (!topicsUniverse || topicsUniverse.length === 0) {
-        const allTopicsForWeights = Object.keys(distributions.topic_distribution);
-        topicsUniverse = allTopicsForWeights.length > 0 ? allTopicsForWeights : ["React"];
-      }
-
-      const weightMap = calculateCoverageWeights(distributions.topic_distribution, topicsUniverse, 1);
-      const topicWeights = topicsUniverse.map((t) => weightMap[t] || 1);
-      const topicIdx = weightedRandomIndex(topicWeights);
-      contextTopic = criteria.preferred_topic || topicsUniverse[topicIdx] || "React";
-
-      const subtopicsByTopic = getStaticSubtopicMap();
-      const topicSubtopicsSet = new Set<string>(subtopicsByTopic[contextTopic] || []);
-
-      if (criteria.preferred_subtopic) {
-        const match = Array.from(topicSubtopicsSet).find((dbSubtopic) => {
-          const preferred = criteria.preferred_subtopic?.toLowerCase() || "";
-          const candidate = dbSubtopic.toLowerCase();
-          return (
-            dbSubtopic === criteria.preferred_subtopic || candidate.includes(preferred) || preferred.includes(candidate)
-          );
-        });
-        if (match) contextSubtopic = match;
-      }
-
-      if (!contextSubtopic && topicSubtopicsSet.size > 0) {
-        const subtopicsArray = Array.from(topicSubtopicsSet);
-        contextSubtopic = subtopicsArray[Math.floor(Math.random() * subtopicsArray.length)];
-      }
-
       let queryText = contextSubtopic || `${contextTopic} fundamentals`;
       queryText += criteria.coding_mode ? " code example implementation" : " explanation concepts";
 
@@ -598,12 +537,6 @@ async function generateMcqFallback(
         })
       );
 
-      const relaxationLevel = Math.max(0, generationAttempts - 1);
-      const avoidTopicsForAttempt =
-        relaxationLevel >= baseAvoidTopics.length
-          ? []
-          : baseAvoidTopics.slice(0, baseAvoidTopics.length - relaxationLevel);
-
       const generatedMcq = await generateMcqFromContext({
         topic: contextTopic,
         subtopic: contextSubtopic,
@@ -612,7 +545,7 @@ async function generateMcqFallback(
         contextItems: contextForGeneration,
         codingMode: criteria.coding_mode,
         negativeExamples,
-        avoidTopics: avoidTopicsForAttempt,
+        avoidTopics: [],
         avoidSubtopics: [],
       });
 
@@ -876,9 +809,6 @@ export async function selectNextQuestionForAttempt(
     criteria,
   });
 
-  // Identify overrepresented topics
-  const overrepresentedTopics = identifyOverrepresentedTopics(distributions, attempt.questions_answered || 0);
-
   // Build asked content keys for similarity checks
   const askedContentKeySet = new Set<string>(
     asked.map((q) => String(q?.mcq_items?.content_key || "")).filter((s: string) => s.length > 0)
@@ -889,26 +819,34 @@ export async function selectNextQuestionForAttempt(
   // Fetch recent questions for cross-attempt freshness
   const recentIdSet = await fetchRecentAttemptQuestions(userId, supabase);
 
-  // Stage 3: Bank Query - Query MCQ bank with LLM criteria
+  // Stage 3: Bank Query - Query MCQ bank with exact 5-dimension match
   let query = supabase
     .from("mcq_items")
     .select("id, topic, subtopic, difficulty, bloom_level, question, options, code, embedding")
-    .eq("difficulty", criteria.difficulty);
+    .eq("difficulty", criteria.difficulty)
+    .eq("topic", criteria.preferred_topic)
+    .eq("bloom_level", criteria.preferred_bloom_level);
 
+  // Handle subtopic matching (null or exact match)
+  if (criteria.preferred_subtopic) {
+    query = query.eq("subtopic", criteria.preferred_subtopic);
+  } else {
+    query = query.is("subtopic", null);
+  }
+
+  // Handle coding mode matching
+  if (criteria.coding_mode) {
+    query = query.not("code", "is", null).not("code", "eq", "");
+  } else {
+    query = query.or("code.is.null,code.eq.");
+  }
+
+  // Exclude already-asked questions
   if (askedIdSet.size > 0) {
     const askedIdListForIn = Array.from(askedIdSet)
       .map((id) => `"${id}"`)
       .join(",");
     query = query.not("id", "in", `(${askedIdListForIn})`);
-  }
-
-  if (criteria.coding_mode) {
-    query = query.not("code", "is", null);
-  }
-
-  if (overrepresentedTopics.length > 0) {
-    const quotedTopics = overrepresentedTopics.map((t) => `"${t}"`).join(",");
-    query = query.not("topic", "in", `(${quotedTopics})`);
   }
 
   query = query.limit(EVALUATE_SELECTION_CONFIG.BANK_QUERY.LIMIT);
@@ -926,8 +864,13 @@ export async function selectNextQuestionForAttempt(
     raw_count: (candidates || []).length,
     filtered_count: filteredPrimary.length,
     seen_recently_count: filteredPrimary.filter((c) => c._seenRecently).length,
-    overrepresented_excluded: overrepresentedTopics,
-    coding_required: !!criteria.coding_mode,
+    exact_match_criteria: {
+      topic: criteria.preferred_topic,
+      subtopic: criteria.preferred_subtopic,
+      difficulty: criteria.difficulty,
+      bloom_level: criteria.preferred_bloom_level,
+      coding_mode: criteria.coding_mode,
+    },
   });
 
   // If no bank candidates, attempt generation fallback
@@ -941,7 +884,6 @@ export async function selectNextQuestionForAttempt(
       distributions,
       asked,
       askedContentKeySet,
-      overrepresentedTopics,
       supabase
     );
 

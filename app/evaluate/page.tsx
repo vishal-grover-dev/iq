@@ -2,9 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useAttemptsQuery, useCreateAttemptMutation } from "@/services/client/evaluate.services";
-import { PlayIcon, ArrowRightIcon, ClockIcon } from "@phosphor-icons/react";
+import {
+  useAttemptsQuery,
+  useCreateAttemptMutation,
+  useResetAttemptsMutation,
+} from "@/services/client/evaluate.services";
+import { PlayIcon, ArrowRightIcon, ClockIcon, TrashIcon } from "@phosphor-icons/react";
 import { EVALUATION_CONFIG, EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS } from "@/constants/evaluate.constants";
+import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
+import { toast } from "sonner";
 
 /**
  * Evaluate Landing Page
@@ -21,6 +27,7 @@ export default function EvaluatePage() {
   const { data: attemptsData, isLoading } = useAttemptsQuery();
 
   const createAttemptMutation = useCreateAttemptMutation();
+  const resetAttemptsMutation = useResetAttemptsMutation();
 
   // Find in-progress attempt if any
   const inProgressAttempt = attemptsData?.attempts?.find((a) => a.status === "in_progress");
@@ -43,6 +50,20 @@ export default function EvaluatePage() {
     }
   };
 
+  const handleResetAttempts = async () => {
+    if (!confirm("⚠️ DEV ONLY: Delete all attempts? This cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const result = await resetAttemptsMutation.mutateAsync();
+      toast.success(`Reset complete: ${result.deleted_count} attempts deleted`);
+    } catch (error) {
+      toast.error("Failed to reset attempts");
+      console.error("Reset error:", error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className='mx-auto w-full max-w-4xl px-4 py-16'>
@@ -60,6 +81,27 @@ export default function EvaluatePage() {
         <h1 className='text-3xl font-semibold tracking-tight'>{EVALUATE_PAGE_LABELS.PAGE_TITLE}</h1>
         <p className='text-muted-foreground mt-2'>{EVALUATE_PAGE_LABELS.PAGE_DESCRIPTION}</p>
       </div>
+
+      {/* Dev Reset Button */}
+      {DEV_DEFAULT_USER_ID && (
+        <div className='mb-4 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3'>
+          <div className='flex items-center justify-between'>
+            <div className='text-sm text-yellow-600 dark:text-yellow-400'>
+              <strong>DEV MODE:</strong> Testing with default user
+            </div>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={handleResetAttempts}
+              disabled={resetAttemptsMutation.isPending}
+              className='border-yellow-500 text-yellow-600 hover:bg-yellow-500/20'
+            >
+              <TrashIcon className='mr-2 h-4 w-4' />
+              {resetAttemptsMutation.isPending ? "Resetting..." : "Reset All Attempts"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Resume In-Progress Attempt */}
       {inProgressAttempt && (

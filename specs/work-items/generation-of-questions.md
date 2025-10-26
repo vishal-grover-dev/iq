@@ -14,7 +14,7 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 - Bottom chat box to request edits (question/options/difficulty/Bloom level, etc.); the AI returns an updated version.
 - Submit action saves the finalized question (all fields + metadata) to DB (`mcq_items`).
 - Automation using two AI personas with visible steps: Generation → Judge evaluation → Final approval.
-- Target throughput: 250–500 diverse questions across React subtopics, Bloom levels, and difficulties (mix of theory and code).
+- Questions are generated on-demand when needed for evaluations and saved to database for reuse across users.
 
 ## Non‑Goals (now)
 
@@ -101,9 +101,9 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 - Strong contract: When coding mode is ON, the model MUST return a 3–50 line fenced `js`/`tsx` block in a required `code` field. If missing after a retry, generation fails. No server-side synthesis or injection.
 - Structured output: Switch chat `response_format` to a strict JSON schema with required `code` (string). Keep the existing prompt rule (“MUST include a fenced code block”) and back it with schema.
 - Two-stage loop (service-level):
-  1) Generate with schema. Validate with `hasValidCodeBlock` (3–50 lines) against `code` (or the first fenced block in `question`).
-  2) If invalid, run a repair pass with a terse instruction: “You omitted the required fenced code block. Return valid JSON with a 3–50 line `js/tsx` fence in `code`. Do not modify other fields.” Optionally escalate to a stronger model for the repair pass only.
-  3) If still invalid → throw. Routes surface a clear error (SSE `error` event or POST 400).
+  1. Generate with schema. Validate with `hasValidCodeBlock` (3–50 lines) against `code` (or the first fenced block in `question`).
+  2. If invalid, run a repair pass with a terse instruction: “You omitted the required fenced code block. Return valid JSON with a 3–50 line `js/tsx` fence in `code`. Do not modify other fields.” Optionally escalate to a stronger model for the repair pass only.
+  3. If still invalid → throw. Routes surface a clear error (SSE `error` event or POST 400).
 - Retrieval bias: Mirror POST’s code-leaning query terms in GET/SSE before retrieval to increase the chance of code-heavy context.
 - Prompt hardening: Add “Return code in a dedicated `code` field (fenced) and reference it in `question`. This is mandatory.” to both system and user messages. Ensure examples include `code`.
 - Validation/normalization: Centralize in `generateMcqFromContext`; if `codingMode===true` and normalized `code` is absent after repair, throw a typed error. Consider widening acceptance to 3–10 lines if needed.
@@ -132,13 +132,14 @@ Design and plan a new page to generate, review, and save high‑quality multiple
   - Purpose: execute the plan; stream events including plan_ready, item_started, item_completed, judge_result, saved, coverage_update, run_completed
   - Input: target count, include/exclude filters, distribution, near‑dup sensitivity
 
-## Automation to 250–500 Items
+## On-Demand Generation Strategy
 
-- Batch runner (CLI or admin‑only trigger) that cycles through React subtopics with a grid over Bloom levels and difficulties
+- Questions are generated when needed for evaluations using exact criteria matching
+- Generated questions are immediately saved to database for reuse across users
 - De‑duplication rules to avoid near‑duplicates; ensure broad coverage by subtopic and cognitive level
 - Safety rails: enforce citations presence, option correctness, and rejection thresholds by Judge
 - Observability: counts per subtopic/difficulty/Bloom; basic error reasons
-- Non‑repeat policy: do not repeat subtopic+difficulty+Bloom combos until ≥85% of available combos have at least one item; avoid near duplicates via content keys
+- Database grows organically based on actual evaluation needs
 
 ## Quality & Safety
 
@@ -158,7 +159,7 @@ Design and plan a new page to generate, review, and save high‑quality multiple
 - Persona progress streams visible steps and verdicts
 - Chat‑based revision returns an updated MCQ without page reload
 - Submit stores the MCQ into `mcq_items` with all fields and user scoping
-- Batch automation can produce 250–500 diverse questions with low duplicate rate
+- On-demand generation produces diverse questions with low duplicate rate as needed
 - Automate button present; automation respects coverage and exclusion constraints to avoid repeats across subtopic, difficulty, and Bloom
 
 ## Tasks
@@ -176,6 +177,6 @@ Design and plan a new page to generate, review, and save high‑quality multiple
   - Progress: Endpoint persists `code`, returns 409 for duplicate `content_key`, and can enforce a fenced `js/tsx` code block via `requireCode=true` in the request.
 - [ ] API: Automation plan and start (SSE) endpoints with coverage/exclusion constraints
 - [ ] Services: Axios clients and TanStack Query hooks where appropriate
-- [ ] Automation: Batch runner to reach 250–500 items across subtopics/Bloom/difficulty
+- [ ] Automation: On-demand generation system for evaluation needs
 - [ ] QA: Visual and a11y checks; review code‑block readability; verify citation linking
 - [x] Docs: Update this work-item with current reliability hardening and endpoint behavior

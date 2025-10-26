@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       subtopic,
       version,
       codingMode: true,
-      maxNeighbors: 8,
+      maxNeighbors: 15,
     });
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));

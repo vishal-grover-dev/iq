@@ -12,8 +12,8 @@
 - `next-env.d.ts`: Next.js type references (auto-generated; do not edit).
 - `README.md`: Starter documentation for running and deploying the app.
 - `.cursorrules`: Cursor rules to always consult `specs/` docs before answering/implementing tasks.
+- `.cursor/mcp.json`: Supabase MCP server configuration for AI agent database interactions.
 - `playwright.config.ts`: Playwright configuration (webServer runs Next dev; Chromium + mobile profiles).
-- `scripts/db.sh`: Helper to run psql queries/files against Supabase pooler URL in `supabase/.temp/pooler-url`.
 
 ### specs/blueprints
 
@@ -75,6 +75,7 @@
 ### components/evaluate
 
 - `questionCard.component.tsx`: MCQ question card with syntax highlighting, option selection, and keyboard shortcuts. Supports evaluation mode (interactive) and review mode (read-only with feedback). ~190 lines.
+- `questionCardSkeleton.component.tsx`: Reusable skeleton loading component for question cards. Matches QuestionCard structure with progress bar, metadata chips, question text, options, and submit button placeholders. ~75 lines.
 - `codeBlock.component.tsx`: Reusable code block component with syntax highlighting via Prism. Handles markdown rendering with fenced code blocks. ~75 lines.
 - `optionButton.component.tsx`: Single MCQ option button with evaluation/review mode styling, correctness indicators, and keyboard accessibility. ~95 lines.
 - `resultsChart.component.tsx`: Performance breakdown visualization as table/list showing category, correct/total, and accuracy. Reusable for topic/subtopic/Bloom breakdowns. ~30 lines. (Replaced by PerformanceBarChart for main results display)

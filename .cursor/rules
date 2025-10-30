@@ -66,10 +66,10 @@ These rules guide Cursor AI when assisting with code generation, refactoring, an
 
 ## SQL & migrations
 
-- You may run schema SQL directly from the terminal (psql or Supabase CLI).
-- After applying any schema change manually, immediately create a new migration file under `migrations/` capturing the same SQL. Do not alter existing migrations.
+- **Use Supabase MCP tools** for all database operations: migrations (`apply_migration`), queries (`execute_sql`), table inspection (`list_tables`), and migration tracking (`list_migrations`).
+- After applying any schema change, immediately create a new migration file under `migrations/` capturing the same SQL. Do not alter existing migrations.
 - Migration naming: use the next incremental number and a short, descriptive title (e.g., `005-Add-Quiz-Attempts.sql`).
-- The repo's migration files are authoritative; local or remote schema must be converged by running these migrations.
+- The repo's migration files are authoritative; local or remote schema must be converged by running these migrations via MCP tools.
 
 ---
 

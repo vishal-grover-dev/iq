@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/evaluate/questionCard.component";
+import QuestionCardSkeleton from "@/components/evaluate/questionCardSkeleton.component";
 import {
   useAttemptDetailsQuery,
   useSubmitAnswerMutation,
@@ -43,7 +44,7 @@ export default function EvaluateAttemptPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   // Fetch attempt details + next question
-  const { data, isLoading } = useAttemptDetailsQuery(attemptId);
+  const { data, isLoading, isFetching } = useAttemptDetailsQuery(attemptId);
 
   const submitAnswerMutation = useSubmitAnswerMutation(attemptId);
   const pauseAttemptMutation = usePauseAttemptMutation(attemptId);
@@ -61,8 +62,9 @@ export default function EvaluateAttemptPage() {
   }, [data?.next_question?.id, startTime]);
 
   // Show delayed loading message if loading takes >500ms (Task 6: Loading States)
+  const isCurrentlyLoading = isLoading || (isFetching && !data) || submitAnswerMutation.isPending;
   useEffect(() => {
-    if (!isLoading) {
+    if (!isCurrentlyLoading) {
       setShowDelayedMessage(false);
       return;
     }
@@ -72,7 +74,7 @@ export default function EvaluateAttemptPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, [isCurrentlyLoading]);
 
   // Handle answer submission
   const handleSubmitAnswer = async (selectedIndex: number) => {
@@ -111,58 +113,9 @@ export default function EvaluateAttemptPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className='mx-auto w-full max-w-4xl px-4 py-6'>
-        {/* Skeleton Progress Bar */}
-        <div className='mb-6'>
-          <div className='mb-3 flex items-center justify-between'>
-            <div className='bg-muted h-6 w-32 animate-pulse rounded' />
-            <div className='bg-muted h-9 w-28 animate-pulse rounded' />
-          </div>
-          <div className='bg-secondary h-2 w-full overflow-hidden rounded-full'>
-            <div className='bg-muted h-full w-1/3 animate-pulse' />
-          </div>
-        </div>
-
-        {/* Skeleton Question Card */}
-        <div className='border-border rounded-lg border bg-white p-6 shadow-sm dark:bg-gray-950'>
-          {/* Metadata chips skeleton */}
-          <div className='mb-4 flex flex-wrap gap-2'>
-            <div className='bg-muted h-6 w-20 animate-pulse rounded-full' />
-            <div className='bg-muted h-6 w-24 animate-pulse rounded-full' />
-            <div className='bg-muted h-6 w-16 animate-pulse rounded-full' />
-          </div>
-
-          {/* Question text skeleton */}
-          <div className='mb-6 space-y-3'>
-            <div className='bg-muted h-4 w-full animate-pulse rounded' />
-            <div className='bg-muted h-4 w-5/6 animate-pulse rounded' />
-            <div className='bg-muted h-4 w-4/6 animate-pulse rounded' />
-          </div>
-
-          {/* Options skeleton */}
-          <div className='space-y-3'>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className='border-border h-12 animate-pulse rounded-lg border' />
-            ))}
-          </div>
-
-          {/* Submit button skeleton */}
-          <div className='mt-6 flex justify-end'>
-            <div className='bg-muted h-10 w-32 animate-pulse rounded' />
-          </div>
-        </div>
-
-        {/* Progressive loading message (shows after 500ms) */}
-        {showDelayedMessage && (
-          <div className='mt-6 text-center'>
-            <p className='text-muted-foreground text-sm'>Preparing next question...</p>
-            <p className='text-muted-foreground mt-1 text-xs'>This usually takes less than a second</p>
-          </div>
-        )}
-      </div>
-    );
+  // Show loading skeleton when initially loading
+  if (isLoading || (isFetching && !data)) {
+    return <QuestionCardSkeleton showProgressBar={true} showDelayedMessage={showDelayedMessage} />;
   }
 
   if (!data || !data.attempt) {
@@ -178,8 +131,14 @@ export default function EvaluateAttemptPage() {
 
   const { attempt, next_question } = data;
 
-  // If no next question (shouldn't happen in in_progress state), show message
+  // If no next question, check if we're currently fetching or if attempt is complete
   if (!next_question) {
+    // If we're fetching or submitting, show loading instead of "no questions" message
+    if (isFetching || submitAnswerMutation.isPending) {
+      return <QuestionCardSkeleton showProgressBar={true} showDelayedMessage={showDelayedMessage} />;
+    }
+
+    // If not fetching and no question, show the "no questions" message
     return (
       <div className='mx-auto w-full max-w-4xl px-4 py-16'>
         <div className='text-center'>

@@ -66,6 +66,9 @@
 - **Postgres Full-Text Search (FTS)** – Keyword search
 - **Hybrid Search** – Combines vector and keyword search for improved accuracy
   - *Why:* Semantic (vector) + exact (keyword) matching complement each other for better retrieval coverage. See [architecture-decisions.md](./architecture-decisions.md#hybrid-search-vector--keyword).
+- **Supabase MCP Server** – Model Context Protocol integration for AI agent database interactions
+  - *Why:* Enables direct agent access to database operations (migrations, queries, table management) through standardized MCP tools instead of shell scripts. Application code continues using `@supabase/supabase-js` clients via `config/supabase.config.ts`.
+  - *Usage:* Agent uses MCP tools (`list_tables`, `execute_sql`, `apply_migration`, `list_migrations`, etc.) for all database operations. Configuration is stored in `.cursor/mcp.json` and scoped to project `xxhsdefivkjtvpmbtokj`.
 
 ### AI/ML Services
 

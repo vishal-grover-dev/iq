@@ -167,8 +167,8 @@ export function useAttemptDetailsQuery(attemptId: string | null, enabled = true)
 /**
  * useSubmitAnswerMutation
  * Mutation hook for submitting answers.
- * Invalidates attempt details to trigger next question fetch.
- * Also prefetches next question as safety net (no-op if already cached from Trigger Point 1 or 2).
+ * Refetches attempt details to trigger next question fetch when not complete.
+ * Invalidates results query when attempt is complete for immediate redirect.
  */
 export function useSubmitAnswerMutation(attemptId: string) {
   const queryClient = useQueryClient();
@@ -178,25 +178,30 @@ export function useSubmitAnswerMutation(attemptId: string) {
     onSuccess: (response) => {
       const detailsKey = ["evaluate", "attempts", attemptId, "details"] as const;
 
-      // Immediately replace cached details with server response so UI updates without refetch
-      queryClient.setQueryData(detailsKey, {
-        attempt: {
-          id: attemptId,
-          status: response.progress.is_complete ? "completed" : "in_progress",
-          questions_answered: response.progress.questions_answered,
-          correct_count: response.progress.correct_count,
-          total_questions: response.progress.total_questions,
-        },
-        next_question: response.next_question ?? null,
-      } as IAttemptDetailsResponse);
-
-      if (!response.progress.is_complete && !response.next_question) {
-        // When no question is returned but attempt isn't complete, refetch for safety
-        queryClient.invalidateQueries({ queryKey: detailsKey });
-      }
-
       if (response.progress.is_complete) {
+        // Attempt is complete - invalidate results query for immediate redirect
         queryClient.invalidateQueries({ queryKey: ["evaluate", "attempts", attemptId, "results"] });
+      } else {
+        // Update attempt progress optimistically and clear next_question to show loading
+        queryClient.setQueryData(detailsKey, (oldData: IAttemptDetailsResponse | undefined) => {
+          if (!oldData) return oldData;
+
+          return {
+            ...oldData,
+            attempt: {
+              ...oldData.attempt,
+              status: response.progress.is_complete ? "completed" : "in_progress",
+              questions_answered: response.progress.questions_answered,
+              correct_count: response.progress.correct_count,
+              total_questions: response.progress.total_questions,
+            },
+            // Clear next_question to trigger loading state while new question is being fetched
+            next_question: null,
+          };
+        });
+
+        // Force refetch to get the actual next question
+        queryClient.refetchQueries({ queryKey: detailsKey });
       }
     },
   });

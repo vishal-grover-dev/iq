@@ -4,6 +4,7 @@
  */
 
 import type { TExample } from "../../data/mcq-examples";
+import { MCQ_PROMPTS } from "@/constants/generation.constants";
 
 /**
  * Formats context items into numbered lines with titles and URLs.
@@ -23,7 +24,7 @@ export function formatContextLines(
 /**
  * Formats examples into labeled blocks for few-shot prompting.
  */
-export function formatExamplesBlock(examples: TExample[]): string {
+export function formatExamplesBlock(examples: TExample[], includeChainOfThought: boolean = false): string {
   return examples
     .map((ex: TExample, i: number): string => {
       const bullets = ex.explanationBullets.map((b: string) => `- ${b}`).join("\n");
@@ -32,6 +33,7 @@ export function formatExamplesBlock(examples: TExample[]): string {
         .join("\n");
       return [
         `Example ${i + 1}`,
+        `Topic: ${ex.topic}${ex.subtopic ? ` — ${ex.subtopic}` : ""}`,
         `Statement: ${ex.statement}`,
         `Question: ${ex.question}`,
         `Options: ${ex.options.join(", ")}`,
@@ -42,6 +44,7 @@ export function formatExamplesBlock(examples: TExample[]): string {
         `Explanation: ${ex.explanation}`,
         `Explanation Bullets:\n${bullets}`,
         `Citations:\n${cits}`,
+        includeChainOfThought && ex.chainOfThought ? `Chain of Thought:\n${ex.chainOfThought}` : undefined,
       ]
         .filter(Boolean)
         .join("\n");
@@ -56,7 +59,7 @@ export function formatNegativeExamplesBlock(negativeExamples: string[] | undefin
   const list = (negativeExamples ?? []).filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 8);
   if (list.length === 0) return undefined;
   return [
-    "Avoid similar gists (learned from previous questions):",
+    MCQ_PROMPTS.NEGATIVE_EXAMPLES_INTRO,
     ...list.map((q, i) => `${i + 1}. ${q.slice(0, 240)}`),
     "Do not copy these. Aim for different angles or scenarios.",
   ].join("\n");

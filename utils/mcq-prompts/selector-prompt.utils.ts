@@ -95,6 +95,12 @@ BALANCE REQUIREMENTS:
 5. Subtopic distribution: Avoid clustering (no >5 consecutive from same subtopic)
 6. Weight-aware selection: Consider topic importance based on available content
 
+INTERVIEW FOCUS GUIDELINES:
+- Prioritize timeless React fundamentals (hooks lifecycle, state management, component patterns) over version-specific features
+- Interviewers typically assess core concepts rather than latest version features
+- Focus on practical debugging, problem-solving scenarios, and real-world application contexts
+- For JavaScript: Emphasize event loop, closures, prototypes, and async behavior over latest syntax features
+
 TOPIC WEIGHTS & SUBTOPIC AVAILABILITY:
 The following topics are available with their relative importance (weights) and subtopic breakdown:
 
@@ -106,6 +112,7 @@ SELECTION GUIDELINES:
 - Ensure coding questions cover practical implementation scenarios
 - Maintain Bloom taxonomy progression: Remember → Understand → Apply → Analyze → Evaluate → Create
 - Only select topics and subtopics that exist in the provided ontology data
+- For React: Favor fundamental subtopics (useState, useEffect, Components & Props, State & Lifecycle) over version-specific features
 
 AVAILABLE BLOOM LEVELS:
 ${availableBloomLevels}

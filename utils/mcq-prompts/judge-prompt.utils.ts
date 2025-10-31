@@ -11,6 +11,7 @@ export function buildJudgeMessages(args: TJudgeBuildArgs & { neighbors?: TNeighb
   const system = [
     "You are an MCQ quality judge. Evaluate clarity, correctness, option plausibility, single correct answer, appropriate difficulty and Bloom level, presence of citations grounded in context, and DUPLICATE RISK.",
     "Duplicate risk: If the MCQ is semantically similar to any provided neighbor items, mark verdict = 'revise' and explain.",
+    "AGGRESSIVE DEDUPLICATION: Mark as 'revise' if question structure, code pattern, or options are >85% similar to neighbors. Reject if question differs only by variable names, minor wording, or trivial option changes. Ensure code snippets vary significantly (different patterns, not just renamed variables).",
     args.codingMode
       ? "Coding mode is ON: Ensure the MCQ includes a js/tsx fenced block between 3 and 50 lines. If none is present, if the block falls outside that range, or if the options do not reflect the code's behavior, mark 'revise' with reasons. Also, reject if the question body simply repeats the entire fenced snippet instead of referencing it in prose."
       : undefined,

@@ -146,9 +146,8 @@
 
 - `json.utils.ts`: Safe JSON parsing helper for strict LLM JSON responses.
 - `mcq-prompt.utils.ts`: Prompt builders for MCQ Generator, Judge, and Reviser (few-shot and chain-of-thought ready) with curated examples.
-- `mcq.utils.ts`: Helpers for MCQ embeddings text build and content-key hashing.
+- `mcq.utils.ts`: Helpers for MCQ embeddings text build, content-key hashing, and MVP ontology accessors (topics, weights, priorities, subtopics).
 - `animation.utils.ts`: Imports and re-exports animation enums from `app.types.ts`, provides `usePrefersReducedMotion` hook, and pre-built Framer Motion variants for question transitions, stagger lists, and results orchestration with reduced-motion fallbacks.
-- `static-ontology.utils.ts`: Loads statically defined topics, subtopics, and weights from JSON.
 - `selection.utils.ts`: Weighted random utilities for selection (`weightedRandomIndex`, `weightedRandomSelect`, `calculateCoverageWeights`).
 - `url.utils.ts`: URL manipulation utilities (normalize, extract domain).
 - `ingest-planner.utils.ts`: Interview Streams planner helpers for depth + type combinations and path derivation.
@@ -200,6 +199,7 @@
 ### constants
 
 - `app.constants.ts`: Application constants from environment variables.
+- `mvp-ontology.constants.ts`: Source of truth for ReactJS MVP ontology topics, priorities, and helper accessors.
 - `interview-streams.constants.ts`: Shared interview streams constants (topics/subtopics/options) used by utils and client.
 - `ui.constants.ts`: Consolidated UI-related constants including theme labels/config (THEME_CONFIG), footer content (FOOTER_CONFIG), and common UI labels (COMMON_LABELS, FORM_LABELS, STATUS_LABELS, ACCESSIBILITY_LABELS). Replaces separate theme.constants.ts and footer.constants.ts.
 - `api.constants.ts`: Centralized API infrastructure constants including HTTP_STATUS_CODES, API_ERROR_MESSAGES, API_RESPONSE_KEYS, CONTENT_TYPES, and VALIDATION_ERRORS. Shared across all API routes and services.
@@ -209,7 +209,6 @@
 
 - `interview-ingest-catalog.json`: Catalog of topics → subtopic ingestion entries.
 - `label-rules.json`: Config-driven rules mapping.
-- `static-ontology.json`: Hard-coded topics, subtopics, and topic weightings for the evaluation feature.
 
 ### scripts
 
@@ -273,6 +272,8 @@
 
 Updates:
 
+- Removed `specs/work-items/topic-based-question-ontology-mvp.md` after MVP ontology rollout was completed.
+- Consolidated `utils/static-ontology.utils.ts` into `utils/mcq.utils.ts`.
 - `api/ingest/web/plan/route.ts`: Added `returnAllPages` and `applyQuotas` flags; response includes `aiUsed`. MDN-specific sections removed; source-agnostic.
 - `api/ingest/web/process/route.ts`: Simplified selection to source-agnostic cap by `maxPages`; removed MDN-specific quotas.
 - `specs/work-items`: Merged `ingestion-reliability-hardening.md` into `interview-ingestion-and-retrieval.md`; removed the former.

@@ -20,7 +20,6 @@ import { generateMcqFromContext } from "@/services/server/mcq-generation.service
 import { getEmbeddings } from "@/services/server/embedding.service";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
 import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
-import { getStaticSubtopicMap } from "@/utils/static-ontology.utils";
 import { weightedRandomIndex } from "@/utils/selection.utils";
 import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
 import { EDifficulty, EBloomLevel, IMcqItemView } from "@/types/mcq.types";

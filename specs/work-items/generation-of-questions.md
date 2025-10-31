@@ -106,6 +106,7 @@ Design and plan a new page to generate, review, and save high‑quality multiple
   3. If still invalid → throw. Routes surface a clear error (SSE `error` event or POST 400).
 - Retrieval bias: Mirror POST’s code-leaning query terms in GET/SSE before retrieval to increase the chance of code-heavy context.
 - Prompt hardening: Add “Return code in a dedicated `code` field (fenced) and reference it in `question`. This is mandatory.” to both system and user messages. Ensure examples include `code`.
+- Few-shot library: `data/mcq-examples.ts` now pairs each MVP topic with at least one example carrying a `chainOfThought` narrative. Standard mode keeps the concise snippet while chain-of-thought mode surfaces the reasoning trace for internal use.
 - Validation/normalization: Centralize in `generateMcqFromContext`; if `codingMode===true` and normalized `code` is absent after repair, throw a typed error. Consider widening acceptance to 3–10 lines if needed.
 - API/UI surfaces: SSE emits an `error` with reason (missing_code); POST returns 400; Save can enforce `requireCode=true`.
 - Observability: Log raw model JSON (short retention) and counters (attempts, repair_attempts, missing_code_errors, model_fallbacks) to verify compliance.

@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // Note: Not using these directly in recovery, but left as reference for future enhancement
         // const { getEmbeddings } = await import("@/services/ai/embedding.service");
         // const { weightedRandomIndex, calculateCoverageWeights } = await import("@/utils/selection.utils");
-        // const { getStaticTopicList, getStaticSubtopicMap } = await import("@/utils/static-ontology.utils");
+        // const { getStaticTopicList, getStaticSubtopicMap } = await import("@/utils/mcq.utils");
 
         // Build attempt context from existing questions
         // (Simplified for recovery - not needed for basic fallback assignment)

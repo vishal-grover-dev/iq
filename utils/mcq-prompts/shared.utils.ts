@@ -53,9 +53,7 @@ export function formatExamplesBlock(examples: TExample[]): string {
  * Formats negative examples (to-avoid gists) for the prompt.
  */
 export function formatNegativeExamplesBlock(negativeExamples: string[] | undefined): string | undefined {
-  const list = (negativeExamples ?? [])
-    .filter((s) => typeof s === "string" && s.trim().length > 0)
-    .slice(0, 8);
+  const list = (negativeExamples ?? []).filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 8);
   if (list.length === 0) return undefined;
   return [
     "Avoid similar gists (learned from previous questions):",

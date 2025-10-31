@@ -6,7 +6,7 @@ import type { ICitation, IContextRow, INeighborRow, IRecentQuestionRow } from "@
 import { parseJsonObject } from "@/utils/json.utils";
 import { buildGeneratorMessages } from "@/utils/mcq-prompts/generator-prompt.utils";
 import { extractFirstCodeFence, hasValidCodeBlock, questionRepeatsCodeBlock } from "@/utils/mcq.utils";
-import { getStaticSubtopicsForTopic } from "@/utils/static-ontology.utils";
+import { getStaticSubtopicsForTopic } from "@/utils/mcq.utils";
 import { createOpenAIClient } from "@/config/openai.config";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { getEmbeddings } from "@/services/server/embedding.service";

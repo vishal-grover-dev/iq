@@ -401,8 +401,8 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 
 #### Phase 0: Static Ontology Configuration (Prerequisite)
 
-- [x] Replace LLM-driven ontology generation with a static JSON (`data/static-ontology.json`)
-- [x] Load topics, subtopics, and weights via `utils/static-ontology.utils.ts`
+- [x] Replace LLM-driven ontology generation with a strongly typed constant (`constants/mvp-ontology.constants.ts`)
+- [x] Load topics, subtopics, priorities, and weights via `utils/mcq.utils.ts`
 - [x] Remove runtime ontology, archetype, and weight generation utilities and APIs
 - [x] Ensure selection and generation reference the static configuration
 - [x] Update docs to describe static ontology data source and maintenance process

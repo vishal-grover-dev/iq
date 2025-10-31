@@ -1,5 +1,5 @@
 import { EBloomLevel } from "@/types/mcq.types";
-import { getStaticTopicWeights, getStaticSubtopicMap } from "@/utils/static-ontology.utils";
+import { getStaticTopicPriority, getStaticSubtopicMap, getStaticTopicWeights } from "@/utils/mcq.utils";
 
 /**
  * Generates system and user prompts for LLM-driven question selection in evaluations.
@@ -61,9 +61,11 @@ export function generateQuestionPrompt(context: {
     .map(([topic, weight]) => {
       const subtopics = subtopicMap[topic] || [];
       const subtopicCount = subtopics.length;
+      const priority = getStaticTopicPriority(topic);
       return {
         topic,
         weight: (weight * 100).toFixed(1) + "%",
+        priority,
         subtopics: subtopics.slice(0, 5), // Show first 5 subtopics
         totalSubtopics: subtopicCount,
       };
@@ -74,9 +76,9 @@ export function generateQuestionPrompt(context: {
   const topicBreakdown = topicDetails
     .map(
       (t) =>
-        `${t.topic}: ${t.weight} weight (${t.totalSubtopics} subtopics) - ${t.subtopics.join(", ")}${
-          t.totalSubtopics > 5 ? "..." : ""
-        }`
+        `${t.topic}: ${t.weight} weight${t.priority ? ` (priority: ${t.priority})` : ""} (${
+          t.totalSubtopics
+        } subtopics) - ${t.subtopics.join(", ")}${t.totalSubtopics > 5 ? "..." : ""}`
     )
     .join("\n");
 

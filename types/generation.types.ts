@@ -7,6 +7,21 @@
 import type { IMcqItemView } from "./mcq.types";
 
 /**
+ * MVP ontology topic metadata (shared across generation and selection flows).
+ */
+export enum EMvpTopicPriority {
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
+}
+
+export type TMvpTopicConfig = {
+  weight: number;
+  priority: EMvpTopicPriority;
+  subtopics: readonly string[];
+};
+
+/**
  * MCQ generation request parameters
  */
 export type TMcqGenerationRequest = {

@@ -444,9 +444,9 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 ## Static Ontology Configuration
 
-- The evaluation feature loads topics, subtopics, and topic weighting from `data/static-ontology.json` using `utils/static-ontology.utils.ts`.
-- This replaces LLM-driven generation for ontology, archetype, and weight data to ensure deterministic behavior.
-- Maintenance workflow: update the JSON file when topics or weights change and redeploy.
+- The evaluation feature sources topics, subtopics, priorities, and weights from `constants/mvp-ontology.constants.ts`, surfaced through `utils/mcq.utils.ts`.
+- This replaces both the legacy runtime ontology generator and the previous JSON file while keeping deterministic behavior and strong typing.
+- Maintenance workflow: update the TypeScript constant (and shared enum/types in `types/app.types.ts`) when the ontology changes, then redeploy.
 
 ---
 

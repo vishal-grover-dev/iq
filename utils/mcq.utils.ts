@@ -1,4 +1,12 @@
+import {
+  MVP_TOPICS,
+  getMvpSubtopics,
+  getMvpTopicPriority,
+  getMvpTopicWeight,
+} from "@/constants/mvp-ontology.constants";
+import type { TMvpTopic } from "@/constants/mvp-ontology.constants";
 import type { IMcqItemView } from "@/types/mcq.types";
+import { EMvpTopicPriority } from "@/types/generation.types";
 import crypto from "crypto";
 
 export function buildMcqEmbeddingText(item: IMcqItemView): string {
@@ -91,4 +99,50 @@ export function validateMcq(item: IMcqItemView, requireCode: boolean): { ok: boo
     }
   }
   return { ok: reasons.length === 0, reasons };
+}
+
+export type TStaticSubtopic = {
+  name: string;
+};
+
+export function getStaticTopicList(): string[] {
+  return Object.keys(MVP_TOPICS);
+}
+
+export function getStaticSubtopicsForTopic(topic: string): string[] {
+  const config = MVP_TOPICS[topic as TMvpTopic];
+  return (config?.subtopics ?? []).slice();
+}
+
+export function getStaticTopicWeights(): Record<string, number> {
+  const weights: Record<string, number> = {};
+  for (const topic of Object.keys(MVP_TOPICS)) {
+    weights[topic] = getMvpTopicWeight(topic as TMvpTopic);
+  }
+  return weights;
+}
+
+export function getStaticTopicChunkCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const topic of Object.keys(MVP_TOPICS)) {
+    counts[topic] = 0;
+  }
+  return counts;
+}
+
+export function getStaticSubtopicMap(): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const topic of Object.keys(MVP_TOPICS)) {
+    map[topic] = getMvpSubtopics(topic as TMvpTopic).slice() as string[];
+  }
+  return map;
+}
+
+export function getStaticSubtopicDetails(topic: string): TStaticSubtopic[] {
+  return getMvpSubtopics(topic as TMvpTopic).map((name) => ({ name }));
+}
+
+export function getStaticTopicPriority(topic: string): EMvpTopicPriority | undefined {
+  const config = MVP_TOPICS[topic as TMvpTopic];
+  return config ? getMvpTopicPriority(topic as TMvpTopic) : undefined;
 }

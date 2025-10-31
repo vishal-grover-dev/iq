@@ -1,15 +1,24 @@
 import type { TGeneratorBuildArgs, TJudgeBuildArgs, TNeighborMcq, TReviserBuildArgs } from "@/types/mcq.types";
 import { EPromptMode, EBloomLevel as BloomLevel } from "@/types/mcq.types";
-import type { TExample } from "../data/mcq-examples";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";
+import { MVP_TOPICS } from "@/constants/mvp-ontology.constants";
+import type { TMvpTopic } from "@/constants/mvp-ontology.constants";
+import type { TExample } from "../data/mcq-examples";
 import { pickExamples } from "../data/mcq-examples";
-import { getStaticTopicWeights, getStaticSubtopicMap } from "./static-ontology.utils";
+import { getStaticSubtopicMap, getStaticTopicWeights } from "./mcq.utils";
 
 // Examples moved to data/mcq-examples.ts to keep this builder focused on prompts
 
+const isMvpTopic = (topic?: string | null): topic is TMvpTopic =>
+  !!topic && Object.prototype.hasOwnProperty.call(MVP_TOPICS, topic);
+
 export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: string; user: string } {
   const mode = args.mode ?? EPromptMode.FEW_SHOT;
-  const examples = pickExamples(args.examplesCount ?? 10, args.topic);
+  const topicForExamples = isMvpTopic(args.topic) ? args.topic : undefined;
+  const examples = pickExamples(args.examplesCount ?? 10, topicForExamples);
+  const prioritizedExamples = args.subtopic
+    ? [...examples].sort((a, b) => Number(b.subtopic === args.subtopic) - Number(a.subtopic === args.subtopic))
+    : examples;
   const system = [
     MCQ_PROMPTS.GENERATOR_SYSTEM_INTRO,
     MCQ_PROMPTS.RULES_HEADER,
@@ -32,7 +41,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
       ? "- Focus on fundamental concepts that apply across React versions rather than version-specific APIs. Prioritize hooks lifecycle, state management, and component patterns over latest features."
       : undefined,
     mode === EPromptMode.CHAIN_OF_THOUGHT
-      ? "- Think step by step internally, but output ONLY the final JSON response."
+      ? "- Review the chain-of-thought reference, think step by step internally, but output ONLY the final JSON response."
       : "- Follow the patterns from the examples; output ONLY the final JSON response.",
   ]
     .filter(Boolean)
@@ -53,7 +62,9 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     .map((c, i) => `${i + 1}. ${c.title ? `${c.title} — ` : ""}${c.url}\n${c.content.slice(0, 700)}`)
     .join("\n\n");
 
-  const examplesBlock = examples
+  const includeChainOfThought = mode === EPromptMode.CHAIN_OF_THOUGHT;
+
+  const examplesBlock = prioritizedExamples
     .map((ex: TExample, i: number): string => {
       const bullets = ex.explanationBullets.map((b: string) => `- ${b}`).join("\n");
       const cits = ex.citations
@@ -61,6 +72,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
         .join("\n");
       return [
         `Example ${i + 1}`,
+        `Topic: ${ex.topic}${ex.subtopic ? ` — ${ex.subtopic}` : ""}`,
         `Statement: ${ex.statement}`,
         `Question: ${ex.question}`,
         `Options: ${ex.options.join(", ")}`,
@@ -71,6 +83,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
         `Explanation: ${ex.explanation}`,
         `Explanation Bullets:\n${bullets}`,
         `Citations:\n${cits}`,
+        includeChainOfThought ? `Chain of Thought:\n${ex.chainOfThought}` : undefined,
       ]
         .filter(Boolean)
         .join("\n");
@@ -96,7 +109,11 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     `Labels: ${labels}`,
     MCQ_PROMPTS.CONTEXT_HEADER,
     contextLines,
-    mode === EPromptMode.FEW_SHOT ? "Examples (style reference):\n" + examplesBlock : undefined,
+    mode === EPromptMode.FEW_SHOT
+      ? "Examples (style reference):\n" + examplesBlock
+      : includeChainOfThought
+      ? "Chain-of-thought references (for internal planning only):\n" + examplesBlock
+      : undefined,
     negativeBlock,
     styleBlock,
     args.extraInstructions || undefined,

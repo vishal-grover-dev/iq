@@ -19,6 +19,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should resume with correct progress and continue from last question", async ({ page }) => {
     // Start new attempt and answer 10 questions
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     const firstTenQuestionIds: string[] = [];
 
@@ -41,6 +42,7 @@ test.describe("Resume Attempt Flow", () => {
 
     // Wait for redirect to attempt page
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
+    expect(page.url()).toContain(attemptId);
 
     // Assert progress shows "Question 11 / 60" (10 questions answered + 1 current)
     await expect(page.locator("[data-testid='progress-indicator']")).toContainText("Question 11 / 60");
@@ -54,6 +56,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should not repeat previously answered questions", async ({ page }) => {
     // Start new attempt and answer 10 questions
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     const firstTenQuestionIds: string[] = [];
 
@@ -71,6 +74,7 @@ test.describe("Resume Attempt Flow", () => {
     const resumeButton = page.getByRole("button", { name: new RegExp(EVALUATE_PAGE_LABELS.RESUME_BUTTON, "i") });
     await resumeButton.click();
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
+    expect(page.url()).toContain(attemptId);
 
     // Answer next 20 questions (questions 11-30)
     const nextTwentyQuestionIds: string[] = [];
@@ -95,6 +99,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should maintain integrity across multiple pause/resume cycles", async ({ page }) => {
     // Start attempt, answer 10 questions, pause
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     for (let i = 0; i < 10; i++) {
       await answerQuestion(page, i % 4);
@@ -104,6 +109,7 @@ test.describe("Resume Attempt Flow", () => {
     const resumeButton1 = page.getByRole("button", { name: /resume.*evaluation/i });
     await resumeButton1.click();
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
+    expect(page.url()).toContain(attemptId);
 
     // Resume, answer 10 more questions, pause
     for (let i = 0; i < 10; i++) {
@@ -114,6 +120,7 @@ test.describe("Resume Attempt Flow", () => {
     const resumeButton2 = page.getByRole("button", { name: /resume.*evaluation/i });
     await resumeButton2.click();
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
+    expect(page.url()).toContain(attemptId);
 
     // Resume, answer 10 more questions, pause
     for (let i = 0; i < 10; i++) {
@@ -142,6 +149,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should show correct metadata in resume section", async ({ page }) => {
     // Start attempt and answer 15 questions
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     for (let i = 0; i < 15; i++) {
       await answerQuestion(page, i % 4);
@@ -184,6 +192,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should maintain question order across pause/resume", async ({ page }) => {
     // Start attempt and answer 5 questions
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     const firstFiveIds: string[] = [];
     for (let i = 0; i < 5; i++) {
@@ -219,6 +228,7 @@ test.describe("Resume Attempt Flow", () => {
   test("should handle rapid pause/resume cycles", async ({ page }) => {
     // Start attempt
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     // Answer 1 question
     await answerQuestion(page, 0);
@@ -229,6 +239,7 @@ test.describe("Resume Attempt Flow", () => {
       const resumeButton = page.getByRole("button", { name: new RegExp(EVALUATE_PAGE_LABELS.RESUME_BUTTON, "i") });
       await resumeButton.click();
       await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
+      expect(page.url()).toContain(attemptId);
     }
 
     // Should still be on question 2 (1 answered + 1 current)

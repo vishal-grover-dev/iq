@@ -1,13 +1,55 @@
-import {
-  MVP_TOPICS,
-  getMvpSubtopics,
-  getMvpTopicPriority,
-  getMvpTopicWeight,
-} from "@/constants/mvp-ontology.constants";
-import type { TMvpTopic } from "@/constants/mvp-ontology.constants";
+import { EVALUATION_CONFIG, TOPIC_SEQUENCE_CONFIG } from "@/constants/evaluate.constants";
+import { MVP_TOPICS, getMvpSubtopics, getMvpTopicPriority, getMvpTopicWeight } from "@/constants/mcq.constants";
+import type { TMvpTopic } from "@/constants/mcq.constants";
 import type { IMcqItemView } from "@/types/mcq.types";
 import { EMvpTopicPriority } from "@/types/generation.types";
 import crypto from "crypto";
+
+export type TSequencedTopic = (typeof TOPIC_SEQUENCE_CONFIG.SEQUENCE)[number];
+
+type TTopicRange = {
+  topic: TSequencedTopic;
+  start: number;
+  end: number;
+  quota: number;
+  index: number;
+};
+
+const TOPIC_RANGES: TTopicRange[] = (() => {
+  const ranges: TTopicRange[] = [];
+  const { SEQUENCE, QUESTIONS_PER_TOPIC } = TOPIC_SEQUENCE_CONFIG;
+
+  let cursor = 1;
+
+  SEQUENCE.forEach((topic, index) => {
+    const quota = QUESTIONS_PER_TOPIC[topic];
+
+    if (typeof quota !== "number" || quota <= 0) {
+      throw new Error(`[topic-sequencing] Invalid quota for topic: ${topic}`);
+    }
+
+    const start = cursor;
+    const end = cursor + quota - 1;
+
+    ranges.push({ topic, start, end, quota, index });
+
+    cursor = end + 1;
+  });
+
+  const totalFromConfig = ranges[ranges.length - 1]?.end ?? 0;
+  if (totalFromConfig !== EVALUATION_CONFIG.TOTAL_QUESTIONS) {
+    throw new Error(
+      `[topic-sequencing] Topic quotas (${totalFromConfig}) do not sum to TOTAL_QUESTIONS (${EVALUATION_CONFIG.TOTAL_QUESTIONS}).`
+    );
+  }
+
+  return ranges;
+})();
+
+const TOPIC_RANGE_MAP = TOPIC_RANGES.reduce<Record<TSequencedTopic, TTopicRange>>((acc, range) => {
+  acc[range.topic] = range;
+  return acc;
+}, {} as Record<TSequencedTopic, TTopicRange>);
 
 export function buildMcqEmbeddingText(item: IMcqItemView): string {
   const options = item.options.map((o, i) => `${String.fromCharCode(65 + i)}. ${o}`).join("\n");
@@ -145,4 +187,71 @@ export function getStaticSubtopicDetails(topic: string): TStaticSubtopic[] {
 export function getStaticTopicPriority(topic: string): EMvpTopicPriority | undefined {
   const config = MVP_TOPICS[topic as TMvpTopic];
   return config ? getMvpTopicPriority(topic as TMvpTopic) : undefined;
+}
+
+export function getTopicQuestionRange(topic: TSequencedTopic): TTopicRange {
+  const range = TOPIC_RANGE_MAP[topic];
+  if (!range) {
+    throw new Error(`[topic-sequencing] Unknown topic: ${topic}`);
+  }
+  return range;
+}
+
+function getTopicByQuestionOrder(questionOrder: number): TTopicRange {
+  const normalizedOrder = Math.max(1, Math.min(questionOrder, EVALUATION_CONFIG.TOTAL_QUESTIONS));
+
+  const range = TOPIC_RANGES.find((entry) => normalizedOrder >= entry.start && normalizedOrder <= entry.end);
+
+  if (!range) {
+    return TOPIC_RANGES[TOPIC_RANGES.length - 1];
+  }
+
+  return range;
+}
+
+export function getCurrentTopicPhase(questionsAnswered: number): TSequencedTopic {
+  const nextQuestionOrder = Math.min(questionsAnswered + 1, EVALUATION_CONFIG.TOTAL_QUESTIONS);
+  return getTopicByQuestionOrder(nextQuestionOrder).topic;
+}
+
+export function getRemainingQuestionsInTopic(questionsAnswered: number): number {
+  const currentTopic = getCurrentTopicPhase(questionsAnswered);
+  const { end } = getTopicQuestionRange(currentTopic);
+
+  if (questionsAnswered >= end) {
+    return 0;
+  }
+
+  return end - questionsAnswered;
+}
+
+export function getTopicProgress(
+  questionsAnswered: number,
+  topic: TSequencedTopic
+): {
+  completed: number;
+  total: number;
+  remaining: number;
+} {
+  const { start, end, quota } = getTopicQuestionRange(topic);
+
+  const completed = Math.max(0, Math.min(questionsAnswered, end) - start + 1);
+  const normalizedCompleted = Math.min(completed, quota);
+  const remaining = Math.max(0, quota - normalizedCompleted);
+
+  return {
+    completed: normalizedCompleted,
+    total: quota,
+    remaining,
+  };
+}
+
+export function getNextTopic(topic: TSequencedTopic): TSequencedTopic | null {
+  const currentRange = getTopicQuestionRange(topic);
+  const nextRange = TOPIC_RANGES[currentRange.index + 1];
+  return nextRange ? nextRange.topic : null;
+}
+
+export function getTopicRanges(): readonly TTopicRange[] {
+  return TOPIC_RANGES;
 }

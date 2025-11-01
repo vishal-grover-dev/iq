@@ -12,7 +12,7 @@ import WeakAreasPanel from "@/components/evaluate/weakAreasPanel.component";
 import QuestionReviewList from "@/components/evaluate/questionReviewList.component";
 import { motion } from "framer-motion";
 import { usePrefersReducedMotion, resultsOrchestrationVariants } from "@/utils/animation.utils";
-import { RESULTS_PAGE_STATES } from "@/constants/evaluate.constants";
+import { REACT_QUESTIONS_SIZE, RESULTS_PAGE_STATES } from "@/constants/evaluate.constants";
 
 /**
  * Results Page - Post-Attempt Analytics and Review
@@ -78,7 +78,7 @@ export default function EvaluateResultsPage() {
   const { summary, topic_breakdown, subtopic_breakdown, bloom_breakdown, weak_areas, questions } = data;
 
   // Check if this attempt has gaps (showing fewer questions than expected)
-  const hasGaps = summary.total_questions < 60;
+  const hasGaps = summary.total_questions < REACT_QUESTIONS_SIZE;
   const actualQuestions = questions.length;
 
   const handleFixAttempt = async () => {
@@ -114,7 +114,8 @@ export default function EvaluateResultsPage() {
           <h1 className='text-2xl font-bold'>Evaluation Results</h1>
           {hasGaps && (
             <p className='text-sm text-amber-600 mt-1'>
-              ⚠️ This attempt has gaps - only {actualQuestions} questions were assigned instead of 60
+              ⚠️ This attempt has gaps - only {actualQuestions} questions were assigned instead of{" "}
+              {REACT_QUESTIONS_SIZE}
             </p>
           )}
         </div>

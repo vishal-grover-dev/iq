@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a structured evaluation experience that assesses users' Frontend (React.js ecosystem) skills through a 60-question adaptive test with real-time analytics, weak-area identification, and comprehensive post-attempt review.
+Build a structured evaluation experience that assesses users' Frontend (React.js ecosystem) skills through a 50-question adaptive test with real-time analytics, weak-area identification, and comprehensive post-attempt review.
 
 ## Mission & Intent
 
@@ -18,27 +18,27 @@ Build a structured evaluation experience that assesses users' Frontend (React.js
 
 ## Scope
 
-- **Question Set Structure**: 60 questions per attempt (30 Easy, 20 Medium, 10 Hard) with topic/subtopic/Bloom/coding-mode tagging; minimum 35% coding-based questions.
+- **Question Set Structure**: 50 questions per attempt (30 Easy, 13 Medium, 7 Hard) with topic/subtopic/Bloom/coding-mode tagging; minimum 35% coding-based questions.
 - **Dynamic Generation & Selection**: LLM-driven question selection that checks existing question bank, avoids intra-attempt repeats, and generates new questions on-demand when gaps exist.
 - **Neighbor Similarity Prevention**: Bank selection applies similarity checking to prevent similar questions from being selected in the same attempt.
-- **Multi-Session Attempts**: Users can pause and resume within a single attempt; attempt state persists across sessions until all 60 questions are answered.
-- **Unlimited Attempts**: Users can start new 60-question attempts as many times as they want; cross-attempt repetition is minimized but not strictly prohibited.
-- **No Mid-Attempt Feedback**: Users answer all 60 questions without knowing if they're correct or incorrect. Feedback is revealed only after completing the entire attempt.
+- **Multi-Session Attempts**: Users can pause and resume within a single attempt; attempt state persists across sessions until all 50 questions are answered.
+- **Unlimited Attempts**: Users can start new 50-question attempts as many times as they want; cross-attempt repetition is minimized but not strictly prohibited.
+- **No Mid-Attempt Feedback**: Users answer all 50 questions without knowing if they're correct or incorrect. Feedback is revealed only after completing the entire attempt.
 - **Post-Attempt Analytics**: Performance summary with topic/subtopic breakdown, Bloom-level accuracy, weak-area highlights, and recommendations.
 
 ## Key Terminology
 
-- **Attempt**: A complete 60-question evaluation. One attempt = 60 questions, regardless of how many sessions it takes to complete.
+- **Attempt**: A complete 50-question evaluation. One attempt = 50 questions, regardless of how many sessions it takes to complete.
 - **Session**: A single continuous period of answering questions. Users can complete one attempt across multiple sessions.
 
 ## Question Structure
 
 ### Distribution per Attempt
 
-- **Total**: 60 questions
-  - **Easy**: 30 questions (50%)
-  - **Medium**: 20 questions (33%)
-  - **Hard**: 10 questions (17%)
+- **Total**: 50 questions
+  - **Easy**: 30 questions (60%)
+  - **Medium**: 13 questions (26%)
+  - **Hard**: 7 questions (14%)
 
 ### Required Metadata (per question)
 
@@ -47,33 +47,33 @@ Build a structured evaluation experience that assesses users' Frontend (React.js
 - **Difficulty**: Easy | Medium | Hard
 - **Bloom Level**: Remember | Understand | Apply | Analyze | Evaluate | Create
 - **Coding Mode**: Boolean flag; `true` requires a code block in question or options
-- **Coding Constraint**: Minimum 35% of all 60 questions must have `coding_mode = true` (≥21 coding questions per attempt)
+- **Coding Constraint**: Minimum 35% of all 50 questions must have `coding_mode = true` (≥18 coding questions per attempt)
 
 ### Coverage Goals
 
 - **Balanced topic distribution**: No single topic exceeds 40% of attempt (≤24 questions)
 - **Bloom diversity**: At least 3 distinct Bloom levels represented in each difficulty tier
 - **Subtopic spread**: Avoid clustering (no more than 5 consecutive questions from same subtopic)
-- **Coding threshold**: Minimum 35% coding questions (≥21 of 60)
+- **Coding threshold**: Minimum 35% coding questions (≥18 of 50)
 
 ## User Journey
 
 ### 1. Entry & Onboarding
 
-- **First-Time**: Explainer about 60 questions, pause/resume, post-completion feedback, unlimited attempts
-- **Resume**: Show progress (e.g., "22/60 answered"), started date, estimated time
+- **First-Time**: Explainer about 50 questions, pause/resume, post-completion feedback, unlimited attempts
+- **Resume**: Show progress (e.g., "22/50 answered"), started date, estimated time
 - **New Attempt**: Past attempts summary with scores, "Start Attempt #N" button
 
 ### 2. Question Flow
 
-- **Display**: Question + code (if coding), 4 options, metadata, progress bar ("15/60")
+- **Display**: Question + code (if coding), 4 options, metadata, progress bar ("15/50")
 - **Submission**: No feedback shown, silent recording, immediate next question load
 - **Navigation**: "Pause & Save" button, no backward navigation, auto-save after 30min idle
 
 ### 3. Completion & Results
 
 - **Summary**: Score with gauge, topic/subtopic/Bloom breakdowns, weak areas with recommendations
-- **Review**: All 60 questions with user/correct answers, explanations, citations; filter by correctness/topic
+- **Review**: All 50 questions with user/correct answers, explanations, citations; filter by correctness/topic
 - **Actions**: Start new attempt, download report, back to dashboard
 
 ## Question Generation & Selection Logic
@@ -104,18 +104,18 @@ LLM analyzes attempt context (questions asked, distributions, coverage gaps) to 
 
 #### `user_attempts`
 
-Purpose: Track evaluation attempts per user. One row = one complete 60-question evaluation.
+Purpose: Track evaluation attempts per user. One row = one complete 50-question evaluation.
 
 Key columns:
 
 - `id` (uuid, primary key)
 - `user_id` (uuid, FK to auth.users or device_id for pre-auth)
 - `status` (enum: 'in_progress' | 'completed' | 'abandoned')
-- `total_questions` (int, default 60, always 60 for v1)
-- `questions_answered` (int, default 0, increments from 0 to 60)
+- `total_questions` (int, default 50, always 50 for v1)
+- `questions_answered` (int, default 0, increments from 0 to 50)
 - `correct_count` (int, default 0)
 - `started_at` (timestamptz, when first question was assigned)
-- `completed_at` (timestamptz, nullable, when 60th question was answered)
+- `completed_at` (timestamptz, nullable, when 50th question was answered)
 - `metadata` (jsonb): session_count, pause_count, time_spent_seconds, last_session_at
 
 #### `attempt_questions`
@@ -127,7 +127,7 @@ Key columns:
 - `id` (uuid, primary key)
 - `attempt_id` (uuid, FK to user_attempts)
 - `question_id` (uuid, FK to mcq_items)
-- `question_order` (int, 1–60)
+- `question_order` (int, 1–50)
 - `user_answer_index` (int, 0–3, nullable until answered)
 - `is_correct` (boolean, nullable until answered)
 - `answered_at` (timestamptz, nullable)
@@ -162,7 +162,7 @@ Submit answer (question_id, user_answer_index, time_spent). Records silently, re
 
 ### 5. GET `/api/evaluate/attempts/:id/results`
 
-Post-completion analytics (FIRST feedback). Returns summary, topic/subtopic/Bloom breakdowns, weak areas, all 60 questions with answers/explanations/citations.
+Post-completion analytics (FIRST feedback). Returns summary, topic/subtopic/Bloom breakdowns, weak areas, all 50 questions with answers/explanations/citations.
 
 ### 6. PATCH `/api/evaluate/attempts/:id/pause`
 
@@ -217,7 +217,7 @@ States:
 Purpose: In-progress evaluation screen.
 Layout:
 
-- Top: progress bar (15/60), topic/subtopic/difficulty metadata strip, pause button
+- Top: progress bar (15/50), topic/subtopic/difficulty metadata strip, pause button
 - Center: question card (question text, code block if present, four option buttons)
 - Bottom: submit button, navigation hints (keyboard shortcuts)
 
@@ -229,7 +229,7 @@ Sections:
 - Summary card: score, accuracy gauge, time spent
 - Topic/Subtopic/Bloom charts or tables
 - Weak areas panel with recommendations
-- Review list: all 60 questions with filtering
+- Review list: all 50 questions with filtering
 
 ### Components (`components/evaluate/`)
 
@@ -303,7 +303,7 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 ### Design Principles
 
 - **Mobile-first**: Responsive across all devices
-- **No mid-attempt feedback**: Maintain evaluation integrity; show progress (15/60) not score
+- **No mid-attempt feedback**: Maintain evaluation integrity; show progress (15/50) not score
 - **Comprehensive post-completion feedback**: Detailed explanations, citations, weak areas
 - **Keyboard-first**: 1-4 for options, Enter for submit, Esc for pause
 - **Smooth animations**: Framer Motion with calm transitions (120-600ms); respect `prefers-reduced-motion`
@@ -401,7 +401,7 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 
 #### Phase 0: Static Ontology Configuration (Prerequisite)
 
-- [x] Replace LLM-driven ontology generation with a strongly typed constant (`constants/mvp-ontology.constants.ts`)
+- [x] Replace LLM-driven ontology generation with a strongly typed constant (`constants/mcq.constants.ts`)
 - [x] Load topics, subtopics, priorities, and weights via `utils/mcq.utils.ts`
 - [x] Remove runtime ontology, archetype, and weight generation utilities and APIs
 - [x] Ensure selection and generation reference the static configuration
@@ -434,16 +434,16 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 ## Acceptance Criteria
 
 - User can start a new evaluation attempt and see onboarding explainer (first-time only)
-- System generates/selects 60 questions following distribution (30 Easy, 20 Medium, 10 Hard) and coding threshold (≥35%)
-- No question repeats within a single 60-question attempt; cross-attempt repetition is minimized but not strictly prohibited
+- System generates/selects 50 questions following distribution (30 Easy, 13 Medium, 7 Hard) and coding threshold (≥35%)
+- No question repeats within a single 50-question attempt; cross-attempt repetition is minimized but not strictly prohibited
 - User can answer questions without receiving any feedback (correct/incorrect) during the attempt
 - System records answers silently and immediately loads next question after each submission
-- Progress bar shows questions answered (e.g., "22/60") but never shows score during attempt
+- Progress bar shows questions answered (e.g., "22/50") but never shows score during attempt
 - User can pause mid-attempt and resume later from exact same point across multiple sessions
-- After completing all 60 questions in an attempt, user sees results summary with topic/subtopic/Bloom breakdowns for the FIRST time
+- After completing all 50 questions in an attempt, user sees results summary with topic/subtopic/Bloom breakdowns for the FIRST time
 - Weak areas are highlighted with actionable recommendations and citation links
-- Review section displays all 60 questions with user's answer, correct answer, explanation (2–5 lines), and citations
-- User can start unlimited new 60-question attempts; past completed attempts are accessible from dashboard with scores and dates
+- Review section displays all 50 questions with user's answer, correct answer, explanation (2–5 lines), and citations
+- User can start unlimited new 50-question attempts; past completed attempts are accessible from dashboard with scores and dates
 - System tracks sessions per attempt (metadata.session_count increments each time user resumes an in-progress attempt)
 
 ## Automated Testing Strategy
@@ -452,9 +452,9 @@ Renders: scrollable list of all questions with user's answer, correct answer, ex
 
 **P0 Blockers:**
 
-- No mid-attempt feedback (verify no correctness/score during 60-question flow)
-- Intra-attempt uniqueness (all 60 questions unique)
-- Distribution enforcement (30/20/10, ≥35% coding, ≤40% per topic)
+- No mid-attempt feedback (verify no correctness/score during 50-question flow)
+- Intra-attempt uniqueness (all 50 questions unique)
+- Distribution enforcement (30/13/7, ≥35% coding, ≤40% per topic)
 - Accessibility (keyboard nav, screen reader, WCAG AA contrast)
 
 **P1 High:**

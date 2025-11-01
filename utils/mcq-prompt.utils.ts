@@ -1,8 +1,8 @@
 import type { TGeneratorBuildArgs, TJudgeBuildArgs, TNeighborMcq, TReviserBuildArgs } from "@/types/mcq.types";
 import { EPromptMode, EBloomLevel as BloomLevel } from "@/types/mcq.types";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";
-import { MVP_TOPICS } from "@/constants/mvp-ontology.constants";
-import type { TMvpTopic } from "@/constants/mvp-ontology.constants";
+import { MVP_TOPICS } from "@/constants/mcq.constants";
+import type { TMvpTopic } from "@/constants/mcq.constants";
 import type { TExample } from "../data/mcq-examples";
 import { pickExamples } from "../data/mcq-examples";
 import { getStaticSubtopicMap, getStaticTopicWeights } from "./mcq.utils";
@@ -15,7 +15,10 @@ const isMvpTopic = (topic?: string | null): topic is TMvpTopic =>
 export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: string; user: string } {
   const mode = args.mode ?? EPromptMode.FEW_SHOT;
   const topicForExamples = isMvpTopic(args.topic) ? args.topic : undefined;
-  const examples = pickExamples(args.examplesCount ?? 10, topicForExamples);
+  const requestedExamplesCount = Math.min(Math.max(args.examplesCount ?? 5, 3), 12);
+  const examples = topicForExamples
+    ? pickExamples(requestedExamplesCount, topicForExamples)
+    : pickExamples(requestedExamplesCount, args.topic);
   const prioritizedExamples = args.subtopic
     ? [...examples].sort((a, b) => Number(b.subtopic === args.subtopic) - Number(a.subtopic === args.subtopic))
     : examples;
@@ -64,6 +67,21 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
 
   const includeChainOfThought = mode === EPromptMode.CHAIN_OF_THOUGHT;
 
+  const previousQuestionsBlock = (() => {
+    const metaList = (args.previousQuestionsMeta ?? []).slice(-10);
+    if (metaList.length === 0) return undefined;
+    const lines = metaList.map((meta, index) => {
+      const parts = [
+        meta.subtopic ? `Subtopic: ${meta.subtopic}` : "Subtopic: (unspecified)",
+        meta.difficulty ? `Difficulty: ${meta.difficulty}` : "Difficulty: (unknown)",
+        meta.bloom ? `Bloom: ${meta.bloom}` : "Bloom: (unknown)",
+        `Has Code: ${meta.is_code ? "Yes" : "No"}`,
+      ];
+      return `${index + 1}. ${parts.join(" | ")}`;
+    });
+    return ["Previously asked questions in this topic (avoid duplicates):", ...lines].join("\n");
+  })();
+
   const examplesBlock = prioritizedExamples
     .map((ex: TExample, i: number): string => {
       const bullets = ex.explanationBullets.map((b: string) => `- ${b}`).join("\n");
@@ -109,6 +127,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     `Labels: ${labels}`,
     MCQ_PROMPTS.CONTEXT_HEADER,
     contextLines,
+    previousQuestionsBlock,
     mode === EPromptMode.FEW_SHOT
       ? "Examples (style reference):\n" + examplesBlock
       : includeChainOfThought

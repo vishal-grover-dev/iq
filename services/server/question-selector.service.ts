@@ -1,10 +1,17 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS } from "@/constants/generation.constants";
+import { EVALUATION_CONFIG } from "@/constants/evaluate.constants";
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
 import { parseJsonObject } from "@/utils/json.utils";
 import { generateQuestionPrompt } from "@/utils/mcq-prompts/selector-prompt.utils";
-import { getStaticTopicList, getStaticSubtopicMap } from "@/utils/mcq.utils";
-import { calculateCoverageWeights, weightedRandomIndex } from "@/utils/selection.utils";
+import {
+  getStaticSubtopicMap,
+  getCurrentTopicPhase,
+  getTopicProgress,
+  getRemainingQuestionsInTopic,
+  getNextTopic,
+} from "@/utils/mcq.utils";
+import { weightedRandomIndex } from "@/utils/selection.utils";
 import { createOpenAIClient, getErrorMessage } from "@/config/openai.config";
 
 /**
@@ -51,11 +58,17 @@ export async function selectNextQuestion(context: {
     bloom_distribution,
   } = context;
 
-  const total_target = 60;
-  const easy_target = 30;
-  const medium_target = 20;
-  const hard_target = 10;
-  const coding_target = Math.ceil(total_target * 0.35); // 21 minimum
+  const total_target = EVALUATION_CONFIG.TOTAL_QUESTIONS;
+  const easy_target = EVALUATION_CONFIG.EASY_QUESTIONS;
+  const medium_target = EVALUATION_CONFIG.MEDIUM_QUESTIONS;
+  const hard_target = EVALUATION_CONFIG.HARD_QUESTIONS;
+  const coding_target = EVALUATION_CONFIG.MIN_CODING_QUESTIONS;
+
+  const currentTopic = getCurrentTopicPhase(questions_answered);
+  const topicProgress = getTopicProgress(questions_answered, currentTopic);
+  const remainingInTopic = getRemainingQuestionsInTopic(questions_answered);
+  const nextTopic = getNextTopic(currentTopic);
+  const subtopicsByTopic = getStaticSubtopicMap();
 
   // Distribution status
   const easy_remaining = Math.max(0, easy_target - easy_count);
@@ -144,6 +157,13 @@ export async function selectNextQuestion(context: {
           preferred_subtopic: parsed.preferred_subtopic || "",
           preferred_bloom_level: parsed.preferred_bloom_level || "Understand",
         },
+        topic_phase: {
+          current: currentTopic,
+          completed: topicProgress.completed,
+          total: topicProgress.total,
+          remaining_in_topic: remainingInTopic,
+          next: nextTopic,
+        },
       });
     } catch (err) {
       console.error("🚀 ~ selectNextQuestion ~ err:", err);
@@ -158,8 +178,11 @@ export async function selectNextQuestion(context: {
       return EDifficulty.EASY;
     })();
     const coding_mode = Boolean(parsed.coding_mode);
-    const preferred_topic = String(parsed.preferred_topic || "React");
-    const preferred_subtopic = String(parsed.preferred_subtopic || "");
+    const requestedTopic = String(parsed.preferred_topic || currentTopic);
+    const preferred_topic = currentTopic;
+    const requestedSubtopic = String(parsed.preferred_subtopic || "");
+    const availableSubtopics = subtopicsByTopic[currentTopic] || [];
+    const preferred_subtopic = availableSubtopics.includes(requestedSubtopic) ? requestedSubtopic : "";
     const preferred_bloom_level = ((): EBloomLevel => {
       const l = String(parsed.preferred_bloom_level || "").toLowerCase();
       if (l === "remember") return EBloomLevel.REMEMBER;
@@ -171,6 +194,11 @@ export async function selectNextQuestion(context: {
       return EBloomLevel.UNDERSTAND;
     })();
     const reasoning = String(parsed.reasoning || "Selected based on attempt context");
+    const topicOverrideNote =
+      requestedTopic && requestedTopic !== currentTopic ? ` (override requested ${requestedTopic})` : "";
+    const finalReasoning =
+      `${reasoning} | Topic block: ${currentTopic}${topicOverrideNote} (${topicProgress.completed}/${topicProgress.total}, ${remainingInTopic} remaining)` +
+      (nextTopic ? ` → Next: ${nextTopic}` : "");
 
     return {
       difficulty,
@@ -178,7 +206,7 @@ export async function selectNextQuestion(context: {
       preferred_topic,
       preferred_subtopic,
       preferred_bloom_level,
-      reasoning,
+      reasoning: finalReasoning,
     };
   } catch (err) {
     console.error("LLM selector failed, using fallback:", getErrorMessage(err));
@@ -195,45 +223,17 @@ export async function selectNextQuestion(context: {
     const difficulty: EDifficulty = deficits[diffIdx]?.d ?? EDifficulty.EASY;
 
     // Force coding if behind pace (accelerate late if needed)
-    const coding_mode = coding_needed > 0 && (questions_answered >= 30 ? true : questions_answered >= 40);
+    const coding_mode = coding_needed > 0 && questions_answered >= Math.floor(total_target * 0.4);
 
-    // Topics: use dynamic ontology and weight by inverse coverage
-    let topics: string[] = [];
-    try {
-      topics = getStaticTopicList();
-    } catch (err) {
-      console.error("ontology_refresh_failed", { error: getErrorMessage(err) });
-      topics = [
-        "React",
-        "JavaScript",
-        "TypeScript",
-        "HTML",
-        "CSS",
-        "State Management",
-        "Routing",
-        "Testing",
-        "Accessibility",
-        "PWA",
-      ];
-    }
-    const topicWeightsMap = calculateCoverageWeights(topic_distribution, topics, 1);
-    const topicWeights = topics.map((t) => topicWeightsMap[t] || 1);
-    const topicIdx = weightedRandomIndex(topicWeights);
-    const topic = topics[topicIdx] || "React";
+    const topic = currentTopic;
 
     // Subtopic: prefer dynamic ontology for chosen topic, pick 1 underrepresented
     let preferred_subtopic: string = "";
-    try {
-      const subtopicsByTopic = getStaticSubtopicMap();
-      const subs = subtopicsByTopic[topic] || [];
-      if (subs.length > 0) {
-        // Build simple inverse-coverage weights using subtopic_distribution
-        const subWeights = subs.map((s) => 1 / ((subtopic_distribution[s] || 0) + 1));
-        const idx = weightedRandomIndex(subWeights);
-        preferred_subtopic = subs[idx] || "";
-      }
-    } catch (err) {
-      console.error("ontology_refresh_failed", { error: getErrorMessage(err) });
+    const subs = subtopicsByTopic[topic] || [];
+    if (subs.length > 0) {
+      const subWeights = subs.map((s) => 1 / ((subtopic_distribution[s] || 0) + 1));
+      const idx = weightedRandomIndex(subWeights);
+      preferred_subtopic = subs[idx] || "";
     }
 
     // Bloom level: prefer underrepresented globally
@@ -254,7 +254,9 @@ export async function selectNextQuestion(context: {
       preferred_topic: topic,
       preferred_subtopic,
       preferred_bloom_level,
-      reasoning: "Coverage-aware fallback after LLM error",
+      reasoning:
+        `Coverage-aware fallback after LLM error | Topic block: ${topic} (${topicProgress.completed}/${topicProgress.total}, ${remainingInTopic} remaining)` +
+        (nextTopic ? ` → Next: ${nextTopic}` : ""),
     };
   }
 }

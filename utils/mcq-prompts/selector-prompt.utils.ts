@@ -1,5 +1,13 @@
 import { EBloomLevel } from "@/types/mcq.types";
+import { EVALUATION_CONFIG } from "@/constants/evaluate.constants";
 import { getStaticTopicPriority, getStaticSubtopicMap, getStaticTopicWeights } from "@/utils/mcq.utils";
+import {
+  getCurrentTopicPhase,
+  getTopicProgress,
+  getRemainingQuestionsInTopic,
+  getNextTopic,
+  getTopicRanges,
+} from "@/utils/mcq.utils";
 
 /**
  * Generates system and user prompts for LLM-driven question selection in evaluations.
@@ -51,6 +59,17 @@ export function generateQuestionPrompt(context: {
   } = context;
 
   const remaining = total_target - questions_answered;
+  const topicRanges = getTopicRanges();
+  const currentTopic = getCurrentTopicPhase(questions_answered);
+  const topicProgress = getTopicProgress(questions_answered, currentTopic);
+  const remainingInTopic = getRemainingQuestionsInTopic(questions_answered);
+  const nextTopic = getNextTopic(currentTopic);
+  const topicSequence = topicRanges.map((range) => range.topic).join(" → ");
+  const topicSequenceBreakdown = topicRanges
+    .map((range) => `${range.topic}: Q${range.start}-${range.end} (${range.quota})`)
+    .join("\n");
+  const currentTopicSummary = `${currentTopic}: ${topicProgress.completed}/${topicProgress.total} completed (${remainingInTopic} remaining)`;
+  const nextTopicSummary = nextTopic ?? "None (final topic)";
 
   // Get comprehensive ontology data
   const topicWeights = getStaticTopicWeights();
@@ -85,12 +104,15 @@ export function generateQuestionPrompt(context: {
   // Get available Bloom levels from the enum
   const availableBloomLevels = Object.values(EBloomLevel).join(", ");
 
+  const difficultyTargetsSummary = `${EVALUATION_CONFIG.EASY_QUESTIONS} Easy, ${EVALUATION_CONFIG.MEDIUM_QUESTIONS} Medium, ${EVALUATION_CONFIG.HARD_QUESTIONS} Hard (total ${EVALUATION_CONFIG.TOTAL_QUESTIONS} questions)`;
+  const codingThresholdSummary = `${EVALUATION_CONFIG.MIN_CODING_QUESTIONS} of ${EVALUATION_CONFIG.TOTAL_QUESTIONS}`;
+
   const system = `You are an intelligent question selector for a comprehensive frontend skills evaluation. Your role is to analyze attempt context and determine optimal criteria for the next question to ensure:
 
 BALANCE REQUIREMENTS:
-1. Difficulty distribution: 30 Easy, 20 Medium, 10 Hard (total 60 questions)
-2. Coding threshold: ≥35% coding questions (minimum 21 of 60)
-3. Topic balance: Respect topic weights and avoid over-concentration (no single topic >40%)
+1. Difficulty distribution: ${difficultyTargetsSummary}
+2. Coding threshold: ≥35% coding questions (minimum ${codingThresholdSummary})
+3. Topic sequencing: Follow the strict topic order (${topicSequence}). Do not advance to the next block until the current quota is satisfied.
 4. Bloom diversity: ≥3 different Bloom levels per difficulty tier
 5. Subtopic distribution: Avoid clustering (no >5 consecutive from same subtopic)
 6. Weight-aware selection: Consider topic importance based on available content
@@ -105,6 +127,12 @@ TOPIC WEIGHTS & SUBTOPIC AVAILABILITY:
 The following topics are available with their relative importance (weights) and subtopic breakdown:
 
 ${topicBreakdown}
+
+TOPIC SEQUENCING (STRICT):
+- Current block progress: ${currentTopicSummary}
+- Next block: ${nextTopicSummary}
+- Full sequence plan:
+${topicSequenceBreakdown}
 
 SELECTION GUIDELINES:
 - Prioritize higher-weight topics when multiple options are viable
@@ -134,6 +162,12 @@ Distribution progress:
 - Medium: ${medium_count}/${medium_target} (${medium_remaining} remaining)  
 - Hard: ${hard_count}/${hard_target} (${hard_remaining} remaining)
 - Coding: ${coding_count}/${total_target} (need ≥${coding_target}, ${coding_needed} more needed)
+
+Topic sequencing status:
+- Current topic block: ${currentTopicSummary}
+- Next topic block: ${nextTopicSummary}
+- Planned sequence:
+${topicSequenceBreakdown}
 
 Comprehensive coverage of answered questions:
 - Topics covered: ${topic_list || "none yet"}

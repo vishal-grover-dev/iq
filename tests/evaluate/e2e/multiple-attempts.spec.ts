@@ -8,15 +8,22 @@
 import { test, expect } from "@playwright/test";
 import {
   startNewAttempt,
-  startFreshAttempt,
   answerQuestion,
-  getProgressInfo,
-  navigateToResults,
-  getAttemptQuestionIds,
   compareQuestionSets,
   isResetButtonAvailable,
 } from "../utils/testHelpers.utils";
-import { EVALUATE_PAGE_LABELS, RESULTS_PAGE_STATES } from "@/constants/evaluate.constants";
+
+type AttemptSummary = {
+  id: string;
+  status: string;
+  score_percentage: number;
+  started_at: string;
+  completed_at: string | null;
+};
+
+type AttemptHistoryResponse = {
+  attempts: AttemptSummary[];
+};
 
 test.describe("Multiple Attempts Flow", () => {
   test.beforeEach(async ({ page }) => {
@@ -87,12 +94,14 @@ test.describe("Multiple Attempts Flow", () => {
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt1Id);
 
     // Navigate to evaluate page and start attempt #2
     await page.goto("/evaluate");
     await page.waitForLoadState("networkidle");
 
     const attempt2Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt2Id);
 
     // Answer 20 questions in attempt #2 and collect IDs
     const attempt2QuestionIds: string[] = [];
@@ -117,6 +126,7 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 4);
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt1Id);
 
     await page.goto("/evaluate");
     await page.waitForLoadState("networkidle");
@@ -126,6 +136,7 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 4);
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt2Id);
 
     // Navigate to evaluate page
     await page.goto("/evaluate");
@@ -168,6 +179,7 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 4);
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt1Id);
 
     // Start and complete attempt #2
     await page.goto("/evaluate");
@@ -178,6 +190,7 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 4);
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt2Id);
 
     // Navigate to evaluate page
     await page.goto("/evaluate");
@@ -209,6 +222,7 @@ test.describe("Multiple Attempts Flow", () => {
         await answerQuestion(page, i % 4);
       }
       await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+      expect(page.url()).toContain(attemptId);
 
       if (attempt < 2) {
         await page.goto("/evaluate");
@@ -218,20 +232,24 @@ test.describe("Multiple Attempts Flow", () => {
 
     // Intercept attempts API call
     const attemptsResponse = await page.waitForResponse(/\/api\/evaluate\/attempts/);
-    const attemptsData = await attemptsResponse.json();
+    const attemptsData = (await attemptsResponse.json()) as AttemptHistoryResponse;
+    const attempts = attemptsData.attempts ?? [];
 
     // Assert response contains array with 3 attempts
-    expect(Array.isArray(attemptsData.attempts)).toBe(true);
-    expect(attemptsData.attempts).toHaveLength(3);
+    expect(Array.isArray(attempts)).toBe(true);
+    expect(attempts).toHaveLength(3);
+    expect(new Set(attemptIds).size).toBe(3);
+    const responseIds = attempts.map((attempt) => attempt.id);
+    attemptIds.forEach((id) => expect(responseIds).toContain(id));
 
     // Assert attempts are ordered by most recent first
-    const attemptDates = attemptsData.attempts.map((attempt: any) => new Date(attempt.started_at));
+    const attemptDates = attempts.map((attempt) => new Date(attempt.started_at));
     for (let i = 0; i < attemptDates.length - 1; i++) {
       expect(attemptDates[i].getTime()).toBeGreaterThanOrEqual(attemptDates[i + 1].getTime());
     }
 
     // Verify each attempt has required fields
-    attemptsData.attempts.forEach((attempt: any) => {
+    attempts.forEach((attempt) => {
       expect(attempt).toHaveProperty("id");
       expect(attempt).toHaveProperty("status");
       expect(attempt).toHaveProperty("score_percentage");
@@ -261,12 +279,14 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 4);
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt1Id);
 
     // Start attempt #2
     await page.goto("/evaluate");
     await page.waitForLoadState("networkidle");
 
     const attempt2Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt2Id);
 
     // Answer 10 questions in attempt #2
     for (let i = 0; i < 10; i++) {
@@ -293,12 +313,14 @@ test.describe("Multiple Attempts Flow", () => {
       await answerQuestion(page, i % 2); // Only options 0 and 1
     }
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attempt1Id);
 
     // Start attempt #2 with different answers
     await page.goto("/evaluate");
     await page.waitForLoadState("networkidle");
 
     const attempt2Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt2Id);
     for (let i = 0; i < 60; i++) {
       await answerQuestion(page, (i % 2) + 2); // Only options 2 and 3
     }

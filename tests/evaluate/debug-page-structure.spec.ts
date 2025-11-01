@@ -2,7 +2,7 @@
  * Debug test to understand page structure and API issues
  */
 
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("Debug Page Structure", () => {
   test("should debug what's on the evaluate page", async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe("Debug Page Structure", () => {
     console.log("Elements with data-testid:");
     for (const element of elementsWithTestId) {
       const testId = await element.getAttribute("data-testid");
-      const tagName = await element.evaluate(el => el.tagName);
+      const tagName = await element.evaluate((el) => el.tagName);
       const isVisible = await element.isVisible();
       console.log(`- ${tagName}[data-testid="${testId}"] (visible: ${isVisible})`);
     }
@@ -65,11 +65,11 @@ test.describe("Debug Page Structure", () => {
     if (await resetButton.isVisible()) {
       console.log("Reset button found, clicking...");
       await resetButton.click();
-      
+
       page.on("dialog", async (dialog) => {
         await dialog.accept();
       });
-      
+
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(1000);
     }
@@ -77,11 +77,11 @@ test.describe("Debug Page Structure", () => {
     // Look for resume or start button
     const resumeButton = page.getByRole("button", { name: /resume.*evaluation/i });
     const startButton = page.getByRole("button", { name: /start.*evaluation/i });
-    
+
     if (await resumeButton.isVisible()) {
       console.log("Resume button found, clicking...");
       await resumeButton.click();
-      
+
       // Wait for redirect
       await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/, { timeout: 15000 });
       await page.waitForLoadState("networkidle");
@@ -95,7 +95,7 @@ test.describe("Debug Page Structure", () => {
       console.log("Elements with data-testid on attempt page:");
       for (const element of elementsWithTestId) {
         const testId = await element.getAttribute("data-testid");
-        const tagName = await element.evaluate(el => el.tagName);
+        const tagName = await element.evaluate((el) => el.tagName);
         const isVisible = await element.isVisible();
         console.log(`- ${tagName}[data-testid="${testId}"] (visible: ${isVisible})`);
       }
@@ -104,7 +104,7 @@ test.describe("Debug Page Structure", () => {
       const questionCard = page.locator("[data-testid='question-card']");
       const questionCardExists = await questionCard.count();
       console.log(`Question card elements found: ${questionCardExists}`);
-      
+
       if (questionCardExists > 0) {
         const isVisible = await questionCard.isVisible();
         console.log(`Question card visible: ${isVisible}`);
@@ -124,7 +124,7 @@ test.describe("Debug Page Structure", () => {
     } else if (await startButton.isVisible()) {
       console.log("Start button found, clicking...");
       await startButton.click();
-      
+
       // Wait for redirect
       await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/, { timeout: 15000 });
       await page.waitForLoadState("networkidle");
@@ -138,7 +138,7 @@ test.describe("Debug Page Structure", () => {
       console.log("Elements with data-testid on attempt page:");
       for (const element of elementsWithTestId) {
         const testId = await element.getAttribute("data-testid");
-        const tagName = await element.evaluate(el => el.tagName);
+        const tagName = await element.evaluate((el) => el.tagName);
         const isVisible = await element.isVisible();
         console.log(`- ${tagName}[data-testid="${testId}"] (visible: ${isVisible})`);
       }
@@ -147,7 +147,7 @@ test.describe("Debug Page Structure", () => {
       const questionCard = page.locator("[data-testid='question-card']");
       const questionCardExists = await questionCard.count();
       console.log(`Question card elements found: ${questionCardExists}`);
-      
+
       if (questionCardExists > 0) {
         const isVisible = await questionCard.isVisible();
         console.log(`Question card visible: ${isVisible}`);

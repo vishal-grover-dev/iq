@@ -34,6 +34,7 @@ Initial scope focuses on React (v1) with a fast follow to JavaScript, TypeScript
 
 ### 3) Practice Experience & Adaptive Drills
 
+- **Full-length evaluation:** 50-question sequence with strict topic blocks (React → JavaScript → HTML → CSS → TypeScript → State Management → Accessibility → Testing). Distribute difficulty 30 Easy / 13 Medium / 7 Hard with ≥18 coding items. Stay within the active block before advancing; LLM selector receives per-topic progress metadata to avoid repeats.
 - **Timed quizzes:** Filter by topic/subtopic, difficulty, Bloom, and version tags.
 - **Adaptive weak‑area drills:** Auto 10‑Q drills targeting weakest subtopics and Bloom levels using a simple score: `0.7×errorRate + 0.3×timeZScore` with progressive difficulty escalation.
 - **No‑repeat policy:** Avoid repeats until ≥85% of the bank is consumed for chosen filters.

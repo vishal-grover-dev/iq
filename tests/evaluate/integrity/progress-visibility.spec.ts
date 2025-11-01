@@ -6,21 +6,8 @@
  */
 
 import { test, expect } from "@playwright/test";
-import {
-  startNewAttempt,
-  answerQuestion,
-  getProgressInfo,
-  assertProgressFormat,
-  pauseAttempt,
-  resumeAttempt,
-  assertProgressAccessibility,
-} from "../utils/testHelpers.utils";
-import {
-  toHaveCorrectProgressFormat,
-  toHaveNoScoreDisplay,
-  toHaveAccessibleProgress,
-} from "../utils/customMatchers.utils";
-import { EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS } from "@/constants/evaluate.constants";
+import { answerQuestion, assertProgressFormat, pauseAttempt, resumeAttempt, assertProgressAccessibility } from "../utils/testHelpers.utils";
+import { toHaveCorrectProgressFormat, toHaveNoScoreDisplay } from "../utils/customMatchers.utils";
 
 test.describe("Progress Visibility", () => {
   test("should update progress bar after each submission", async ({ page }) => {
@@ -41,6 +28,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer 5 questions and verify progress updates
     for (let i = 0; i < 5; i++) {
@@ -73,6 +61,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer 10 questions and verify progress is always visible
     for (let i = 0; i < 10; i++) {
@@ -104,6 +93,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer 30 questions (mix of correct/incorrect)
     for (let i = 0; i < 30; i++) {
@@ -138,6 +128,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer 15 questions
     for (let i = 0; i < 15; i++) {
@@ -185,6 +176,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer a few questions
     for (let i = 0; i < 3; i++) {
@@ -219,6 +211,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer questions and verify smooth transitions
     for (let i = 0; i < 5; i++) {
@@ -266,6 +259,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer questions with slow network
     for (let i = 0; i < 3; i++) {
@@ -294,6 +288,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer 5 questions
     for (let i = 0; i < 5; i++) {
@@ -329,6 +324,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
     await answerQuestion(page, 0);
 
     // Assert progress is visible on desktop
@@ -369,6 +365,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Submit answers rapidly
     for (let i = 0; i < 5; i++) {
@@ -406,6 +403,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Navigate with keyboard
     await page.keyboard.press("Tab"); // Focus first option
@@ -445,6 +443,7 @@ test.describe("Progress Visibility", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     // Answer question and check progress during loading
     await answerQuestion(page, 0);

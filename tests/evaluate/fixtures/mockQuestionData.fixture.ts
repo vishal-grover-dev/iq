@@ -4,7 +4,7 @@
  */
 
 import { EDifficulty, EBloomLevel } from "@/types/mcq.types";
-import type { IEvaluationQuestion, IQuestionMetadata } from "@/types/evaluate.types";
+import type { IEvaluationQuestion } from "@/types/evaluate.types";
 
 /**
  * Easy React question (non-coding)

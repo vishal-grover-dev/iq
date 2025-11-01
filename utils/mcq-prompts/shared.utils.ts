@@ -4,6 +4,7 @@
  */
 
 import type { TExample } from "../../data/mcq-examples";
+import type { TPreviousQuestionMeta } from "@/types/mcq.types";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";
 
 /**
@@ -71,6 +72,24 @@ export function formatNegativeExamplesBlock(negativeExamples: string[] | undefin
 export function formatAvailableSubtopicsHint(subtopics: string[] | null | undefined): string | undefined {
   if (!subtopics || subtopics.length === 0) return undefined;
   return `Available subtopics for this topic: ${subtopics.join(", ")}.`;
+}
+
+export function formatPreviousQuestionsMetaBlock(
+  metaList: TPreviousQuestionMeta[] | undefined,
+  limit: number = 10
+): string | undefined {
+  if (!metaList || metaList.length === 0) return undefined;
+  const entries = metaList.slice(-limit).map((meta, index) => {
+    const pieces = [
+      meta.subtopic ? `Subtopic: ${meta.subtopic}` : "Subtopic: (unspecified)",
+      meta.difficulty ? `Difficulty: ${meta.difficulty}` : "Difficulty: (unknown)",
+      meta.bloom ? `Bloom: ${meta.bloom}` : "Bloom: (unknown)",
+      `Has Code: ${meta.is_code ? "Yes" : "No"}`,
+    ];
+    return `${index + 1}. ${pieces.join(" | ")}`;
+  });
+
+  return ["Previously asked questions in this topic (avoid duplicates):", ...entries].join("\n");
 }
 
 /**

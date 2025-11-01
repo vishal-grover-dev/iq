@@ -145,3 +145,78 @@ export function getMvpTopicWeight(topic: TMvpTopic): number {
 export function getMvpTopicPriority(topic: TMvpTopic): EMvpTopicPriority {
   return MVP_TOPICS[topic].priority;
 }
+
+export function assertSubtopic(topic: TMvpTopic, value: string): TMvpSubtopic {
+  const subtopics = MVP_TOPICS[topic].subtopics as readonly TMvpSubtopic[];
+  if (!subtopics.includes(value as TMvpSubtopic)) {
+    throw new Error(`[mcq.constants] Unknown subtopic "${value}" for topic "${topic}".`);
+  }
+  return value as TMvpSubtopic;
+}
+
+export const TOPICS = {
+  REACT: "React",
+  JAVASCRIPT: "JavaScript",
+  HTML: "HTML",
+  CSS: "CSS",
+  STATE_MANAGEMENT: "State Management",
+  TYPESCRIPT: "TypeScript",
+  ACCESSIBILITY: "Accessibility",
+  TESTING: "Testing",
+} as const satisfies Record<string, TMvpTopic>;
+
+export const SUBTOPICS = {
+  React: {
+    HooksUseRef: assertSubtopic(TOPICS.REACT, "Hooks: useRef"),
+    HooksUseEffect: assertSubtopic(TOPICS.REACT, "Hooks: useEffect"),
+    ListsKeysReconciliation: assertSubtopic(TOPICS.REACT, "Lists & Keys (Reconciliation)"),
+    ComponentsProps: assertSubtopic(TOPICS.REACT, "Components & Props"),
+    HooksUseState: assertSubtopic(TOPICS.REACT, "Hooks: useState"),
+    HooksUseMemoUseCallback: assertSubtopic(TOPICS.REACT, "Hooks: useMemo & useCallback"),
+    CustomHooks: assertSubtopic(TOPICS.REACT, "Custom Hooks"),
+    PerformanceOptimization: assertSubtopic(TOPICS.REACT, "Performance Optimization"),
+    ContextApi: assertSubtopic(TOPICS.REACT, "Context API"),
+    ErrorBoundaries: assertSubtopic(TOPICS.REACT, "Error Boundaries"),
+  },
+  JavaScript: {
+    ArrayPrototypeMethods: assertSubtopic(TOPICS.JAVASCRIPT, "Array Prototype Methods"),
+    AsyncAwaitPromises: assertSubtopic(TOPICS.JAVASCRIPT, "Async/Await & Promises"),
+    ClosuresLexicalScope: assertSubtopic(TOPICS.JAVASCRIPT, "Closures & Lexical Scope"),
+  },
+  TypeScript: {
+    TypeNarrowing: assertSubtopic(TOPICS.TYPESCRIPT, "Type Narrowing"),
+    ReactComponentPropsTyping: assertSubtopic(TOPICS.TYPESCRIPT, "React Component Props Typing"),
+    GenericComponents: assertSubtopic(TOPICS.TYPESCRIPT, "Generic Components"),
+  },
+  HTML: {
+    DocumentStructureSemantics: assertSubtopic(TOPICS.HTML, "Document Structure & Semantics"),
+    FormsValidationBasics: assertSubtopic(TOPICS.HTML, "Forms & Validation Basics"),
+    AccessibilityFundamentals: assertSubtopic(TOPICS.HTML, "Accessibility Fundamentals"),
+  },
+  CSS: {
+    FlexboxFundamentals: assertSubtopic(TOPICS.CSS, "Flexbox Fundamentals"),
+    GridLayoutBasics: assertSubtopic(TOPICS.CSS, "Grid Layout Basics"),
+    ResponsiveDesignTechniques: assertSubtopic(TOPICS.CSS, "Responsive Design Techniques"),
+  },
+  StateManagement: {
+    ReactContextApi: assertSubtopic(TOPICS.STATE_MANAGEMENT, "React Context API"),
+    StateLiftingPatterns: assertSubtopic(TOPICS.STATE_MANAGEMENT, "State Lifting Patterns"),
+    ReduxToolkitBasics: assertSubtopic(TOPICS.STATE_MANAGEMENT, "Redux Toolkit Basics"),
+  },
+  Accessibility: {
+    FocusManagementKeyboardNavigation: assertSubtopic(
+      TOPICS.ACCESSIBILITY,
+      "Focus Management & Keyboard Navigation"
+    ),
+    AriaRolesAttributes: assertSubtopic(TOPICS.ACCESSIBILITY, "ARIA Roles & Attributes"),
+    ColorContrastTheming: assertSubtopic(TOPICS.ACCESSIBILITY, "Color Contrast & Theming"),
+  },
+  Testing: {
+    AsyncTestingPatterns: assertSubtopic(TOPICS.TESTING, "Async Testing Patterns"),
+    ComponentRenderingQueries: assertSubtopic(TOPICS.TESTING, "Component Rendering & Queries"),
+    MockingFundamentals: assertSubtopic(TOPICS.TESTING, "Mocking Fundamentals"),
+  },
+} as const satisfies Record<string, Record<string, TMvpSubtopic>>;
+
+export type TTopicKey = keyof typeof TOPICS;
+

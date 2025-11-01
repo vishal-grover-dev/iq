@@ -43,6 +43,7 @@ test.describe("First-Time User Flow", () => {
     // Assert redirect to attempt page
     expect(page.url()).toMatch(/\/evaluate\/[a-f0-9-]+$/);
     expect(attemptId).toBeTruthy();
+    expect(page.url()).toContain(attemptId);
 
     // Assert first question loads with progress showing "Question 1 / 60"
     await expect(page.locator("[data-testid='progress-indicator']")).toContainText("Question 1 / 60");
@@ -64,6 +65,7 @@ test.describe("First-Time User Flow", () => {
   test("should answer questions and verify progress updates", async ({ page }) => {
     // Start new attempt
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     const questionIds: string[] = [];
 
@@ -100,6 +102,7 @@ test.describe("First-Time User Flow", () => {
   test("should handle pause functionality correctly", async ({ page }) => {
     // Start new attempt and answer a few questions
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     // Answer 3 questions
     for (let i = 0; i < 3; i++) {
@@ -146,6 +149,7 @@ test.describe("First-Time User Flow", () => {
   test("should handle keyboard navigation", async ({ page }) => {
     // Start new attempt
     const attemptId = await startNewAttempt(page);
+    expect(page.url()).toContain(attemptId);
 
     // Test keyboard shortcuts (1-4 for options, Enter for submit)
     await page.keyboard.press("1"); // Select first option
@@ -186,6 +190,7 @@ test.describe("First-Time User Flow", () => {
       // Verify we're on a fresh attempt page
       expect(page.url()).toMatch(/\/evaluate\/[a-f0-9-]+$/);
       expect(attemptId).toBeTruthy();
+      expect(page.url()).toContain(attemptId);
 
       // Verify no past attempts are shown
       const pastAttempts = page.locator("text=/Past Attempts/");
@@ -194,6 +199,7 @@ test.describe("First-Time User Flow", () => {
       // Fall back to regular startNewAttempt if reset not available
       const attemptId = await startNewAttempt(page);
       expect(attemptId).toBeTruthy();
+      expect(page.url()).toContain(attemptId);
     }
   });
 });

@@ -82,6 +82,11 @@ function findExistingPendingQuestion(
   return pending || null;
 }
 
+function extractAskedMcq(entry: IAskedQuestionRow): IBankCandidate | null {
+  const raw = Array.isArray(entry.mcq_items) ? entry.mcq_items[0] : entry.mcq_items;
+  return raw ? (raw as IBankCandidate) : null;
+}
+
 async function validateAttemptQuestions(
   attemptId: string,
   supabase: SupabaseClient
@@ -307,6 +312,9 @@ function scoreCandidate(
   distributions: IDistributions,
   attempt: IAttemptContext
 ): number {
+  void criteria;
+  void distributions;
+  void attempt;
   let score = 100; // Base score for exact matches
 
   // Apply penalties for similarity and freshness
@@ -496,10 +504,41 @@ async function generateMcqFallback(
   const contextTopic = criteria.preferred_topic || "React";
   const contextSubtopic = criteria.preferred_subtopic;
 
+  const topicFilteredQuestions = askedQuestions.filter((entry) => {
+    const mcqItem = extractAskedMcq(entry);
+    return mcqItem?.topic === contextTopic;
+  });
+
+  const previousQuestionsMeta = topicFilteredQuestions
+    .map((entry) => {
+      const mcqItem = extractAskedMcq(entry);
+      if (!mcqItem || !mcqItem.topic) {
+        return null;
+      }
+      return {
+        topic: String(mcqItem.topic),
+        subtopic: String(mcqItem.subtopic || ""),
+        is_code: Boolean(mcqItem.code),
+        difficulty: String(mcqItem.difficulty || ""),
+        bloom: String(mcqItem.bloom_level || ""),
+      };
+    })
+    .filter(
+      (
+        meta
+      ): meta is {
+        topic: string;
+        subtopic: string;
+        is_code: boolean;
+        difficulty: string;
+        bloom: string;
+      } => Boolean(meta && meta.topic)
+    );
+
   let negativeExamples: string[] = askedQuestions
     .slice(-NEGATIVE_EXAMPLES_LOOKAHEAD)
     .map((q) => {
-      const mcqItem = Array.isArray(q.mcq_items) ? q.mcq_items[0] : q.mcq_items;
+      const mcqItem = extractAskedMcq(q);
       return String(mcqItem?.question || "");
     })
     .filter((s) => s.length > 0);
@@ -546,6 +585,7 @@ async function generateMcqFallback(
         negativeExamples,
         avoidTopics: [],
         avoidSubtopics: [],
+        previousQuestionsMeta,
       });
 
       const contentKey = computeMcqContentKey(generatedMcq);

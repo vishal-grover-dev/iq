@@ -8,7 +8,6 @@ import { test, expect } from "@playwright/test";
 import {
   startNewAttempt,
   answerQuestion,
-  getProgressInfo,
   assertNoCorrectnessFeedback,
   assertProgressFormat,
   resetAllAttempts,

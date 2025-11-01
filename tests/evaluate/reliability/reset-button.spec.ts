@@ -11,7 +11,6 @@ import {
   isResetButtonAvailable,
   startNewAttempt,
   answerQuestion,
-  getPastAttempts,
 } from "../utils/testHelpers.utils";
 
 test.describe("Reset Button Functionality", () => {
@@ -42,6 +41,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Create some attempts first
     const attempt1Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt1Id);
     for (let i = 0; i < 5; i++) {
       await answerQuestion(page, i % 4);
     }
@@ -86,6 +86,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Create some attempts first
     const attempt1Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt1Id);
     for (let i = 0; i < 3; i++) {
       await answerQuestion(page, i % 4);
     }
@@ -122,6 +123,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Create some attempts first
     const attempt1Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt1Id);
     for (let i = 0; i < 3; i++) {
       await answerQuestion(page, i % 4);
     }
@@ -158,6 +160,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Create multiple attempts with different progress
     const attempt1Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt1Id);
     for (let i = 0; i < 10; i++) {
       await answerQuestion(page, i % 4);
     }
@@ -168,6 +171,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Start second attempt
     const attempt2Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt2Id);
     for (let i = 0; i < 5; i++) {
       await answerQuestion(page, i % 4);
     }
@@ -218,6 +222,7 @@ test.describe("Reset Button Functionality", () => {
 
     // Create some attempts
     const attempt1Id = await startNewAttempt(page);
+    expect(page.url()).toContain(attempt1Id);
     for (let i = 0; i < 3; i++) {
       await answerQuestion(page, i % 4);
     }

@@ -44,6 +44,14 @@ export enum EPromptMode {
   CHAIN_OF_THOUGHT = "chain_of_thought",
 }
 
+export type TPreviousQuestionMeta = {
+  topic: string;
+  subtopic: string;
+  is_code: boolean;
+  difficulty: string;
+  bloom: string;
+};
+
 export type TGeneratorBuildArgs = {
   topic: string;
   subtopic?: string | null;
@@ -82,6 +90,10 @@ export type TGeneratorBuildArgs = {
    * Additional builder instructions appended to the prompt when experimenting with new guidance.
    */
   extraInstructions?: string | null;
+  /**
+   * Metadata about prior questions from the same topic within the current attempt.
+   */
+  previousQuestionsMeta?: TPreviousQuestionMeta[];
 };
 
 export type TJudgeBuildArgs = {

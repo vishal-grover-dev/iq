@@ -4,12 +4,15 @@
  * Contains simple constants for evaluation functionality that don't require enums.
  */
 
+export const REACT_QUESTIONS_SIZE = 50;
+export const REACT_MIN_CODING_QUESTION_COUNT = Math.ceil(REACT_QUESTIONS_SIZE * 0.35);
+
 /**
  * Evaluate page labels
  */
 export const EVALUATE_PAGE_LABELS = {
   PAGE_TITLE: "Frontend Skills Assessment",
-  PAGE_DESCRIPTION: "Test your React.js ecosystem knowledge with a comprehensive 60-question evaluation",
+  PAGE_DESCRIPTION: `Test your React.js ecosystem knowledge with a comprehensive ${REACT_QUESTIONS_SIZE}-question evaluation`,
   RESUME_TITLE: "Resume Your Evaluation",
   RESUME_SUBTITLE: "Continue where you left off",
   PROGRESS_LABEL: "Progress",
@@ -119,7 +122,7 @@ export const EVALUATE_API_ERROR_MESSAGES = {
   ATTEMPT_ID_REQUIRED: "Attempt ID is required",
   AUTHENTICATION_REQUIRED: "Authentication required",
   ATTEMPT_NOT_FOUND: "Attempt not found",
-  ATTEMPT_NOT_COMPLETED: "Attempt not completed yet. Complete all 60 questions first.",
+  ATTEMPT_NOT_COMPLETED: `Attempt not completed yet. Complete all ${REACT_QUESTIONS_SIZE} questions first.`,
   FAILED_TO_CREATE_ATTEMPT: "Failed to create attempt",
   FAILED_TO_FETCH_ATTEMPTS: "Failed to fetch attempts",
   FAILED_TO_FETCH_QUESTIONS: "Failed to fetch attempt questions",
@@ -145,12 +148,35 @@ export const EVALUATE_API_ERROR_MESSAGES = {
  * Evaluation configuration
  */
 export const EVALUATION_CONFIG = {
-  TOTAL_QUESTIONS: 60,
+  TOTAL_QUESTIONS: REACT_QUESTIONS_SIZE,
   EASY_QUESTIONS: 30,
-  MEDIUM_QUESTIONS: 20,
-  HARD_QUESTIONS: 10,
-  MIN_CODING_QUESTIONS: 21, // 35% of 60
+  MEDIUM_QUESTIONS: 13,
+  HARD_QUESTIONS: 7,
+  MIN_CODING_QUESTIONS: REACT_MIN_CODING_QUESTION_COUNT, // 35% of total (rounded up)
   MAX_TOPIC_PERCENTAGE: 40, // No single topic exceeds 40%
+} as const;
+
+export const TOPIC_SEQUENCE_CONFIG = {
+  SEQUENCE: [
+    "React",
+    "JavaScript",
+    "HTML",
+    "CSS",
+    "TypeScript",
+    "State Management",
+    "Accessibility",
+    "Testing",
+  ] as const,
+  QUESTIONS_PER_TOPIC: {
+    React: 20,
+    JavaScript: 15,
+    HTML: 3,
+    CSS: 3,
+    TypeScript: 3,
+    "State Management": 2,
+    Accessibility: 2,
+    Testing: 2,
+  },
 } as const;
 
 /**

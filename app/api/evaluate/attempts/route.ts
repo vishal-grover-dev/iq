@@ -3,14 +3,14 @@ import { getAuthenticatedUserId } from "@/utils/auth.utils";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { getSupabaseServiceRoleClient } from "@/config/supabase.config";
 import { EAttemptStatus } from "@/types/evaluate.types";
-import { EVALUATE_API_ERROR_MESSAGES } from "@/constants/evaluate.constants";
+import { EVALUATE_API_ERROR_MESSAGES, REACT_QUESTIONS_SIZE } from "@/constants/evaluate.constants";
 import { logger } from "@/utils/logger.utils";
 
 export const runtime = "nodejs";
 
 /**
  * POST /api/evaluate/attempts
- * Creates a new 60-question evaluation attempt for the current user.
+ * Creates a new evaluation attempt for the current user using the configured question count.
  */
 export async function POST() {
   try {
@@ -26,7 +26,7 @@ export async function POST() {
       .insert({
         user_id: userId,
         status: EAttemptStatus.InProgress,
-        total_questions: 60,
+        total_questions: REACT_QUESTIONS_SIZE,
         questions_answered: 0,
         correct_count: 0,
         metadata: {

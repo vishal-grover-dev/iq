@@ -1,32 +1,27 @@
 /**
  * Complete Attempt Flow E2E Tests
  *
- * Tests the complete 60-question attempt flow and results page functionality.
+ * Tests the complete evaluation flow and results page functionality.
  * Validates results display, score calculation, breakdowns, weak areas, and question review.
  */
 
 import { test, expect } from "@playwright/test";
-import {
-  startNewAttempt,
-  answerQuestion,
-  getProgressInfo,
-  navigateToResults,
-  waitForApiResponse,
-} from "../utils/testHelpers.utils";
+import { startNewAttempt, answerQuestion, TOTAL_QUESTIONS, PROGRESS_LOCATOR_PATTERN } from "../utils/testHelpers.utils";
 import { RESULTS_PAGE_STATES } from "@/constants/evaluate.constants";
 
 test.describe("Complete Attempt Flow", () => {
-  test("should complete all 60 questions and redirect to results", async ({ page }) => {
+  test("should complete all questions and redirect to results", async ({ page }) => {
     // Start new attempt
     const attemptId = await startNewAttempt(page);
 
-    // Answer all 60 questions
-    for (let i = 0; i < 60; i++) {
+    // Answer all questions
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4); // Cycle through options 0-3
     }
 
     // Assert redirect to results page
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
 
     // Assert results page URL matches pattern
     expect(page.url()).toMatch(/\/evaluate\/[a-f0-9-]+\/results$/);
@@ -36,12 +31,13 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     // Wait for results page
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
 
     // Assert score gauge is visible
     await expect(page.locator("text=/Evaluation Results/")).toBeVisible();
@@ -50,9 +46,9 @@ test.describe("Complete Attempt Flow", () => {
     const scoreText = await page.locator("text=/\\d+%/").first().textContent();
     expect(scoreText).toBeTruthy();
 
-    // Assert "X / 60 correct" text is visible
-    const correctText = await page.locator("text=/\\d+\\s*\\/\\s*60/").textContent();
-    expect(correctText).toContain("/ 60");
+    // Assert "X / total" correct text is visible
+    const correctText = await page.locator(PROGRESS_LOCATOR_PATTERN).textContent();
+    expect(correctText).toContain(`/${TOTAL_QUESTIONS}`);
 
     // Assert this is the FIRST time user sees correctness feedback
     // (No correctness indicators should have been shown during the attempt)
@@ -63,11 +59,13 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
+    expect(page.url()).toContain(attemptId);
 
     // Assert topic breakdown is visible
     await expect(page.locator("text=/Performance by Topic/")).toBeVisible();
@@ -86,11 +84,13 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
+    expect(page.url()).toContain(attemptId);
 
     // Assert weak areas panel is visible (if user has weak areas)
     const weakAreasPanel = page.locator("text=/Areas to Improve/");
@@ -110,15 +110,16 @@ test.describe("Complete Attempt Flow", () => {
     }
   });
 
-  test("should show review section with all 60 questions", async ({ page }) => {
+  test("should show review section with all questions", async ({ page }) => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
 
     // Scroll to review section
     await page.locator("text=/Question Review/").scrollIntoViewIfNeeded();
@@ -150,13 +151,14 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     // Intercept results API call
     const resultsResponse = await page.waitForResponse(/\/api\/evaluate\/attempts\/.*\/results/);
     const resultsData = await resultsResponse.json();
+    expect(resultsResponse.url()).toContain(attemptId);
 
     // Assert response contains required fields
     expect(resultsData).toHaveProperty("summary");
@@ -178,15 +180,15 @@ test.describe("Complete Attempt Flow", () => {
     expect(Array.isArray(resultsData.weak_areas)).toBe(true);
     expect(Array.isArray(resultsData.questions)).toBe(true);
 
-    // Assert questions array has 60 items
-    expect(resultsData.questions).toHaveLength(60);
+    // Assert questions array has expected number of items
+    expect(resultsData.questions).toHaveLength(TOTAL_QUESTIONS);
   });
 
   test("should handle results page loading states", async ({ page }) => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
@@ -195,6 +197,7 @@ test.describe("Complete Attempt Flow", () => {
 
     // Wait for results to load
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
     await expect(page.locator("text=/Evaluation Results/")).toBeVisible();
   });
 
@@ -214,11 +217,12 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
 
     // Click "Back to Evaluate" button
     const backButton = page.getByRole("button", { name: /back to evaluate/i });
@@ -234,11 +238,12 @@ test.describe("Complete Attempt Flow", () => {
     // Complete attempt
     const attemptId = await startNewAttempt(page);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TOTAL_QUESTIONS; i++) {
       await answerQuestion(page, i % 4);
     }
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+\/results$/);
+    expect(page.url()).toContain(attemptId);
 
     // Click "Start New Attempt" button
     const newAttemptButton = page.getByRole("button", { name: /start new attempt/i });
@@ -247,6 +252,6 @@ test.describe("Complete Attempt Flow", () => {
 
     // Should redirect to new attempt page
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
-    await expect(page.locator("[data-testid='progress-indicator']")).toContainText("Question 1 / 60");
+    await expect(page.locator("[data-testid='progress-indicator']")).toContainText(`Question 1 / ${TOTAL_QUESTIONS}`);
   });
 });

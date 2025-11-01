@@ -444,7 +444,7 @@ This document captures the "why" behind key technical choices in the IQ project.
 
 ## Static Ontology Configuration
 
-- The evaluation feature sources topics, subtopics, priorities, and weights from `constants/mvp-ontology.constants.ts`, surfaced through `utils/mcq.utils.ts`.
+- The evaluation feature sources topics, subtopics, priorities, and weights from `constants/mcq.constants.ts`, surfaced through `utils/mcq.utils.ts`.
 - This replaces both the legacy runtime ontology generator and the previous JSON file while keeping deterministic behavior and strong typing.
 - Maintenance workflow: update the TypeScript constant (and shared enum/types in `types/app.types.ts`) when the ontology changes, then redeploy.
 

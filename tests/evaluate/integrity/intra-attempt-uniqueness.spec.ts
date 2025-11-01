@@ -6,17 +6,8 @@
  */
 
 import { test, expect } from "@playwright/test";
-import {
-  startNewAttempt,
-  answerQuestion,
-  answerMultipleQuestions,
-  getCurrentQuestionId,
-  getAttemptQuestionIds,
-  pauseAttempt,
-  resumeAttempt,
-} from "../utils/testHelpers.utils";
-import { toHaveUniqueQuestionIds, toHaveUniqueContent, toHaveNoDuplicates } from "../utils/customMatchers.utils";
-import { EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS } from "@/constants/evaluate.constants";
+import { answerQuestion, getCurrentQuestionId, pauseAttempt, resumeAttempt } from "../utils/testHelpers.utils";
+import { toHaveUniqueQuestionIds, toHaveUniqueContent } from "../utils/customMatchers.utils";
 
 test.describe("Intra-Attempt Uniqueness", () => {
   test("should have unique question IDs for all 60 questions", async ({ page }) => {
@@ -36,6 +27,11 @@ test.describe("Intra-Attempt Uniqueness", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
 
     const questionIds: string[] = [];
 
@@ -79,6 +75,10 @@ test.describe("Intra-Attempt Uniqueness", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
+    expect(attemptId).toBeTruthy();
 
     const firstBatchIds: string[] = [];
 
@@ -136,6 +136,7 @@ test.describe("Intra-Attempt Uniqueness", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     const questionTexts: string[] = [];
 
@@ -374,6 +375,7 @@ test.describe("Intra-Attempt Uniqueness", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     const questionIds: string[] = [];
 
@@ -413,6 +415,7 @@ test.describe("Intra-Attempt Uniqueness", () => {
 
     await page.waitForURL(/\/evaluate\/[a-f0-9-]+$/);
     const attemptId = page.url().match(/\/evaluate\/([a-f0-9-]+)$/)?.[1];
+    expect(attemptId).toBeTruthy();
 
     const questionIds: string[] = [];
 

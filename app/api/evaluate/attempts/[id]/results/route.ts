@@ -16,14 +16,14 @@ import { logger } from "@/utils/logger.utils";
  * GET /api/evaluate/attempts/:id/results
  *
  * Fetch comprehensive post-attempt analytics and review data.
- * Only available after completing all 60 questions.
+ * Only available after completing all configured questions.
  * This is the FIRST time users see any feedback about their answers.
  *
  * Returns:
  * - Summary: score percentage, time spent
  * - Topic/subtopic/Bloom breakdowns with accuracy
  * - Weak areas identification with recommendations
- * - Complete question review (all 60 questions with user answer, correct answer, explanation, citations)
+ * - Complete question review (all questions with user answer, correct answer, explanation, citations)
  */
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const params = await context.params;

@@ -2,7 +2,7 @@
  * Manual reset script to clear all attempts
  */
 
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("Manual Reset", () => {
   test("should reset all attempts manually", async ({ page }) => {

@@ -29,7 +29,7 @@ import {
  * Users can pause and resume across sessions.
  *
  * After answering, immediately loads next question.
- * On completion (60/60), redirects to results page.
+ * On completion (50/50), redirects to results page.
  */
 export default function EvaluateAttemptPage() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import { OPENAI_API_KEY } from "@/constants/app.constants";
 import { OPENAI_CONFIG, AI_SERVICE_ERRORS, MCQ_SIMILARITY_THRESHOLDS } from "@/constants/generation.constants";
-import type { IMcqItemView, IMcqGenerationRawResponse } from "@/types/mcq.types";
+import type { IMcqItemView, IMcqGenerationRawResponse, TPreviousQuestionMeta } from "@/types/mcq.types";
 import { EDifficulty, EBloomLevel, EPromptMode, EQuestionStyle } from "@/types/mcq.types";
 import type { ICitation, IContextRow, INeighborRow, IRecentQuestionRow } from "@/types/evaluate.types";
 import { parseJsonObject } from "@/utils/json.utils";
@@ -30,6 +30,7 @@ export async function generateMcqFromContext(args: {
   avoidTopics?: string[];
   avoidSubtopics?: string[];
   questionStyle?: EQuestionStyle;
+  previousQuestionsMeta?: TPreviousQuestionMeta[];
 }): Promise<IMcqItemView> {
   if (!OPENAI_API_KEY) throw new Error(AI_SERVICE_ERRORS.MISSING_API_KEY);
   const client = createOpenAIClient();
@@ -55,6 +56,7 @@ export async function generateMcqFromContext(args: {
     avoidSubtopics: args.avoidSubtopics,
     questionStyle: styleInfo?.style,
     extraInstructions: styleInfo?.instruction ?? null,
+    previousQuestionsMeta: args.previousQuestionsMeta,
   });
 
   // Structured metrics: prompt context (avoid lists, negatives, ontology)
@@ -69,6 +71,7 @@ export async function generateMcqFromContext(args: {
       negative_examples_count: (args.negativeExamples ?? []).length,
       question_style_requested: args.questionStyle ?? null,
       question_style_applied: styleInfo?.style ?? null,
+      previous_topic_questions: (args.previousQuestionsMeta ?? []).length,
     });
   } catch (err) {
     console.error("🚀 ~ generateMcqFromContext ~ err:", err);

@@ -8,7 +8,7 @@ import {
   useResetAttemptsMutation,
 } from "@/services/client/evaluate.services";
 import { PlayIcon, ArrowRightIcon, ClockIcon, TrashIcon } from "@phosphor-icons/react";
-import { EVALUATION_CONFIG, EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS } from "@/constants/evaluate.constants";
+import { EVALUATE_PAGE_LABELS, QUESTION_CARD_LABELS, REACT_QUESTIONS_SIZE } from "@/constants/evaluate.constants";
 import { DEV_DEFAULT_USER_ID } from "@/constants/app.constants";
 import { toast } from "sonner";
 
@@ -118,15 +118,14 @@ export default function EvaluatePage() {
             <div className='flex items-center justify-between text-sm'>
               <span className='text-muted-foreground'>{EVALUATE_PAGE_LABELS.PROGRESS_LABEL}</span>
               <span className='font-medium'>
-                {inProgressAttempt.questions_answered} / {EVALUATION_CONFIG.TOTAL_QUESTIONS}{" "}
-                {EVALUATE_PAGE_LABELS.QUESTIONS_LABEL}
+                {inProgressAttempt.questions_answered} / {REACT_QUESTIONS_SIZE} {EVALUATE_PAGE_LABELS.QUESTIONS_LABEL}
               </span>
             </div>
             <div className='bg-secondary h-2 w-full overflow-hidden rounded-full'>
               <div
                 className='bg-primary h-full transition-all duration-300'
                 style={{
-                  width: `${(inProgressAttempt.questions_answered / EVALUATION_CONFIG.TOTAL_QUESTIONS) * 100}%`,
+                  width: `${(inProgressAttempt.questions_answered / REACT_QUESTIONS_SIZE) * 100}%`,
                 }}
               />
             </div>
@@ -206,7 +205,7 @@ export default function EvaluatePage() {
           <h2 className='mb-4 text-lg font-semibold'>{EVALUATE_PAGE_LABELS.PAST_ATTEMPTS_TITLE}</h2>
           <div className='space-y-3'>
             {completedAttempts.slice(0, 5).map((attempt) => {
-              const scorePercent = Math.round((attempt.correct_count / EVALUATION_CONFIG.TOTAL_QUESTIONS) * 100);
+              const scorePercent = Math.round((attempt.correct_count / REACT_QUESTIONS_SIZE) * 100);
               return (
                 <div
                   key={attempt.id}
@@ -216,7 +215,7 @@ export default function EvaluatePage() {
                     <div className='text-center'>
                       <div className='text-2xl font-bold'>{scorePercent}%</div>
                       <div className='text-muted-foreground text-xs'>
-                        {attempt.correct_count}/{EVALUATION_CONFIG.TOTAL_QUESTIONS}
+                        {attempt.correct_count}/{REACT_QUESTIONS_SIZE}
                       </div>
                     </div>
                     <div>

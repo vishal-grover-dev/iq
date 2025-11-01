@@ -4,7 +4,8 @@
  */
 
 import { expect } from "@playwright/test";
-import { EVALUATION_CONFIG } from "@/constants/evaluate.constants";
+import type { Page } from "@playwright/test";
+import { EVALUATION_CONFIG, REACT_QUESTIONS_SIZE } from "@/constants/evaluate.constants";
 
 /**
  * Assert that all question IDs are unique
@@ -102,8 +103,12 @@ export async function toHaveBalancedTopics(
   const totalQuestions = questions.length;
   const maxAllowed = Math.floor((maxPercentage / 100) * totalQuestions);
 
-  for (const [topic, count] of Object.entries(topicCounts)) {
-    expect(count).toBeLessThanOrEqual(maxAllowed);
+  for (const [topicName, count] of Object.entries(topicCounts)) {
+    if (count > maxAllowed) {
+      throw new Error(
+        `Topic "${topicName}" exceeds maximum allowed share (${count}/${totalQuestions}) with limit ${maxPercentage}%`
+      );
+    }
   }
 }
 
@@ -170,10 +175,10 @@ export async function toHaveUniqueContent(
 }
 
 /**
- * Assert that progress format is correct (X/60)
+ * Assert that progress format is correct (X/total)
  */
 export async function toHaveCorrectProgressFormat(progressText: string): Promise<void> {
-  // Should be in "Question X / 60" format
+  // Should be in "Question X / total" format
   const match = progressText.match(/^Question\s+(\d+)\s*\/\s*(\d+)$/);
   expect(match).not.toBeNull();
 
@@ -182,15 +187,15 @@ export async function toHaveCorrectProgressFormat(progressText: string): Promise
     const total = parseInt(match[2], 10);
 
     expect(current).toBeGreaterThanOrEqual(0);
-    expect(current).toBeLessThanOrEqual(EVALUATION_CONFIG.TOTAL_QUESTIONS);
-    expect(total).toBe(EVALUATION_CONFIG.TOTAL_QUESTIONS);
+    expect(current).toBeLessThanOrEqual(REACT_QUESTIONS_SIZE);
+    expect(total).toBe(REACT_QUESTIONS_SIZE);
   }
 }
 
 /**
  * Assert that no score or percentage is displayed
  */
-export async function toHaveNoScoreDisplay(page: any): Promise<void> {
+export async function toHaveNoScoreDisplay(page: Page): Promise<void> {
   // The UI shows percentage completion (e.g., "15% complete") but this is progress, not score
   // We should allow progress percentage but not score percentage
   // Check for score display (not progress percentage)
@@ -204,14 +209,14 @@ export async function toHaveNoScoreDisplay(page: any): Promise<void> {
 /**
  * Assert that progress bar has proper accessibility attributes
  */
-export async function toHaveAccessibleProgress(page: any): Promise<void> {
+export async function toHaveAccessibleProgress(page: Page): Promise<void> {
   const progressBar = page.locator("[role='progressbar']");
   await expect(progressBar).toBeVisible();
 
   // Check ARIA attributes
   await expect(progressBar).toHaveAttribute("aria-valuenow");
   await expect(progressBar).toHaveAttribute("aria-valuemin", "0");
-  await expect(progressBar).toHaveAttribute("aria-valuemax", EVALUATION_CONFIG.TOTAL_QUESTIONS.toString());
+  await expect(progressBar).toHaveAttribute("aria-valuemax", REACT_QUESTIONS_SIZE.toString());
 }
 
 /**
@@ -427,7 +432,7 @@ function detectSynonymSubstitution(str1: string, str2: string): number {
   const words2 = tokenizeText(str2);
 
   let synonymMatches = 0;
-  let totalWords = Math.max(words1.length, words2.length);
+  const totalWords = Math.max(words1.length, words2.length);
 
   for (const group of synonymGroups) {
     const hasGroup1 = group.some((word) => words1.includes(word));
@@ -504,7 +509,10 @@ function detectNegationPatterns(str1: string, str2: string): number {
 /**
  * Assert that API response contains only allowed fields
  */
-export async function toHaveValidApiResponse(response: any, allowedFields: string[]): Promise<void> {
+export async function toHaveValidApiResponse(
+  response: Record<string, unknown>,
+  allowedFields: readonly string[]
+): Promise<void> {
   const responseKeys = Object.keys(response);
 
   for (const key of responseKeys) {
@@ -557,7 +565,7 @@ export async function toHaveValidAttemptProgress(progress: {
 }): Promise<void> {
   expect(progress.questions_answered).toBeGreaterThanOrEqual(0);
   expect(progress.questions_answered).toBeLessThanOrEqual(progress.total_questions);
-  expect(progress.total_questions).toBe(EVALUATION_CONFIG.TOTAL_QUESTIONS);
+  expect(progress.total_questions).toBe(REACT_QUESTIONS_SIZE);
   expect(typeof progress.is_complete).toBe("boolean");
 
   if (progress.questions_answered === progress.total_questions) {

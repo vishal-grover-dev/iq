@@ -4,7 +4,10 @@
  */
 
 import { Page, expect } from "@playwright/test";
-import { EVALUATION_CONFIG } from "@/constants/evaluate.constants";
+import { REACT_QUESTIONS_SIZE } from "@/constants/evaluate.constants";
+
+export const TOTAL_QUESTIONS = REACT_QUESTIONS_SIZE;
+export const PROGRESS_LOCATOR_PATTERN = `text=/\\d+\\s*\\/\\s*${TOTAL_QUESTIONS}/`;
 
 /**
  * Check if we're in dev mode (reset button available)
@@ -212,7 +215,7 @@ export async function waitForQuestionLoad(page: Page): Promise<void> {
     try {
       await expect(loadingText).not.toBeVisible({ timeout: 60000 });
     } catch (error) {
-      console.log("Loading text did not disappear within 60 seconds - may be stuck");
+      console.log("Loading text did not disappear within 60 seconds - may be stuck", error);
       // Continue anyway to see what's on the page
     }
   }
@@ -220,13 +223,16 @@ export async function waitForQuestionLoad(page: Page): Promise<void> {
   // Wait for any additional loading states to complete
   await page.waitForTimeout(3000);
 
-  // Check if we're on a completed attempt (61/60 questions)
+  // Check if we're on a completed attempt (> configured questions)
   const progressText = await page
-    .locator("text=/\\d+\\s*\\/\\s*60/")
+    .locator(PROGRESS_LOCATOR_PATTERN)
     .textContent()
     .catch(() => null);
-  if (progressText && progressText.includes("61")) {
-    throw new Error("Attempt has already completed 61 questions (invalid state)");
+  if (progressText) {
+    const overflowValue = (TOTAL_QUESTIONS + 1).toString();
+    if (progressText.includes(overflowValue)) {
+      throw new Error(`Attempt has already completed ${overflowValue} questions (invalid state)`);
+    }
   }
 
   // Wait for question card to be visible with longer timeout
@@ -254,14 +260,14 @@ export async function waitForQuestionLoad(page: Page): Promise<void> {
  * Get current progress information
  */
 export async function getProgressInfo(page: Page): Promise<{ current: number; total: number }> {
-  // The actual UI shows "Question X / 60" format in the progress indicator
+  // The actual UI shows "Question X / total" format in the progress indicator
   const progressText = await page.locator("[data-testid='progress-indicator']").textContent();
 
   if (!progressText) {
     throw new Error("Could not find progress information");
   }
 
-  // Parse "Question X / 60" format
+  // Parse "Question X / total" format
   // Note: X is the current question number (1-based), not questions answered
   const match = progressText.match(/Question\s+(\d+)\s*\/\s*(\d+)/);
   if (!match) {
@@ -345,12 +351,12 @@ export async function getAttemptQuestionIds(page: Page, attemptId: string): Prom
 }
 
 /**
- * Check if progress bar shows correct format (X/60)
+ * Check if progress bar shows correct format (X/total)
  */
 export async function assertProgressFormat(page: Page, expectedCurrent: number): Promise<void> {
   const progress = await getProgressInfo(page);
   expect(progress.current).toBe(expectedCurrent);
-  expect(progress.total).toBe(EVALUATION_CONFIG.TOTAL_QUESTIONS);
+  expect(progress.total).toBe(TOTAL_QUESTIONS);
 }
 
 /**
@@ -381,7 +387,7 @@ export async function assertProgressAccessibility(page: Page): Promise<void> {
   // Check ARIA attributes
   await expect(progressBar).toHaveAttribute("aria-valuenow");
   await expect(progressBar).toHaveAttribute("aria-valuemin", "0");
-  await expect(progressBar).toHaveAttribute("aria-valuemax", EVALUATION_CONFIG.TOTAL_QUESTIONS.toString());
+  await expect(progressBar).toHaveAttribute("aria-valuemax", TOTAL_QUESTIONS.toString());
 }
 
 /**
@@ -427,15 +433,15 @@ export async function getResumeButtonMetadata(page: Page): Promise<{
   totalQuestions: number;
   startedDate: string;
 }> {
-  const progressText = await page.locator("text=/\\d+\\s*\\/\\s*60/").textContent();
+  const progressText = await page.locator(PROGRESS_LOCATOR_PATTERN).textContent();
   const dateText = await page.locator("text=/Started/").textContent();
 
-  // Parse "15 / 60 questions"
+  // Parse "15 / total questions"
   const match = progressText?.match(/(\d+)\s*\/\s*(\d+)/);
 
   return {
     questionsAnswered: match ? parseInt(match[1]) : 0,
-    totalQuestions: match ? parseInt(match[2]) : 60,
+    totalQuestions: match ? parseInt(match[2]) : TOTAL_QUESTIONS,
     startedDate: dateText || "",
   };
 }
@@ -450,13 +456,13 @@ export async function getResultsScore(page: Page): Promise<{
 }> {
   const scoreText = await page.locator("text=/\\d+%/").first().textContent();
   const percentMatch = scoreText?.match(/(\d+)%/);
-  const countText = await page.locator("text=/\\d+\\s*\\/\\s*60/").textContent();
+  const countText = await page.locator(PROGRESS_LOCATOR_PATTERN).textContent();
   const countMatch = countText?.match(/(\d+)\s*\/\s*(\d+)/);
 
   return {
     percentage: percentMatch ? parseInt(percentMatch[1]) : 0,
     correct: countMatch ? parseInt(countMatch[1]) : 0,
-    total: countMatch ? parseInt(countMatch[2]) : 60,
+    total: countMatch ? parseInt(countMatch[2]) : TOTAL_QUESTIONS,
   };
 }
 
@@ -499,7 +505,6 @@ export function compareQuestionSets(
   unique1: number;
   unique2: number;
 } {
-  const set1 = new Set(ids1);
   const set2 = new Set(ids2);
 
   const overlap = ids1.filter((id) => set2.has(id)).length;

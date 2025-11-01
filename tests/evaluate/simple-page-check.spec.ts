@@ -2,7 +2,7 @@
  * Simple test to check what's actually on the evaluate page
  */
 
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("Simple Page Check", () => {
   test("should check what's on the evaluate page", async ({ page }) => {

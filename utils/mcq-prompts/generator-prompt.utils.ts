@@ -1,8 +1,8 @@
 import type { TGeneratorBuildArgs } from "@/types/mcq.types";
 import { EPromptMode } from "@/types/mcq.types";
 import { MCQ_PROMPTS } from "@/constants/generation.constants";
-import { MVP_TOPICS } from "@/constants/mvp-ontology.constants";
-import type { TMvpTopic } from "@/constants/mvp-ontology.constants";
+import { MVP_TOPICS } from "@/constants/mcq.constants";
+import type { TMvpTopic } from "@/constants/mcq.constants";
 import { pickExamples } from "../../data/mcq-examples";
 import {
   formatContextLines,
@@ -10,6 +10,7 @@ import {
   formatNegativeExamplesBlock,
   formatLabels,
   formatAvailableSubtopicsHint,
+  formatPreviousQuestionsMetaBlock,
 } from "./shared.utils";
 
 const isMvpTopic = (topic?: string | null): topic is TMvpTopic =>
@@ -21,7 +22,8 @@ const isMvpTopic = (topic?: string | null): topic is TMvpTopic =>
 export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: string; user: string } {
   const mode = args.mode ?? EPromptMode.FEW_SHOT;
   const topicForExamples = isMvpTopic(args.topic) ? args.topic : undefined;
-  const examples = pickExamples(args.examplesCount ?? 10, topicForExamples);
+  const requestedExamplesCount = Math.min(Math.max(args.examplesCount ?? 5, 3), 12);
+  const examples = pickExamples(requestedExamplesCount, topicForExamples ?? args.topic);
   const prioritizedExamples = args.subtopic
     ? [...examples].sort((a, b) => Number(b.subtopic === args.subtopic) - Number(a.subtopic === args.subtopic))
     : examples;
@@ -66,6 +68,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
   const examplesBlock = formatExamplesBlock(prioritizedExamples, includeChainOfThought);
   const negativeBlock = formatNegativeExamplesBlock(args.negativeExamples);
   const subtopicsHint = formatAvailableSubtopicsHint(args.availableSubtopics);
+  const previousQuestionsBlock = formatPreviousQuestionsMetaBlock(args.previousQuestionsMeta);
 
   const styleBlock = (() => {
     if (!args.questionStyle) return undefined;
@@ -77,6 +80,7 @@ export function buildGeneratorMessages(args: TGeneratorBuildArgs): { system: str
     subtopicsHint,
     MCQ_PROMPTS.CONTEXT_HEADER,
     contextLines,
+    previousQuestionsBlock,
     mode === EPromptMode.FEW_SHOT
       ? "Examples (style reference):\n" + examplesBlock
       : includeChainOfThought

@@ -6,7 +6,7 @@ Create comprehensive Playwright test coverage for the Evaluate page feature to e
 
 ## Mission & Intent
 
-**Core Mission**: Validate the 60-question evaluation feature meets all integrity constraints, user experience requirements, and performance benchmarks through systematic testing.
+**Core Mission**: Validate the 50-question evaluation feature meets all integrity constraints, user experience requirements, and performance benchmarks through systematic testing.
 
 ### Key Principles
 
@@ -40,7 +40,7 @@ tests/
   evaluate/
     integrity/          # P0: No mid-attempt feedback, uniqueness
     e2e/                # P0-P1: Complete user flows
-    distribution/         # P0: 30/20/10, 35% coding, topic caps
+    distribution/         # P0: 30/13/7, 35% coding, topic caps
     reliability/          # P1: Resume, exclusion, error handling
     mission/              # P1: Learning-first feedback, citations
     a11y/                 # P0: WCAG AA, keyboard nav, screen readers
@@ -69,7 +69,7 @@ tests/
   - `apiMocks.utils.ts`: Reusable API response mocks
 - Configure Playwright with:
   - Desktop and mobile profiles (already in `playwright.config.ts`)
-  - Custom test timeout for long flows (90s for full 60-question attempts)
+  - Custom test timeout for long flows (90s for full 50-question attempts)
   - Screenshot/video capture on failure
   - Parallel execution settings
 - Document testing conventions in `tests/README.md`
@@ -100,23 +100,23 @@ tests/
 
 - **Test**: User answers question correctly → no "correct" indicator shown
 - **Test**: User answers question incorrectly → no "incorrect" indicator shown
-- **Test**: Progress bar shows "15/60" but never shows score/percentage
+- **Test**: Progress bar shows "15/50" but never shows score/percentage
 - **Test**: After submitting answer, next question loads immediately without feedback
 - **Test**: API response for answer submission does not include correctness field
 - **Validation**: Inspect DOM for absence of correctness indicators; verify API response shape
 
 #### 1.2 Intra-Attempt Uniqueness
 
-- **Test**: Complete full 60-question attempt → verify all question IDs are unique
+- **Test**: Complete full 50-question attempt → verify all question IDs are unique
 - **Test**: Resume mid-attempt → verify no question repeats from earlier in same attempt
 - **Test**: Mock API to return duplicate question → verify frontend rejects or retries
 - **Test**: Verify question content uniqueness → ensure no semantically similar questions appear in same attempt
-- **Validation**: Collect all question IDs during attempt; assert Set size === 60
-- **Note**: This is a critical integrity constraint - all 60 questions must be unique within a single attempt
+- **Validation**: Collect all question IDs during attempt; assert Set size === 50
+- **Note**: This is a critical integrity constraint - all 50 questions must be unique within a single attempt
 
 #### 1.3 Progress Visibility
 
-- **Test**: Progress bar updates correctly after each submission (1/60 → 2/60 → ... → 60/60)
+- **Test**: Progress bar updates correctly after each submission (1/50 → 2/50 → ... → 50/50)
 - **Test**: Progress counter is visible and accurate throughout attempt
 - **Test**: Progress bar never shows score or correctness percentage during attempt
 - **Validation**: Check progress text and aria-valuenow attribute
@@ -167,16 +167,16 @@ tests/
 #### 2.2 Resume Attempt Flow
 
 - **Test**: Start attempt, answer 10 questions, pause → resume → continue from question 11
-- **Test**: Resume shows correct progress (10/60) and does not re-ask questions 1-10
+- **Test**: Resume shows correct progress (10/50) and does not re-ask questions 1-10
 - **Test**: Complete remaining 50 questions → results displayed
 - **Validation**: Verify question_order continuity, no duplicates across pause/resume
 
 #### 2.3 Complete Attempt Flow
 
-- **Test**: Answer all 60 questions → redirected to results page
+- **Test**: Answer all 50 questions → redirected to results page
 - **Test**: Results show score, topic/subtopic/Bloom breakdowns for FIRST time
 - **Test**: Weak areas panel displays recommendations with citations
-- **Test**: Review section shows all 60 questions with user/correct answers and explanations
+- **Test**: Review section shows all 50 questions with user/correct answers and explanations
 - **Validation**: Check results API call, verify all sections render with correct data
 
 #### 2.4 Multiple Attempts Flow
@@ -209,7 +209,7 @@ tests/
 
 #### 3.1 Difficulty Split (30/20/10)
 
-- **Test**: Complete 60-question attempt → verify 30 Easy, 20 Medium, 10 Hard
+- **Test**: Complete 50-question attempt → verify 30 Easy, 13 Medium, 7 Hard
 - **Test**: Mock bank with insufficient Hard questions → verify system generates to meet quota
 - **Validation**: Count questions by difficulty; assert exact counts
 
@@ -401,7 +401,7 @@ tests/
 
 #### 7.2 Results Load Time (<2s)
 
-- **Test**: Complete 60th question → measure time until results summary visible
+- **Test**: Complete 50th question → measure time until results summary visible
 - **Test**: Verify results page loads in <2s (p95)
 - **Validation**: Measure time from navigation to content paint
 
@@ -486,7 +486,7 @@ Run all tests in CI before merging to main:
 
 Run extended suite including:
 
-- Full 60-question attempts
+- Full 50-question attempts
 - Cross-attempt exclusion over 3+ attempts
 - Visual regression with baseline updates
 - **Target**: <45 minutes
@@ -593,14 +593,14 @@ Run extended suite including:
 
 - Tests are failing due to selector mismatches with actual UI
 - Need to update test helpers to match actual DOM structure
-- Progress format shows "15% complete" instead of "15/60" format
+- Progress format shows "15% complete" instead of "15/50" format
 - Question ID extraction needs different selectors
 - Some tests expect different button text/behavior
 
 ### Next Steps Required
 
 1. **Update Test Selectors**: Fix test helpers to match actual UI elements
-2. **Update Progress Format**: Tests expect "X/60" but UI shows "X% complete"
+2. **Update Progress Format**: Tests expect "X/50" but UI shows "X% complete"
 3. **Fix Question ID Extraction**: Update selectors for question identification
 4. **Update Button Selectors**: Fix submit button and option button selectors
 5. **Run Full Test Suite**: Execute all Phase 1 tests after selector fixes

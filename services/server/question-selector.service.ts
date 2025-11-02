@@ -13,6 +13,7 @@ import {
 } from "@/utils/mcq.utils";
 import { weightedRandomIndex } from "@/utils/selection.utils";
 import { createOpenAIClient, getErrorMessage } from "@/config/openai.config";
+import { applyCodingPacing, enforceBloomTargets, enforceDifficultyLimits } from "@/utils/evaluation-selection.utils";
 
 /**
  * selectNextQuestion
@@ -36,6 +37,7 @@ export async function selectNextQuestion(context: {
   topic_distribution: Record<string, number>;
   subtopic_distribution: Record<string, number>;
   bloom_distribution: Record<string, number>;
+  coverage_summary: { hotspots: string[]; opportunities: string[] };
 }): Promise<{
   difficulty: EDifficulty;
   coding_mode: boolean;
@@ -56,13 +58,21 @@ export async function selectNextQuestion(context: {
     topic_distribution,
     subtopic_distribution,
     bloom_distribution,
+    coverage_summary,
   } = context;
 
   const total_target = EVALUATION_CONFIG.TOTAL_QUESTIONS;
-  const easy_target = EVALUATION_CONFIG.EASY_QUESTIONS;
-  const medium_target = EVALUATION_CONFIG.MEDIUM_QUESTIONS;
-  const hard_target = EVALUATION_CONFIG.HARD_QUESTIONS;
+  const difficultyTargets = EVALUATION_CONFIG.DIFFICULTY_TARGETS;
+  const bloomTargets = EVALUATION_CONFIG.BLOOM_TARGETS;
+  const easy_cap = difficultyTargets.MAX_EASY;
+  const medium_cap = difficultyTargets.MAX_MEDIUM;
+  const hard_floor = difficultyTargets.MIN_HARD;
   const coding_target = EVALUATION_CONFIG.MIN_CODING_QUESTIONS;
+
+  const understand_cap = bloomTargets.MAX_UNDERSTAND;
+  const apply_cap = bloomTargets.MAX_APPLY;
+  const analyze_min = bloomTargets.MIN_ANALYZE;
+  const eval_create_min = bloomTargets.MIN_EVALUATE_CREATE;
 
   const currentTopic = getCurrentTopicPhase(questions_answered);
   const topicProgress = getTopicProgress(questions_answered, currentTopic);
@@ -70,11 +80,28 @@ export async function selectNextQuestion(context: {
   const nextTopic = getNextTopic(currentTopic);
   const subtopicsByTopic = getStaticSubtopicMap();
 
+  const questionsRemaining = Math.max(total_target - questions_answered, 0);
+
   // Distribution status
-  const easy_remaining = Math.max(0, easy_target - easy_count);
-  const medium_remaining = Math.max(0, medium_target - medium_count);
-  const hard_remaining = Math.max(0, hard_target - hard_count);
+  const easy_remaining = Math.max(0, easy_cap - easy_count);
+  const medium_remaining = Math.max(0, medium_cap - medium_count);
+  const hard_needed = Math.max(0, hard_floor - hard_count);
   const coding_needed = Math.max(0, coding_target - coding_count);
+
+  const bloomCounts: Record<EBloomLevel, number> = {
+    [EBloomLevel.REMEMBER]: bloom_distribution[EBloomLevel.REMEMBER] ?? 0,
+    [EBloomLevel.UNDERSTAND]: bloom_distribution[EBloomLevel.UNDERSTAND] ?? 0,
+    [EBloomLevel.APPLY]: bloom_distribution[EBloomLevel.APPLY] ?? 0,
+    [EBloomLevel.ANALYZE]: bloom_distribution[EBloomLevel.ANALYZE] ?? 0,
+    [EBloomLevel.EVALUATE]: bloom_distribution[EBloomLevel.EVALUATE] ?? 0,
+    [EBloomLevel.CREATE]: bloom_distribution[EBloomLevel.CREATE] ?? 0,
+  };
+
+  const understand_remaining = Math.max(0, understand_cap - bloomCounts[EBloomLevel.UNDERSTAND]);
+  const apply_remaining = Math.max(0, apply_cap - bloomCounts[EBloomLevel.APPLY]);
+  const analyze_needed = Math.max(0, analyze_min - bloomCounts[EBloomLevel.ANALYZE]);
+  const eval_create_count = bloomCounts[EBloomLevel.EVALUATE] + bloomCounts[EBloomLevel.CREATE];
+  const eval_create_needed = Math.max(0, eval_create_min - eval_create_count);
 
   // Comprehensive coverage info
   const topic_list = Object.entries(topic_distribution)
@@ -99,6 +126,12 @@ export async function selectNextQuestion(context: {
     .map(([level, count]) => `${level}: ${count}`)
     .join(", ");
 
+  const coverage_hotspots = coverage_summary?.hotspots ?? [];
+  const coverage_opportunities = coverage_summary?.opportunities ?? [];
+
+  const difficulty_goal_summary = `≤${easy_cap} Easy, ≤${medium_cap} Medium, ≥${hard_floor} Hard`;
+  const bloom_goal_summary = `Understand ≤${understand_cap}, Apply ≤${apply_cap}, Analyze ≥${analyze_min}, Evaluate/Create ≥${eval_create_min}`;
+
   // Note: Topic/subtopic information is now dynamically generated within generateQuestionPrompt
   const { system, user } = generateQuestionPrompt({
     questions_answered,
@@ -107,13 +140,13 @@ export async function selectNextQuestion(context: {
     medium_count,
     hard_count,
     coding_count,
-    easy_target,
-    medium_target,
-    hard_target,
+    easy_target: easy_cap,
+    medium_target: medium_cap,
+    hard_target: hard_floor,
     coding_target,
     easy_remaining,
     medium_remaining,
-    hard_remaining,
+    hard_remaining: hard_needed,
     coding_needed,
     topic_list,
     subtopic_list,
@@ -121,6 +154,24 @@ export async function selectNextQuestion(context: {
     difficulty_list,
     coding_list,
     bloom_count_list,
+    coverage_hotspots,
+    coverage_opportunities,
+    difficulty_goal_summary,
+    bloom_goal_summary,
+    understand_cap,
+    apply_cap,
+    analyze_min,
+    eval_create_min,
+    understand_remaining,
+    apply_remaining,
+    analyze_needed,
+    eval_create_needed,
+    understand_count: bloomCounts[EBloomLevel.UNDERSTAND],
+    apply_count: bloomCounts[EBloomLevel.APPLY],
+    analyze_count: bloomCounts[EBloomLevel.ANALYZE],
+    evaluate_count: bloomCounts[EBloomLevel.EVALUATE],
+    create_count: bloomCounts[EBloomLevel.CREATE],
+    remember_count: bloomCounts[EBloomLevel.REMEMBER],
   });
 
   try {
@@ -170,7 +221,7 @@ export async function selectNextQuestion(context: {
     }
 
     // Validate and normalize
-    const difficulty = ((): EDifficulty => {
+    const requestedDifficulty = ((): EDifficulty => {
       const d = String(parsed.difficulty || "").toLowerCase();
       if (d === "easy") return EDifficulty.EASY;
       if (d === "medium") return EDifficulty.MEDIUM;
@@ -183,7 +234,7 @@ export async function selectNextQuestion(context: {
     const requestedSubtopic = String(parsed.preferred_subtopic || "");
     const availableSubtopics = subtopicsByTopic[currentTopic] || [];
     const preferred_subtopic = availableSubtopics.includes(requestedSubtopic) ? requestedSubtopic : "";
-    const preferred_bloom_level = ((): EBloomLevel => {
+    const requestedBloomLevel = ((): EBloomLevel => {
       const l = String(parsed.preferred_bloom_level || "").toLowerCase();
       if (l === "remember") return EBloomLevel.REMEMBER;
       if (l === "understand") return EBloomLevel.UNDERSTAND;
@@ -200,12 +251,74 @@ export async function selectNextQuestion(context: {
       `${reasoning} | Topic block: ${currentTopic}${topicOverrideNote} (${topicProgress.completed}/${topicProgress.total}, ${remainingInTopic} remaining)` +
       (nextTopic ? ` → Next: ${nextTopic}` : "");
 
+    const normalizedDifficulty = enforceDifficultyLimits(requestedDifficulty, {
+      easyRemaining: easy_remaining,
+      mediumRemaining: medium_remaining,
+      hardNeeded: hard_needed,
+      questionsRemaining,
+      questionsAnswered: questions_answered,
+      easyCount: easy_count,
+      mediumCount: medium_count,
+      hardCount: hard_count,
+      totalQuestions: total_target,
+      hardTarget: hard_floor,
+      easyCap: easy_cap,
+      mediumCap: medium_cap,
+    });
+
+    const normalizedBloomLevel = enforceBloomTargets(requestedBloomLevel, {
+      counts: bloomCounts,
+      understandCap: understand_cap,
+      applyCap: apply_cap,
+      analyzeMin: analyze_min,
+      evalCreateMin: eval_create_min,
+      questionsRemaining,
+      questionsAnswered: questions_answered,
+      totalQuestions: total_target,
+    });
+
+    if (normalizedDifficulty !== requestedDifficulty) {
+      console.log("difficulty_enforcement_override", {
+        attempt_id: context.attempt_id,
+        answered: questions_answered,
+        requested: requestedDifficulty,
+        enforced: normalizedDifficulty,
+        easy_remaining: easy_remaining,
+        medium_remaining: medium_remaining,
+        hard_needed: hard_needed,
+        questions_remaining: questionsRemaining,
+        hard_count: hard_count,
+      });
+    }
+
+    if (normalizedBloomLevel !== requestedBloomLevel) {
+      console.log("bloom_enforcement_override", {
+        attempt_id: context.attempt_id,
+        answered: questions_answered,
+        requested: requestedBloomLevel,
+        enforced: normalizedBloomLevel,
+        analyze_needed: Math.max(0, analyze_min - (bloomCounts[EBloomLevel.ANALYZE] ?? 0)),
+        eval_create_needed: Math.max(
+          0,
+          eval_create_min - ((bloomCounts[EBloomLevel.EVALUATE] ?? 0) + (bloomCounts[EBloomLevel.CREATE] ?? 0))
+        ),
+        questions_remaining: questionsRemaining,
+      });
+    }
+
+    const pacedCodingMode = applyCodingPacing(coding_mode, {
+      questionsAnswered: questions_answered,
+      codingCount: coding_count,
+      codingNeeded: coding_needed,
+      totalQuestions: total_target,
+    });
+
     return {
-      difficulty,
-      coding_mode,
+      difficulty: normalizedDifficulty,
+      coding_mode: pacedCodingMode,
       preferred_topic,
       preferred_subtopic,
-      preferred_bloom_level,
+      preferred_bloom_level: normalizedBloomLevel,
       reasoning: finalReasoning,
     };
   } catch (err) {
@@ -216,14 +329,34 @@ export async function selectNextQuestion(context: {
     const deficits: Array<{ d: EDifficulty; remaining: number }> = [
       { d: EDifficulty.EASY, remaining: easy_remaining },
       { d: EDifficulty.MEDIUM, remaining: medium_remaining },
-      { d: EDifficulty.HARD, remaining: hard_remaining },
+      { d: EDifficulty.HARD, remaining: Math.max(hard_needed, 1) },
     ];
     const diffWeights = deficits.map((x) => Math.max(0, x.remaining));
     const diffIdx = weightedRandomIndex(diffWeights);
-    const difficulty: EDifficulty = deficits[diffIdx]?.d ?? EDifficulty.EASY;
+    const requestedDifficulty: EDifficulty = deficits[diffIdx]?.d ?? EDifficulty.EASY;
+    const difficulty = enforceDifficultyLimits(requestedDifficulty, {
+      easyRemaining: easy_remaining,
+      mediumRemaining: medium_remaining,
+      hardNeeded: hard_needed,
+      questionsRemaining,
+      questionsAnswered: questions_answered,
+      easyCount: easy_count,
+      mediumCount: medium_count,
+      hardCount: hard_count,
+      totalQuestions: total_target,
+      hardTarget: hard_floor,
+      easyCap: easy_cap,
+      mediumCap: medium_cap,
+    });
 
     // Force coding if behind pace (accelerate late if needed)
-    const coding_mode = coding_needed > 0 && questions_answered >= Math.floor(total_target * 0.4);
+    const rawCodingMode = coding_needed > 0 && questions_answered >= Math.floor(total_target * 0.4);
+    const coding_mode = applyCodingPacing(rawCodingMode, {
+      questionsAnswered: questions_answered,
+      codingCount: coding_count,
+      codingNeeded: coding_needed,
+      totalQuestions: total_target,
+    });
 
     const topic = currentTopic;
 
@@ -245,8 +378,67 @@ export async function selectNextQuestion(context: {
       EBloomLevel.EVALUATE,
       EBloomLevel.CREATE,
     ];
-    const bloomWeights = allBlooms.map((b) => 1 / ((bloom_distribution[b] || 0) + 1));
-    const preferred_bloom_level = allBlooms[weightedRandomIndex(bloomWeights)];
+    let bloomWeights = allBlooms.map((level) => {
+      if (level === EBloomLevel.UNDERSTAND && understand_remaining <= 0) return 0;
+      if (level === EBloomLevel.APPLY && apply_remaining <= 0) return 0;
+      if (level === EBloomLevel.ANALYZE && analyze_needed > 0) return analyze_needed + 5;
+      if (level === EBloomLevel.EVALUATE || level === EBloomLevel.CREATE) {
+        if (eval_create_needed > 0) {
+          const levelCount = bloomCounts[level] ?? 0;
+          const counterpart =
+            level === EBloomLevel.EVALUATE ? bloomCounts[EBloomLevel.CREATE] : bloomCounts[EBloomLevel.EVALUATE];
+          const balanceBonus = levelCount <= counterpart ? 2 : 1;
+          return eval_create_needed + 4 + balanceBonus;
+        }
+        return 1 / ((bloom_distribution[level] || 0) + 1);
+      }
+      return 1 / ((bloom_distribution[level] || 0) + 1);
+    });
+
+    if (bloomWeights.every((weight) => weight <= 0)) {
+      bloomWeights = allBlooms.map(() => 1);
+    }
+
+    const requestedBloom = allBlooms[weightedRandomIndex(bloomWeights)];
+    const preferred_bloom_level = enforceBloomTargets(requestedBloom, {
+      counts: bloomCounts,
+      understandCap: understand_cap,
+      applyCap: apply_cap,
+      analyzeMin: analyze_min,
+      evalCreateMin: eval_create_min,
+      questionsRemaining,
+      questionsAnswered: questions_answered,
+      totalQuestions: total_target,
+    });
+
+    if (difficulty !== requestedDifficulty) {
+      console.log("difficulty_enforcement_override_fallback", {
+        attempt_id: context.attempt_id,
+        answered: context.questions_answered,
+        requested: requestedDifficulty,
+        enforced: difficulty,
+        easy_remaining: easy_remaining,
+        medium_remaining: medium_remaining,
+        hard_needed: hard_needed,
+        questions_remaining: questionsRemaining,
+        hard_count: hard_count,
+      });
+    }
+
+    if (preferred_bloom_level !== requestedBloom) {
+      console.log("bloom_enforcement_override_fallback", {
+        attempt_id: context.attempt_id,
+        answered: context.questions_answered,
+        requested: requestedBloom,
+        enforced: preferred_bloom_level,
+        analyze_needed: Math.max(0, analyze_min - (bloomCounts[EBloomLevel.ANALYZE] ?? 0)),
+        eval_create_needed: Math.max(
+          0,
+          eval_create_min - ((bloomCounts[EBloomLevel.EVALUATE] ?? 0) + (bloomCounts[EBloomLevel.CREATE] ?? 0))
+        ),
+        questions_remaining: questionsRemaining,
+      });
+    }
 
     return {
       difficulty,

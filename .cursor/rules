@@ -249,6 +249,8 @@ This allows gradual migration of existing code without breaking changes.
 
 Before submitting code:
 
+- [ ] Run lint checks after every code change and confirm no lint errors remain
+- [ ] Ensure no usages of the `any` type are introduced; prefer explicit typings
 - [ ] No hardcoded strings in components (except comments)
 - [ ] All labels/config values live in `constants/*.ts`
 - [ ] No enum + constant duplication (only one source per value)

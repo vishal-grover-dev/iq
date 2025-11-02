@@ -12,79 +12,182 @@ import {
   IAssignmentError,
   ISelectionCriteria,
   IScoredCandidate,
-  IUserAttempt,
+  IUserCoverageSummary,
+  IUserQuestionStatRow,
   TAttemptQuestion,
 } from "@/types/evaluate.types";
 import { selectNextQuestion as callLLMSelector } from "@/services/server/question-selector.service";
 import { generateMcqFromContext } from "@/services/server/mcq-generation.service";
 import { getEmbeddings } from "@/services/server/embedding.service";
 import { toNumericVector, cosineSimilarity } from "@/utils/vector.utils";
-import { computeMcqContentKey, buildMcqEmbeddingText } from "@/utils/mcq.utils";
+import {
+  computeMcqContentKey,
+  buildMcqEmbeddingText,
+  getStaticSubtopicMap,
+  getCurrentTopicPhase,
+} from "@/utils/mcq.utils";
 import { weightedRandomIndex } from "@/utils/selection.utils";
-import { EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
+import { EVALUATION_CONFIG, EVALUATE_SELECTION_CONFIG } from "@/constants/evaluate.constants";
 import { EDifficulty, EBloomLevel, IMcqItemView } from "@/types/mcq.types";
+import {
+  buildExposureKey,
+  buildSelectionContext,
+  calculateDistributions,
+  checkCompletionStatus,
+  extractAskedMcq,
+  fetchAttemptOrFail,
+  findExistingPendingQuestion,
+  formatCoverageLine,
+  normalizeSubtopic,
+} from "@/utils/evaluation-selection.utils";
 
-// ---------------------------------------------------------------------------
-// Stage 1 helpers: Attempt guard and validation
-// ---------------------------------------------------------------------------
+const ALL_DIFFICULTIES = [EDifficulty.EASY, EDifficulty.MEDIUM, EDifficulty.HARD];
+const CODING_VARIANTS = [true, false] as const;
 
-async function fetchAttemptOrFail(
-  attemptId: string,
+async function recordQuestionExposure(
   userId: string,
+  question: {
+    id?: string;
+    topic?: string;
+    subtopic?: string | null;
+    difficulty?: string;
+    bloom_level?: string;
+    code?: string | null;
+  },
   supabase: SupabaseClient
-): Promise<IUserAttempt | null> {
-  const { data: attempt, error } = await supabase
-    .from("user_attempts")
-    .select("*")
-    .eq("id", attemptId)
-    .eq("user_id", userId)
-    .single();
-
-  if (error || !attempt) {
-    return null;
+): Promise<void> {
+  if (!question?.topic || !question?.difficulty || !question?.bloom_level) {
+    return;
   }
 
-  return attempt as IUserAttempt;
-}
-
-function checkCompletionStatus(attempt: IUserAttempt): { status: EAttemptStatus; completed: boolean } | null {
-  if (attempt.status === EAttemptStatus.Completed) {
-    return {
-      status: attempt.status,
-      completed: true,
-    };
-  }
-
-  // Also check if user has answered the target number of questions
-  // This prevents assigning a 61st question when 60 have been answered
-  if ((attempt.questions_answered || 0) >= attempt.total_questions) {
-    return {
-      status: attempt.status,
-      completed: true,
-    };
-  }
-
-  return null;
-}
-
-function findExistingPendingQuestion(
-  askedQuestions: TAttemptQuestion[],
-  nextQuestionOrder: number
-): TAttemptQuestion | null {
-  const pending = askedQuestions.find((q) => {
-    const answeredAt = q?.answered_at;
-    const userAnswer = q?.user_answer_index;
-    const orderMatches = Number(q?.question_order ?? 0) === nextQuestionOrder;
-    const notAnsweredYet = typeof userAnswer !== "number" && !answeredAt;
-    return orderMatches && notAnsweredYet;
+  const { error } = await supabase.rpc("increment_user_question_stats", {
+    p_user_id: userId,
+    p_topic: question.topic,
+    p_subtopic: normalizeSubtopic(question.subtopic ?? ""),
+    p_difficulty: question.difficulty,
+    p_bloom_level: question.bloom_level,
+    p_coding_mode: Boolean(question.code),
   });
 
-  return pending || null;
+  if (error) {
+    console.warn("user_question_stats_increment_failed", {
+      user_id: userId,
+      question_id: question?.id || null,
+      error: error.message,
+    });
+  } else {
+    console.log("user_question_stats_incremented", {
+      user_id: userId,
+      topic: question.topic,
+      subtopic: normalizeSubtopic(question.subtopic ?? ""),
+      difficulty: question.difficulty,
+      bloom_level: question.bloom_level,
+      coding_mode: Boolean(question.code),
+    });
+  }
 }
 
-function extractAskedMcq(entry: IAskedQuestionRow): IBankCandidate | null {
-  const raw = Array.isArray(entry.mcq_items) ? entry.mcq_items[0] : entry.mcq_items;
-  return raw ? (raw as IBankCandidate) : null;
+function buildCoverageSummary(
+  stats: IUserQuestionStatRow[],
+  exposureLookup: Map<string, number>,
+  currentTopic: string
+): IUserCoverageSummary {
+  const {
+    USER_FRESHNESS: { HOTSPOT_LIMIT, OPPORTUNITY_LIMIT, OPPORTUNITY_THRESHOLD },
+  } = EVALUATE_SELECTION_CONFIG;
+
+  const hotspots = stats
+    .filter((row) => row.total_seen > 0)
+    .sort((a, b) => b.total_seen - a.total_seen)
+    .slice(0, HOTSPOT_LIMIT)
+    .map((row) => formatCoverageLine(row.topic, row.subtopic, row.difficulty, row.coding_mode, row.total_seen));
+
+  const opportunitiesMap = new Map<
+    string,
+    { topic: string; subtopic: string; difficulty: string; coding_mode: boolean; total: number }
+  >();
+
+  for (const row of stats) {
+    if (row.total_seen <= OPPORTUNITY_THRESHOLD) {
+      const key = buildExposureKey(row.topic, row.subtopic, row.difficulty, row.coding_mode);
+      opportunitiesMap.set(key, {
+        topic: row.topic,
+        subtopic: row.subtopic,
+        difficulty: row.difficulty,
+        coding_mode: row.coding_mode,
+        total: row.total_seen,
+      });
+    }
+  }
+
+  const staticSubtopics = getStaticSubtopicMap();
+  const topicSubtopics = staticSubtopics[currentTopic] ?? [];
+  const subtopicPool = new Set<string>(["", ...topicSubtopics]);
+
+  for (const subtopic of subtopicPool) {
+    for (const difficulty of ALL_DIFFICULTIES) {
+      for (const coding of CODING_VARIANTS) {
+        const key = buildExposureKey(currentTopic, subtopic, difficulty, coding);
+        if (!opportunitiesMap.has(key)) {
+          const total = exposureLookup.get(key) ?? 0;
+          if (total <= OPPORTUNITY_THRESHOLD) {
+            opportunitiesMap.set(key, {
+              topic: currentTopic,
+              subtopic: normalizeSubtopic(subtopic),
+              difficulty,
+              coding_mode: coding,
+              total,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const opportunities = Array.from(opportunitiesMap.values())
+    .sort((a, b) => {
+      if (a.total !== b.total) return a.total - b.total;
+      return `${a.topic}-${a.subtopic}`.localeCompare(`${b.topic}-${b.subtopic}`);
+    })
+    .slice(0, OPPORTUNITY_LIMIT)
+    .map((bucket) =>
+      formatCoverageLine(bucket.topic, bucket.subtopic, bucket.difficulty, bucket.coding_mode, bucket.total)
+    );
+
+  return {
+    hotspots,
+    opportunities,
+  };
+}
+
+async function fetchUserCoverageData(
+  userId: string,
+  supabase: SupabaseClient,
+  currentTopic: string
+): Promise<{ summary: IUserCoverageSummary; exposureLookup: Map<string, number> }> {
+  const { data: rows } = await supabase
+    .from("user_question_stats")
+    .select("topic, subtopic, difficulty, bloom_level, coding_mode, total_seen, last_seen_at")
+    .eq("user_id", userId);
+
+  const stats = (rows ?? []).map((row) => ({
+    topic: String(row.topic || ""),
+    subtopic: normalizeSubtopic(row.subtopic || ""),
+    difficulty: String(row.difficulty || ""),
+    bloom_level: String(row.bloom_level || ""),
+    coding_mode: Boolean(row.coding_mode),
+    total_seen: Number(row.total_seen || 0),
+    last_seen_at: String(row.last_seen_at || ""),
+  })) as IUserQuestionStatRow[];
+
+  const exposureLookup = new Map<string, number>();
+  for (const stat of stats) {
+    const key = buildExposureKey(stat.topic, stat.subtopic, stat.difficulty, stat.coding_mode);
+    exposureLookup.set(key, stat.total_seen);
+  }
+
+  const summary = buildCoverageSummary(stats, exposureLookup, currentTopic);
+  return { summary, exposureLookup };
 }
 
 async function validateAttemptQuestions(
@@ -122,80 +225,31 @@ async function validateAttemptQuestions(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Stage 2 helpers: Context building
-// ---------------------------------------------------------------------------
+async function fetchRecentAttemptQuestions(
+  userId: string,
+  supabase: SupabaseClient,
+  options: { excludeAttemptId?: string } = {}
+): Promise<Set<string>> {
+  const { LOOK_BACK_COUNT } = EVALUATE_SELECTION_CONFIG.RECENT_ATTEMPTS;
+  const { excludeAttemptId } = options;
 
-function calculateDistributions(askedQuestions: IAskedQuestionRow[]): IDistributions {
-  return askedQuestions.reduce(
-    (acc, q) => {
-      const mcq = q.mcq_items as IBankCandidate | undefined;
-      if (!mcq) return acc;
-
-      const difficulty = mcq.difficulty as string;
-      const bloom = mcq.bloom_level as string;
-      const topic = mcq.topic as string;
-      const subtopic = (mcq.subtopic as string) || "";
-      const hasCoding = !!mcq.code;
-
-      if (difficulty === "Easy") acc.easy_count++;
-      else if (difficulty === "Medium") acc.medium_count++;
-      else if (difficulty === "Hard") acc.hard_count++;
-
-      if (hasCoding) acc.coding_count++;
-
-      acc.topic_distribution[topic] = (acc.topic_distribution[topic] || 0) + 1;
-
-      if (subtopic) {
-        acc.subtopic_distribution[subtopic] = (acc.subtopic_distribution[subtopic] || 0) + 1;
-      }
-
-      acc.bloom_distribution[bloom] = (acc.bloom_distribution[bloom] || 0) + 1;
-
-      return acc;
-    },
-    {
-      easy_count: 0,
-      medium_count: 0,
-      hard_count: 0,
-      coding_count: 0,
-      topic_distribution: {} as Record<string, number>,
-      subtopic_distribution: {} as Record<string, number>,
-      bloom_distribution: {} as Record<string, number>,
-    }
-  );
-}
-
-function buildSelectionContext(
-  attemptId: string,
-  questionsAnswered: number,
-  distributions: IDistributions
-): IAttemptContext {
-  return {
-    attempt_id: attemptId,
-    questions_answered: questionsAnswered,
-    easy_count: distributions.easy_count,
-    medium_count: distributions.medium_count,
-    hard_count: distributions.hard_count,
-    coding_count: distributions.coding_count,
-    topic_distribution: distributions.topic_distribution,
-    subtopic_distribution: distributions.subtopic_distribution,
-    bloom_distribution: distributions.bloom_distribution,
-    recent_subtopics: Object.keys(distributions.subtopic_distribution).slice(0, 5),
-    asked_question_ids: [],
-  };
-}
-
-async function fetchRecentAttemptQuestions(userId: string, supabase: SupabaseClient): Promise<Set<string>> {
-  const { data: recentCompleted } = await supabase
+  let attemptQuery = supabase
     .from("user_attempts")
-    .select("id, completed_at")
+    .select("id, updated_at")
     .eq("user_id", userId)
-    .eq("status", EAttemptStatus.Completed)
-    .order("completed_at", { ascending: false })
-    .limit(EVALUATE_SELECTION_CONFIG.RECENT_ATTEMPTS.LOOK_BACK_COUNT);
+    .order("updated_at", { ascending: false })
+    .limit(LOOK_BACK_COUNT + (excludeAttemptId ? 1 : 0));
 
-  const recentAttemptIds = (recentCompleted ?? []).map((r: { id: string }) => r.id);
+  if (excludeAttemptId) {
+    attemptQuery = attemptQuery.neq("id", excludeAttemptId);
+  }
+
+  const { data: recentAttempts } = await attemptQuery;
+
+  const recentAttemptIds = (recentAttempts ?? [])
+    .map((r: { id: string }) => r.id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+    .slice(0, LOOK_BACK_COUNT);
 
   if (recentAttemptIds.length === 0) {
     return new Set<string>();
@@ -337,6 +391,40 @@ function selectTopKWithWeights(scoredCandidates: IScoredCandidate[]): IScoredCan
 // Stage 5 helpers: Assignment + generation fallback
 // ---------------------------------------------------------------------------
 
+async function computeNextQuestionOrder(
+  attemptId: string,
+  attemptQuestionsAnswered: number,
+  totalQuestions: number,
+  supabase: SupabaseClient
+): Promise<number> {
+  const { data: existingOrders, error } = await supabase
+    .from("attempt_questions")
+    .select("question_order")
+    .eq("attempt_id", attemptId)
+    .order("question_order", { ascending: true });
+
+  if (error) {
+    console.error("next_order_compute_failed", {
+      attempt_id: attemptId,
+      message: error.message,
+    });
+    return Math.min(attemptQuestionsAnswered + 1, totalQuestions);
+  }
+
+  const orders = existingOrders?.map((row: { question_order: number }) => Number(row.question_order)) ?? [];
+  const orderSet = new Set(orders);
+  const targetWindow = Math.min(totalQuestions, attemptQuestionsAnswered + 1);
+
+  for (let i = 1; i <= targetWindow; i++) {
+    if (!orderSet.has(i)) {
+      return i;
+    }
+  }
+
+  const currentMax = orders.length > 0 ? orders[orders.length - 1] : 0;
+  return Math.min(currentMax + 1, totalQuestions);
+}
+
 async function assignQuestionWithRetry(
   attemptId: string,
   questionId: string,
@@ -349,19 +437,23 @@ async function assignQuestionWithRetry(
   let lastError: IAssignmentError | null = null;
 
   for (let retry = 0; retry < MAX_RETRIES; retry++) {
-    const { error: assignError } = await supabase.from("attempt_questions").insert({
-      attempt_id: attemptId,
-      question_id: questionId,
-      question_order: questionOrder,
-    });
+    const { data: insertedRow, error: assignError } = await supabase
+      .from("attempt_questions")
+      .insert({
+        attempt_id: attemptId,
+        question_id: questionId,
+        question_order: questionOrder,
+      })
+      .select("question_id, question_order")
+      .single();
 
-    if (!assignError) {
+    if (!assignError && insertedRow?.question_id === questionId && insertedRow?.question_order === questionOrder) {
       return { success: true, assigned_question_id: questionId };
     }
 
-    lastError = assignError;
+    lastError = (assignError as IAssignmentError) ?? null;
 
-    if (assignError.code === "23505") {
+    if (assignError?.code === "23505") {
       return {
         success: false,
         assigned_question_id: null,
@@ -377,7 +469,7 @@ async function assignQuestionWithRetry(
         order: questionOrder,
         retry: retry + 1,
         max_retries: MAX_RETRIES,
-        error: assignError.message,
+        error: assignError?.message,
         delay_ms: delay,
       });
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -444,47 +536,294 @@ async function persistGeneratedMcq(
   return { id: savedMcq?.id || null };
 }
 
+interface IFallbackStage {
+  requireTopic: boolean;
+  requireSubtopic: boolean;
+  requireDifficulty: boolean;
+  requireBloom: boolean;
+  enforceCodingMode: boolean;
+}
+
+interface IEnsureAssignmentOptions {
+  criteria?: Partial<ISelectionCriteria>;
+  excludedQuestionIds?: Set<string>;
+  recentQuestionIds?: Set<string>;
+  maxAttempts?: number;
+  exposureLookup?: Map<string, number>;
+  maxExposurePerCombo?: number;
+  enforceDifficulty?: boolean;
+  enforceBloom?: boolean;
+}
+
 async function ensureQuestionAssigned(
   attemptId: string,
   questionOrder: number,
   supabase: SupabaseClient,
-  attemptIdForLogging: string
+  attemptIdForLogging: string,
+  options: IEnsureAssignmentOptions = {}
 ): Promise<{ question_id: string | null; error?: IAssignmentError | string | null }> {
-  const { data: fallbackMcq } = await supabase
-    .from("mcq_items")
-    .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
-    .limit(1)
-    .single();
+  const {
+    criteria,
+    excludedQuestionIds,
+    recentQuestionIds,
+    maxAttempts = 12,
+    exposureLookup,
+    maxExposurePerCombo,
+    enforceDifficulty = false,
+    enforceBloom = false,
+  } = options;
 
-  if (!fallbackMcq) {
-    return { question_id: null, error: "no_fallback_available" };
+  const excluded = new Set<string>((excludedQuestionIds ? Array.from(excludedQuestionIds) : []).filter(Boolean));
+  const recent = new Set<string>((recentQuestionIds ? Array.from(recentQuestionIds) : []).filter(Boolean));
+
+  const baseFallbackStages: IFallbackStage[] = [
+    { requireTopic: true, requireSubtopic: true, requireDifficulty: true, requireBloom: true, enforceCodingMode: true },
+    {
+      requireTopic: true,
+      requireSubtopic: false,
+      requireDifficulty: true,
+      requireBloom: true,
+      enforceCodingMode: true,
+    },
+    {
+      requireTopic: true,
+      requireSubtopic: false,
+      requireDifficulty: true,
+      requireBloom: false,
+      enforceCodingMode: true,
+    },
+    {
+      requireTopic: true,
+      requireSubtopic: false,
+      requireDifficulty: false,
+      requireBloom: false,
+      enforceCodingMode: false,
+    },
+    {
+      requireTopic: false,
+      requireSubtopic: false,
+      requireDifficulty: false,
+      requireBloom: false,
+      enforceCodingMode: false,
+    },
+  ];
+
+  let fallbackStages = [...baseFallbackStages];
+  const removedFilters: string[] = [];
+
+  if (enforceDifficulty) {
+    const filtered = fallbackStages.filter((stage) => stage.requireDifficulty);
+    if (filtered.length > 0 && filtered.length !== fallbackStages.length) {
+      removedFilters.push("difficulty");
+      fallbackStages = filtered;
+    }
   }
 
-  const { error: fallbackError } = await supabase.from("attempt_questions").insert({
-    attempt_id: attemptId,
-    question_id: fallbackMcq.id,
-    question_order: questionOrder,
-  });
+  if (enforceBloom) {
+    const filtered = fallbackStages.filter((stage) => stage.requireBloom);
+    if (filtered.length > 0 && filtered.length !== fallbackStages.length) {
+      removedFilters.push("bloom");
+      fallbackStages = filtered;
+    }
+  }
 
-  if (!fallbackError) {
-    console.log("question_selected", {
+  if (fallbackStages.length === 0) {
+    fallbackStages = [
+      {
+        requireTopic: true,
+        requireSubtopic: Boolean(criteria?.preferred_subtopic),
+        requireDifficulty: enforceDifficulty,
+        requireBloom: enforceBloom,
+        enforceCodingMode: true,
+      },
+    ];
+  }
+
+  if (removedFilters.length > 0) {
+    console.log("ensure_assignment_constraints_enforced", {
       attempt_id: attemptIdForLogging,
-      method: ESelectionMethod.FALLBACK_ASSIGNMENT,
-      question_id: fallbackMcq.id,
       order: questionOrder,
-      topic: fallbackMcq.topic,
-      subtopic: fallbackMcq.subtopic,
+      removed_filters: removedFilters,
+      stage_count: fallbackStages.length,
     });
-    return { question_id: fallbackMcq.id };
   }
 
-  console.error("fallback_assignment_failed", {
-    attempt_id: attemptIdForLogging,
-    order: questionOrder,
-    error: fallbackError.message,
-  });
+  const selectionColumns = "id, topic, subtopic, difficulty, bloom_level, question, options, code";
 
-  return { question_id: null, error: fallbackError };
+  let attemptsRemaining = Math.max(1, maxAttempts);
+  let lastError: IAssignmentError | string | null = null;
+
+  const buildNotInClause = (ids: Set<string>): string | null => {
+    if (ids.size === 0) return null;
+    const list = Array.from(ids)
+      .filter(Boolean)
+      .map((id) => `"${id.replace(/"/g, '""')}"`)
+      .join(",");
+    return list.length > 0 ? `(${list})` : null;
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyStageFilters = (query: any, stage: IFallbackStage) => {
+    if (stage.requireTopic && criteria?.preferred_topic) {
+      query = query.eq("topic", criteria.preferred_topic);
+    }
+
+    if (stage.requireSubtopic) {
+      if (criteria?.preferred_subtopic) {
+        query = query.eq("subtopic", criteria.preferred_subtopic);
+      } else {
+        query = query.is("subtopic", null);
+      }
+    }
+
+    if (stage.requireDifficulty && criteria?.difficulty) {
+      query = query.eq("difficulty", criteria.difficulty);
+    }
+
+    if (stage.requireBloom && criteria?.preferred_bloom_level) {
+      query = query.eq("bloom_level", criteria.preferred_bloom_level);
+    }
+
+    if (typeof criteria?.coding_mode === "boolean" && stage.enforceCodingMode) {
+      query = criteria.coding_mode
+        ? query.not("code", "is", null).not("code", "eq", "")
+        : query.or("code.is.null,code.eq.");
+    } else if (criteria?.coding_mode === false && stage.enforceCodingMode === false) {
+      // Prefer non-coding when possible by filtering out code if we still have room to explore
+      query = query.or("code.is.null,code.eq.");
+    }
+
+    return query;
+  };
+
+  for (let stageIndex = 0; stageIndex < fallbackStages.length && attemptsRemaining > 0; stageIndex++) {
+    const stage = fallbackStages[stageIndex];
+
+    console.log("ensure_assignment_stage_start", {
+      attempt_id: attemptIdForLogging,
+      order: questionOrder,
+      stage_index: stageIndex,
+      stage,
+      attempts_remaining: attemptsRemaining,
+    });
+
+    const exclusionVariants: Set<string>[] = [];
+    if (recent.size > 0) {
+      exclusionVariants.push(new Set<string>([...excluded, ...recent]));
+    }
+    exclusionVariants.push(new Set<string>(excluded));
+
+    for (const exclusion of exclusionVariants) {
+      if (attemptsRemaining <= 0) break;
+
+      let query = supabase.from("mcq_items").select(selectionColumns);
+      query = applyStageFilters(query, stage);
+
+      const exclusionClause = buildNotInClause(exclusion);
+      if (exclusionClause) {
+        query = query.not("id", "in", exclusionClause);
+      }
+
+      const candidateLimit = stage.requireTopic && stage.requireSubtopic ? 12 : 24;
+      const { data: candidates, error: candidateError } = await query.limit(candidateLimit);
+
+      if (candidateError) {
+        console.warn("fallback_candidate_query_failed", {
+          attempt_id: attemptIdForLogging,
+          order: questionOrder,
+          stage: stageIndex,
+          error: candidateError.message,
+        });
+        lastError = candidateError as unknown as IAssignmentError;
+        continue;
+      }
+
+      const candidateList = (candidates as IBankCandidate[]) ?? [];
+      if (candidateList.length === 0) {
+        continue;
+      }
+
+      for (const candidate of candidateList) {
+        if (attemptsRemaining <= 0) break;
+        if (!candidate?.id || excluded.has(candidate.id)) continue;
+
+        if (exposureLookup && typeof maxExposurePerCombo === "number") {
+          const exposureKey = buildExposureKey(
+            candidate.topic,
+            candidate.subtopic,
+            candidate.difficulty,
+            Boolean(candidate.code)
+          );
+          const seenCount = exposureLookup.get(exposureKey) ?? 0;
+          if (seenCount >= maxExposurePerCombo) {
+            excluded.add(candidate.id);
+            console.log("fallback_candidate_skipped_user_freshness", {
+              attempt_id: attemptIdForLogging,
+              candidate_id: candidate.id,
+              order: questionOrder,
+              seen_count: seenCount,
+            });
+            continue;
+          }
+        }
+
+        attemptsRemaining--;
+
+        const { data: insertedRow, error: fallbackError } = await supabase
+          .from("attempt_questions")
+          .insert({
+            attempt_id: attemptId,
+            question_id: candidate.id,
+            question_order: questionOrder,
+          })
+          .select("question_id, question_order")
+          .single();
+
+        if (
+          !fallbackError &&
+          insertedRow?.question_id === candidate.id &&
+          insertedRow?.question_order === questionOrder
+        ) {
+          console.log("question_selected", {
+            attempt_id: attemptIdForLogging,
+            method: ESelectionMethod.FALLBACK_ASSIGNMENT,
+            question_id: candidate.id,
+            order: questionOrder,
+            topic: candidate.topic,
+            subtopic: candidate.subtopic,
+          });
+          return { question_id: candidate.id };
+        }
+
+        if (fallbackError?.code === "23505") {
+          excluded.add(candidate.id);
+          console.warn("fallback_candidate_duplicate", {
+            attempt_id: attemptIdForLogging,
+            order: questionOrder,
+            candidate_id: candidate.id,
+            stage: stageIndex,
+          });
+          lastError = (fallbackError as IAssignmentError) ?? lastError;
+          continue;
+        }
+
+        console.error("fallback_assignment_failed", {
+          attempt_id: attemptIdForLogging,
+          order: questionOrder,
+          candidate_id: candidate.id,
+          stage: stageIndex,
+          error: fallbackError?.message,
+        });
+        lastError = (fallbackError as IAssignmentError) ?? lastError;
+      }
+    }
+  }
+
+  if (!lastError) {
+    lastError = "no_fallback_available";
+  }
+
+  return { question_id: null, error: lastError };
 }
 
 async function generateMcqFallback(
@@ -762,13 +1101,18 @@ export async function selectNextQuestionForAttempt(
     };
   }
 
-  const nextQuestionOrder = (attempt.questions_answered || 0) + 1;
-
   // Fetch all asked questions
   const { questions: askedQuestionsData, error: questionsError } = await validateAttemptQuestions(attemptId, supabase);
   if (questionsError) throw questionsError;
 
   const asked = askedQuestionsData || [];
+
+  const nextQuestionOrder = await computeNextQuestionOrder(
+    attemptId,
+    attempt.questions_answered || 0,
+    attempt.total_questions,
+    supabase
+  );
 
   // Check for existing pending question
   const existingPending = findExistingPendingQuestion(asked, nextQuestionOrder);
@@ -823,7 +1167,43 @@ export async function selectNextQuestionForAttempt(
 
   // Stage 2: Context - Build distributions and selection context
   const distributions = calculateDistributions(asked);
-  const selectionContext = buildSelectionContext(attemptId, attempt.questions_answered || 0, distributions);
+  const currentTopicPhase = getCurrentTopicPhase(attempt.questions_answered || 0);
+  const { summary: coverageSummary, exposureLookup } = await fetchUserCoverageData(userId, supabase, currentTopicPhase);
+  const selectionContext = buildSelectionContext(
+    attemptId,
+    attempt.questions_answered || 0,
+    distributions,
+    coverageSummary
+  );
+
+  const totalTarget = EVALUATION_CONFIG.TOTAL_QUESTIONS;
+  const difficultyTargets = EVALUATION_CONFIG.DIFFICULTY_TARGETS;
+  const bloomTargets = EVALUATION_CONFIG.BLOOM_TARGETS;
+
+  const questionsAnswered = attempt.questions_answered || 0;
+  const questionsRemaining = Math.max(totalTarget - questionsAnswered, 0);
+
+  const hardNeeded = Math.max(0, difficultyTargets.MIN_HARD - distributions.hard_count);
+  const easyRemaining = Math.max(0, difficultyTargets.MAX_EASY - distributions.easy_count);
+  const mediumRemaining = Math.max(0, difficultyTargets.MAX_MEDIUM - distributions.medium_count);
+
+  const bloomCounts: Record<EBloomLevel, number> = {
+    [EBloomLevel.REMEMBER]: distributions.bloom_distribution[EBloomLevel.REMEMBER] ?? 0,
+    [EBloomLevel.UNDERSTAND]: distributions.bloom_distribution[EBloomLevel.UNDERSTAND] ?? 0,
+    [EBloomLevel.APPLY]: distributions.bloom_distribution[EBloomLevel.APPLY] ?? 0,
+    [EBloomLevel.ANALYZE]: distributions.bloom_distribution[EBloomLevel.ANALYZE] ?? 0,
+    [EBloomLevel.EVALUATE]: distributions.bloom_distribution[EBloomLevel.EVALUATE] ?? 0,
+    [EBloomLevel.CREATE]: distributions.bloom_distribution[EBloomLevel.CREATE] ?? 0,
+  };
+
+  const analyzeNeeded = Math.max(0, bloomTargets.MIN_ANALYZE - bloomCounts[EBloomLevel.ANALYZE]);
+  const evalCreateNeeded = Math.max(
+    0,
+    bloomTargets.MIN_EVALUATE_CREATE - (bloomCounts[EBloomLevel.EVALUATE] + bloomCounts[EBloomLevel.CREATE])
+  );
+
+  const enforceDifficultyFallback = hardNeeded > 0;
+  const enforceBloomFallback = analyzeNeeded > 0 || evalCreateNeeded > 0;
 
   console.log("selection_input", {
     attempt_id: attemptId,
@@ -838,6 +1218,15 @@ export async function selectNextQuestionForAttempt(
       topics: distributions.topic_distribution,
       blooms: distributions.bloom_distribution,
     },
+    constraints: {
+      hard_needed: hardNeeded,
+      easy_remaining: easyRemaining,
+      medium_remaining: mediumRemaining,
+      analyze_needed: analyzeNeeded,
+      eval_create_needed: evalCreateNeeded,
+      questions_remaining: questionsRemaining,
+    },
+    coverage_summary: coverageSummary,
   });
 
   // Call LLM selector
@@ -856,7 +1245,7 @@ export async function selectNextQuestionForAttempt(
   const askedIdSet = new Set<string>(asked.map((q) => q.question_id).filter((id: string) => typeof id === "string"));
 
   // Fetch recent questions for cross-attempt freshness
-  const recentIdSet = await fetchRecentAttemptQuestions(userId, supabase);
+  const recentIdSet = await fetchRecentAttemptQuestions(userId, supabase, { excludeAttemptId: attemptId });
 
   // Stage 3: Bank Query - Query MCQ bank with exact 5-dimension match
   let query = supabase
@@ -894,15 +1283,39 @@ export async function selectNextQuestionForAttempt(
   if (candidatesError) throw candidatesError;
 
   // Filter primary candidates
-  const filteredPrimary = (candidates || [])
+  const primaryCandidates = (candidates || [])
     .filter((c: IBankCandidate) => !askedIdSet.has(c.id))
     .map((c: IBankCandidate) => ({ ...c, _seenRecently: recentIdSet.has(c.id) }));
+
+  const {
+    USER_FRESHNESS: { MAX_PER_COMBO },
+  } = EVALUATE_SELECTION_CONFIG;
+
+  const freshnessFiltered = primaryCandidates.filter((candidate) => {
+    const key = buildExposureKey(candidate.topic, candidate.subtopic, candidate.difficulty, Boolean(candidate.code));
+    const seenCount = exposureLookup.get(key) ?? 0;
+    if (seenCount >= MAX_PER_COMBO) {
+      console.log("candidate_skipped_user_freshness", {
+        attempt_id: attemptId,
+        question_id: candidate.id,
+        topic: candidate.topic,
+        subtopic: candidate.subtopic,
+        difficulty: candidate.difficulty,
+        coding_mode: Boolean(candidate.code),
+        seen_count: seenCount,
+      });
+      return false;
+    }
+
+    return true;
+  });
 
   console.log("candidate_pool_primary", {
     attempt_id: attemptId,
     raw_count: (candidates || []).length,
-    filtered_count: filteredPrimary.length,
-    seen_recently_count: filteredPrimary.filter((c) => c._seenRecently).length,
+    filtered_count: primaryCandidates.length,
+    freshness_filtered_count: freshnessFiltered.length,
+    seen_recently_count: freshnessFiltered.filter((c) => c._seenRecently).length,
     exact_match_criteria: {
       topic: criteria.preferred_topic,
       subtopic: criteria.preferred_subtopic,
@@ -913,7 +1326,7 @@ export async function selectNextQuestionForAttempt(
   });
 
   // If no bank candidates, attempt generation fallback
-  if (!filteredPrimary || filteredPrimary.length === 0) {
+  if (!freshnessFiltered || freshnessFiltered.length === 0) {
     console.warn("No bank candidates found; attempting generation fallback");
 
     const { questionId: generatedId, generatedMcq } = await generateMcqFallback(
@@ -956,6 +1369,19 @@ export async function selectNextQuestionForAttempt(
         subtopic: generatedMcq.subtopic,
       });
 
+      await recordQuestionExposure(
+        userId,
+        {
+          id: finalQuestionId,
+          topic: generatedMcq.topic,
+          subtopic: generatedMcq.subtopic,
+          difficulty: generatedMcq.difficulty,
+          bloom_level: generatedMcq.bloomLevel,
+          code: generatedMcq.code || null,
+        },
+        supabase
+      );
+
       return {
         attempt: {
           id: attempt.id,
@@ -983,7 +1409,21 @@ export async function selectNextQuestionForAttempt(
     }
 
     // If generation failed, attempt fallback assignment
-    const { question_id: fallbackId } = await ensureQuestionAssigned(attemptId, nextQuestionOrder, supabase, attemptId);
+    const { question_id: fallbackId } = await ensureQuestionAssigned(
+      attemptId,
+      nextQuestionOrder,
+      supabase,
+      attemptId,
+      {
+        criteria,
+        excludedQuestionIds: askedIdSet,
+        recentQuestionIds: recentIdSet,
+        exposureLookup,
+        maxExposurePerCombo: MAX_PER_COMBO,
+        enforceDifficulty: enforceDifficultyFallback,
+        enforceBloom: enforceBloomFallback,
+      }
+    );
 
     if (!fallbackId) {
       throw new Error("Unable to assign question after exhausting all methods");
@@ -1031,7 +1471,7 @@ export async function selectNextQuestionForAttempt(
   }
 
   const candidatesWithSimilarity = await applyNeighborSimilarityChecks(
-    filteredPrimary.map((c) => ({ ...c, similarityPenalty: 0, similarityMetrics: {} })) as ICandidateWithSimilarity[],
+    freshnessFiltered.map((c) => ({ ...c, similarityPenalty: 0, similarityMetrics: {} })) as ICandidateWithSimilarity[],
     askedEmbeddings,
     userId,
     supabase
@@ -1046,7 +1486,7 @@ export async function selectNextQuestionForAttempt(
 
   // Stage 5: Assignment - Stochastic top-K selection with fallback
   const selectionOrder = selectTopKWithWeights(scoredCandidates);
-  const nextOrder = attempt.questions_answered + 1;
+  const nextOrder = nextQuestionOrder;
   let final: IBankCandidate | null = null;
 
   for (const candidate of selectionOrder) {
@@ -1085,13 +1525,23 @@ export async function selectNextQuestionForAttempt(
         topic: selectedForResponse.topic,
         subtopic: selectedForResponse.subtopic,
       });
+
+      await recordQuestionExposure(userId, selectedForResponse, supabase);
       break;
     }
   }
 
   // Fallback if no candidate succeeded
   if (!final) {
-    const { question_id: fallbackId } = await ensureQuestionAssigned(attemptId, nextOrder, supabase, attemptId);
+    const { question_id: fallbackId } = await ensureQuestionAssigned(attemptId, nextOrder, supabase, attemptId, {
+      criteria,
+      excludedQuestionIds: askedIdSet,
+      recentQuestionIds: recentIdSet,
+      exposureLookup,
+      maxExposurePerCombo: MAX_PER_COMBO,
+      enforceDifficulty: enforceDifficultyFallback,
+      enforceBloom: enforceBloomFallback,
+    });
 
     if (fallbackId) {
       const { data: fallbackMcq } = await supabase
@@ -1099,7 +1549,10 @@ export async function selectNextQuestionForAttempt(
         .select("id, topic, subtopic, difficulty, bloom_level, question, options, code")
         .eq("id", fallbackId)
         .single();
-      if (fallbackMcq) final = fallbackMcq as IBankCandidate;
+      if (fallbackMcq) {
+        final = fallbackMcq as IBankCandidate;
+        await recordQuestionExposure(userId, final, supabase);
+      }
     }
   }
 

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const isCorrect = user_answer_index === mcqItem.correct_index;
 
     // Update attempt_questions with user's answer
-    const { error: updateQuestionError } = await supabase
+    const { data: updatedAttemptQuestion, error: updateQuestionError } = await supabase
       .from("attempt_questions")
       .update({
         user_answer_index,
@@ -74,11 +74,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         time_spent_seconds: time_spent_seconds || null,
       })
       .eq("attempt_id", attemptId)
-      .eq("question_id", question_id);
+      .eq("question_id", question_id)
+      .select("id, question_order")
+      .maybeSingle();
 
     if (updateQuestionError) {
       logger.error("Error updating question answer:", updateQuestionError);
       return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_RECORD_ANSWER }, { status: 500 });
+    }
+
+    if (!updatedAttemptQuestion) {
+      logger.error("Attempt question missing for answer submission", {
+        attempt_id: attemptId,
+        question_id,
+      });
+      return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.ATTEMPT_QUESTION_MISSING }, { status: 409 });
     }
 
     // Update attempt counters
@@ -88,12 +98,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // CRITICAL FIX: Validate that all questions are actually assigned before marking complete
     // Check if we have reached the target number of answered questions
     const hasReachedTarget = newQuestionsAnswered >= attempt.total_questions;
+    let actualAssignedCount = newQuestionsAnswered;
 
     // If we've reached the target, verify that all questions are actually assigned
     let isComplete = false;
     if (hasReachedTarget) {
       // Count actual assigned questions to verify completion
-      const { data: assignedQuestions, error: countError } = await supabase
+      const { data: assignedQuestions, count: assignedCount, error: countError } = await supabase
         .from("attempt_questions")
         .select("id", { count: "exact" })
         .eq("attempt_id", attemptId);
@@ -103,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: EVALUATE_API_ERROR_MESSAGES.FAILED_TO_VERIFY_COMPLETION }, { status: 500 });
       }
 
-      const actualAssignedCount = assignedQuestions?.length || 0;
+      actualAssignedCount = typeof assignedCount === "number" ? assignedCount : assignedQuestions?.length || 0;
       isComplete = actualAssignedCount >= attempt.total_questions;
 
       // Log completion validation for debugging
@@ -172,7 +183,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // Include validation info for debugging
         validation: hasReachedTarget
           ? {
-              actual_assigned: newQuestionsAnswered, // This will be the count from the validation above
+              actual_assigned: isComplete ? attempt.total_questions : actualAssignedCount,
               has_gaps: !isComplete && hasReachedTarget,
             }
           : null,

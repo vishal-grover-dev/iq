@@ -310,6 +310,21 @@ export interface IQuestionSelectionCriteria {
   reasoning: string;
 }
 
+export interface IUserQuestionStatRow {
+  topic: string;
+  subtopic: string;
+  difficulty: string;
+  bloom_level: string;
+  coding_mode: boolean;
+  total_seen: number;
+  last_seen_at: string;
+}
+
+export interface IUserCoverageSummary {
+  hotspots: string[];
+  opportunities: string[];
+}
+
 /**
  * Attempt context for LLM selector
  */
@@ -325,6 +340,7 @@ export interface IAttemptContext {
   bloom_distribution: Record<string, number>;
   recent_subtopics: string[];
   asked_question_ids: string[];
+  coverage_summary: IUserCoverageSummary;
 }
 
 /**
@@ -470,4 +486,30 @@ export interface IBankCandidate {
 
 export interface IBankCandidateWithMetadata extends IBankCandidate {
   _seenRecently?: boolean;
+}
+
+export interface IDifficultyEnforcementContext {
+  easyRemaining: number;
+  mediumRemaining: number;
+  hardNeeded: number;
+  questionsRemaining: number;
+  questionsAnswered: number;
+  easyCount: number;
+  mediumCount: number;
+  hardCount: number;
+  totalQuestions: number;
+  hardTarget: number;
+  easyCap: number;
+  mediumCap: number;
+}
+
+export interface IBloomEnforcementContext {
+  counts: Record<EBloomLevel, number>;
+  understandCap: number;
+  applyCap: number;
+  analyzeMin: number;
+  evalCreateMin: number;
+  questionsRemaining: number;
+  questionsAnswered: number;
+  totalQuestions: number;
 }

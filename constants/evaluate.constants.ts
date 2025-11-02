@@ -138,6 +138,7 @@ export const EVALUATE_API_ERROR_MESSAGES = {
   FAILED_TO_COUNT_QUESTIONS: "Failed to count questions",
   FAILED_TO_FIX_ATTEMPT: "Failed to fix attempt",
   FAILED_TO_UPDATE_ATTEMPT_STATUS: "Failed to update attempt status",
+  ATTEMPT_QUESTION_MISSING: "Attempt question record missing",
   INTERNAL_SERVER_ERROR: "Internal server error",
   INVALID_ANSWER_INDEX: "Invalid answer index",
   QUESTION_NOT_FOUND: "Question not found",
@@ -149,9 +150,18 @@ export const EVALUATE_API_ERROR_MESSAGES = {
  */
 export const EVALUATION_CONFIG = {
   TOTAL_QUESTIONS: REACT_QUESTIONS_SIZE,
-  EASY_QUESTIONS: 30,
-  MEDIUM_QUESTIONS: 13,
-  HARD_QUESTIONS: 7,
+  DIFFICULTY_TARGETS: {
+    MAX_EASY: Math.floor(REACT_QUESTIONS_SIZE * 0.45),
+    MAX_MEDIUM: Math.floor(REACT_QUESTIONS_SIZE * 0.35),
+    MIN_HARD:
+      REACT_QUESTIONS_SIZE - (Math.floor(REACT_QUESTIONS_SIZE * 0.45) + Math.floor(REACT_QUESTIONS_SIZE * 0.35)),
+  },
+  BLOOM_TARGETS: {
+    MAX_UNDERSTAND: Math.floor(REACT_QUESTIONS_SIZE * 0.25),
+    MAX_APPLY: Math.floor(REACT_QUESTIONS_SIZE * 0.35),
+    MIN_ANALYZE: Math.ceil(REACT_QUESTIONS_SIZE * 0.2),
+    MIN_EVALUATE_CREATE: Math.ceil(REACT_QUESTIONS_SIZE * 0.2),
+  },
   MIN_CODING_QUESTIONS: REACT_MIN_CODING_QUESTION_COUNT, // 35% of total (rounded up)
   MAX_TOPIC_PERCENTAGE: 40, // No single topic exceeds 40%
 } as const;
@@ -377,4 +387,14 @@ export const EVALUATE_SELECTION_CONFIG = {
   RECENT_ATTEMPTS: {
     LOOK_BACK_COUNT: 2, // Number of recent completed attempts to check for freshness
   },
+
+  // Per-user freshness enforcement across attempts
+  USER_FRESHNESS: {
+    MAX_PER_COMBO: 3, // Maximum times a user can see the same topic/subtopic/difficulty/coding combo before we force variation
+    HOTSPOT_LIMIT: 4, // Number of top coverage hotspots to surface for LLM prompts
+    OPPORTUNITY_LIMIT: 4, // Number of coverage gaps to highlight for LLM prompts
+    OPPORTUNITY_THRESHOLD: 1, // Treat combos with <= threshold exposures as gaps
+  },
 } as const;
+
+export const COVERAGE_KEY_DELIMITER = "::";

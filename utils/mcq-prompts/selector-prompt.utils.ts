@@ -34,6 +34,24 @@ export function generateQuestionPrompt(context: {
   difficulty_list: string;
   coding_list: string;
   bloom_count_list: string;
+  coverage_hotspots: string[];
+  coverage_opportunities: string[];
+  difficulty_goal_summary: string;
+  bloom_goal_summary: string;
+  understand_cap: number;
+  apply_cap: number;
+  analyze_min: number;
+  eval_create_min: number;
+  understand_remaining: number;
+  apply_remaining: number;
+  analyze_needed: number;
+  eval_create_needed: number;
+  understand_count: number;
+  apply_count: number;
+  analyze_count: number;
+  evaluate_count: number;
+  create_count: number;
+  remember_count: number;
 }): { system: string; user: string } {
   const {
     questions_answered,
@@ -56,6 +74,24 @@ export function generateQuestionPrompt(context: {
     difficulty_list,
     coding_list,
     bloom_count_list,
+    coverage_hotspots,
+    coverage_opportunities,
+    difficulty_goal_summary,
+    bloom_goal_summary,
+    understand_cap,
+    apply_cap,
+    analyze_min,
+    eval_create_min,
+    understand_remaining,
+    apply_remaining,
+    analyze_needed,
+    eval_create_needed,
+    understand_count,
+    apply_count,
+    analyze_count,
+    evaluate_count,
+    create_count,
+    remember_count,
   } = context;
 
   const remaining = total_target - questions_answered;
@@ -104,16 +140,29 @@ export function generateQuestionPrompt(context: {
   // Get available Bloom levels from the enum
   const availableBloomLevels = Object.values(EBloomLevel).join(", ");
 
-  const difficultyTargetsSummary = `${EVALUATION_CONFIG.EASY_QUESTIONS} Easy, ${EVALUATION_CONFIG.MEDIUM_QUESTIONS} Medium, ${EVALUATION_CONFIG.HARD_QUESTIONS} Hard (total ${EVALUATION_CONFIG.TOTAL_QUESTIONS} questions)`;
+  const difficultyTargetsSummary = difficulty_goal_summary;
+  const bloomTargetsSummary = bloom_goal_summary;
   const codingThresholdSummary = `${EVALUATION_CONFIG.MIN_CODING_QUESTIONS} of ${EVALUATION_CONFIG.TOTAL_QUESTIONS}`;
+
+  const hotspotList = coverage_hotspots.length
+    ? coverage_hotspots.map((line) => `- ${line}`).join("\n")
+    : "- None recorded yet";
+  const opportunityList = coverage_opportunities.length
+    ? coverage_opportunities.map((line) => `- ${line}`).join("\n")
+    : "- No clear gaps yet — explore adjacent subtopics";
+
+  const difficultyProgress = `- Easy: ${easy_count}/${easy_target} (capacity left ${easy_remaining})\n- Medium: ${medium_count}/${medium_target} (capacity left ${medium_remaining})\n- Hard: ${hard_count} completed (need ≥${hard_target}, remaining ${hard_remaining})`;
+
+  const combinedEvalCreate = evaluate_count + create_count;
+  const bloomGoalStatus = `- Remember: ${remember_count}\n- Understand: ${understand_count}/${understand_cap} (cap remaining ${understand_remaining})\n- Apply: ${apply_count}/${apply_cap} (cap remaining ${apply_remaining})\n- Analyze: ${analyze_count}/${analyze_min} (need ${analyze_needed})\n- Evaluate/Create combined: ${combinedEvalCreate}/${eval_create_min} (need ${eval_create_needed})`;
 
   const system = `You are an intelligent question selector for a comprehensive frontend skills evaluation. Your role is to analyze attempt context and determine optimal criteria for the next question to ensure:
 
 BALANCE REQUIREMENTS:
-1. Difficulty distribution: ${difficultyTargetsSummary}
+1. Difficulty caps: ${difficultyTargetsSummary}
 2. Coding threshold: ≥35% coding questions (minimum ${codingThresholdSummary})
 3. Topic sequencing: Follow the strict topic order (${topicSequence}). Do not advance to the next block until the current quota is satisfied.
-4. Bloom diversity: ≥3 different Bloom levels per difficulty tier
+4. Bloom goals: ${bloomTargetsSummary}
 5. Subtopic distribution: Avoid clustering (no >5 consecutive from same subtopic)
 6. Weight-aware selection: Consider topic importance based on available content
 
@@ -145,6 +194,13 @@ SELECTION GUIDELINES:
 AVAILABLE BLOOM LEVELS:
 ${availableBloomLevels}
 
+RECENT COVERAGE PATTERNS TO CONSIDER:
+Hotspots (overused combinations):
+${hotspotList}
+
+Opportunities (under-served combinations):
+${opportunityList}
+
 Return strict JSON with:
 - difficulty: "Easy" | "Medium" | "Hard"
 - coding_mode: boolean
@@ -157,10 +213,8 @@ Return strict JSON with:
 - Questions answered: ${questions_answered}/${total_target}
 - Remaining: ${remaining}
 
-Distribution progress:
-- Easy: ${easy_count}/${easy_target} (${easy_remaining} remaining)
-- Medium: ${medium_count}/${medium_target} (${medium_remaining} remaining)  
-- Hard: ${hard_count}/${hard_target} (${hard_remaining} remaining)
+Distribution progress vs targets:
+${difficultyProgress}
 - Coding: ${coding_count}/${total_target} (need ≥${coding_target}, ${coding_needed} more needed)
 
 Topic sequencing status:
@@ -172,10 +226,17 @@ ${topicSequenceBreakdown}
 Comprehensive coverage of answered questions:
 - Topics covered: ${topic_list || "none yet"}
 - Subtopics covered: ${subtopic_list || "none yet"}
-- Bloom levels used: ${bloom_list || "none yet"}
-- Bloom level counts: ${bloom_count_list || "none yet"}
+- Bloom levels used: ${bloom_list || "none yet"}${bloom_count_list ? ` (counts: ${bloom_count_list})` : ""}
+- Bloom goal progress:
+${bloomGoalStatus}
 - Difficulty levels used: ${difficulty_list || "none yet"}
 - Coding questions: ${coding_list || "none yet"}
+
+Recent coverage hotspots to avoid repeating:
+${hotspotList}
+
+Coverage opportunities you should prioritize when possible:
+${opportunityList}
 
 Based on the dynamic topic weights (shown above) and current attempt state, determine optimal criteria for question #${
     questions_answered + 1
